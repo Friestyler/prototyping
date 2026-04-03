@@ -1123,16 +1123,54 @@ function FilterDropdown({ label, options, value, onChange, icon: Icon }) {
   );
 }
 
-// ── Campaign Sample Data ────────────────────────────────────────────────
+// ── Campaign Sample Data (with per-broker detail) ───────────────────────
+// Status per broker: "launched" | "not_launched" | "overdue" | "completed"
+const generateBrokerCampaignData = (brokerId, campaignStatus) => {
+  const broker = SAMPLE_BROKERS.find(b => b.id === brokerId);
+  if (!broker) return null;
+  const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+  const seed = parseInt(brokerId.slice(-4), 10);
+  // Deterministic-ish per broker
+  const statusPool = campaignStatus === "completed" ? ["completed"] : campaignStatus === "scheduled" ? ["not_launched"] : ["launched", "launched", "launched", "not_launched", "overdue", "completed"];
+  const status = statusPool[(seed) % statusPool.length];
+  const hasSent = status === "launched" || status === "completed" || status === "overdue";
+  const sent = hasSent ? rand(80, 450) : 0;
+  const opened = hasSent ? Math.round(sent * (0.45 + (seed % 30) / 100)) : 0;
+  const clicked = hasSent ? Math.round(opened * (0.3 + (seed % 25) / 100)) : 0;
+  const totalTasks = hasSent ? rand(5, 18) : 0;
+  const doneTasks = status === "completed" ? totalTasks : hasSent ? rand(0, totalTasks) : 0;
+  const overdueTasks = status === "overdue" ? rand(2, 6) : 0;
+  const delegated = hasSent ? rand(0, Math.max(0, totalTasks - doneTasks - overdueTasks)) : 0;
+  const called = hasSent ? rand(0, Math.max(0, totalTasks - doneTasks - overdueTasks - delegated)) : 0;
+  const daysOverdue = status === "overdue" ? rand(2, 14) : 0;
+  const lastActivity = status === "not_launched" ? null : `2026-0${rand(3,4)}-${String(rand(1, 28)).padStart(2, "0")}`;
+  return {
+    brokerId, brokerName: broker.name, city: broker.city,
+    status, sent, opened, clicked,
+    tasks: { total: totalTasks, done: doneTasks, overdue: overdueTasks, delegated, called, pending: Math.max(0, totalTasks - doneTasks - overdueTasks - delegated - called) },
+    daysOverdue, lastActivity,
+  };
+};
+
 const CAMPAIGNS = [
-  { id: "C001", name: "Spring Non-Life Promo", type: "Non-Life", insurer: "AXA Belgium", status: "active", week: 12, year: 2026, brokers: ["476238978", "345678901", "123456789"], emails: { sent: 2450, opened: 1680, clicked: 890 }, tasks: { total: 45, done: 28, delegated: 8, called: 6, pending: 3 } },
-  { id: "C002", name: "Pension Awareness Q1", type: "Life", insurer: "AG Insurance", status: "active", week: 10, year: 2026, brokers: ["430316833", "512789345", "123456789", "345678901"], emails: { sent: 3200, opened: 2100, clicked: 1250 }, tasks: { total: 62, done: 41, delegated: 12, called: 5, pending: 4 } },
-  { id: "C003", name: "SME Fire Package", type: "Non-Life", insurer: "Ethias", status: "active", week: 13, year: 2026, brokers: ["430316833", "512789345", "234567890"], emails: { sent: 1800, opened: 1120, clicked: 560 }, tasks: { total: 38, done: 20, delegated: 10, called: 5, pending: 3 } },
-  { id: "C004", name: "Investment Life Launch", type: "Life", insurer: "Athora", status: "completed", week: 8, year: 2026, brokers: ["476238978", "123456789"], emails: { sent: 1200, opened: 890, clicked: 445 }, tasks: { total: 24, done: 24, delegated: 0, called: 0, pending: 0 } },
-  { id: "C005", name: "Fleet Insurance Drive", type: "Non-Life", insurer: "Baloise", status: "active", week: 14, year: 2026, brokers: ["832851798", "512789345", "123456789"], emails: { sent: 950, opened: 620, clicked: 310 }, tasks: { total: 30, done: 12, delegated: 6, called: 8, pending: 4 } },
-  { id: "C006", name: "Health Top-Up Campaign", type: "Life", insurer: "Vivium", status: "scheduled", week: 16, year: 2026, brokers: ["476238978", "345678901"], emails: { sent: 0, opened: 0, clicked: 0 }, tasks: { total: 0, done: 0, delegated: 0, called: 0, pending: 0 } },
-  { id: "C007", name: "Home Insurance Renewal", type: "Non-Life", insurer: "AG Insurance", status: "active", week: 11, year: 2026, brokers: ["512789345", "123456789", "234567890", "345678901"], emails: { sent: 4100, opened: 2870, clicked: 1640 }, tasks: { total: 78, done: 52, delegated: 15, called: 7, pending: 4 } },
-];
+  { id: "C001", name: "Spring Non-Life Promo", type: "Non-Life", insurer: "AXA Belgium", status: "active", week: 12, year: 2026,
+    brokerIds: ["476238978", "345678901", "123456789", "430316833", "832851798", "512789345", "234567890", "890345672", "667904512", "461521347", "753420873", "407183548", "422624830", "871215633", "746996901"] },
+  { id: "C002", name: "Pension Awareness Q1", type: "Life", insurer: "AG Insurance", status: "active", week: 10, year: 2026,
+    brokerIds: ["430316833", "512789345", "123456789", "345678901", "476238978", "234567890", "890345672", "832851798"] },
+  { id: "C003", name: "SME Fire Package", type: "Non-Life", insurer: "Ethias", status: "active", week: 13, year: 2026,
+    brokerIds: ["430316833", "512789345", "234567890", "123456789", "345678901", "667904512", "476238978", "871215633", "461521347", "407183548", "832851798", "890345672"] },
+  { id: "C004", name: "Investment Life Launch", type: "Life", insurer: "Athora", status: "completed", week: 8, year: 2026,
+    brokerIds: ["476238978", "123456789", "345678901", "512789345"] },
+  { id: "C005", name: "Fleet Insurance Drive", type: "Non-Life", insurer: "Baloise", status: "active", week: 14, year: 2026,
+    brokerIds: ["832851798", "512789345", "123456789", "430316833", "234567890", "345678901", "476238978", "890345672", "667904512"] },
+  { id: "C006", name: "Health Top-Up Campaign", type: "Life", insurer: "Vivium", status: "scheduled", week: 16, year: 2026,
+    brokerIds: ["476238978", "345678901", "123456789", "512789345", "832851798", "430316833"] },
+  { id: "C007", name: "Home Insurance Renewal", type: "Non-Life", insurer: "AG Insurance", status: "active", week: 11, year: 2026,
+    brokerIds: ["512789345", "123456789", "234567890", "345678901", "430316833", "476238978", "832851798", "890345672", "461521347", "753420873", "667904512"] },
+].map(c => ({
+  ...c,
+  brokers: c.brokerIds.map(id => generateBrokerCampaignData(id, c.status)).filter(Boolean),
+}));
 
 // ── Insurer Environment ─────────────────────────────────────────────────
 function InsurerEnvironment({ onBack }) {
@@ -1148,6 +1186,9 @@ function InsurerEnvironment({ onBack }) {
   const [bookingInterest, setBookingInterest] = useState("");
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
+  const [expandedCampaign, setExpandedCampaign] = useState(null);
+  const [brokerStatusFilter, setBrokerStatusFilter] = useState("");
+  const [brokerSortBy, setBrokerSortBy] = useState("status"); // status | name | tasks | emails
 
   // Collect all account managers from INSURER_CONTACTS
   const allAccountManagers = useMemo(() => {
@@ -1181,8 +1222,8 @@ function InsurerEnvironment({ onBack }) {
       if (filterStatus && c.status !== filterStatus) return false;
       if (filterCampaign && c.id !== filterCampaign) return false;
       if (filterAM) {
-        const hasAM = c.brokers.some(bid => {
-          const ams = getBrokerAMs(bid);
+        const hasAM = c.brokers.some(bd => {
+          const ams = getBrokerAMs(bd.brokerId);
           return ams.some(a => a.name === filterAM);
         });
         if (!hasAM) return false;
@@ -1190,160 +1231,341 @@ function InsurerEnvironment({ onBack }) {
       return true;
     });
 
-    const totalEmails = filteredCampaigns.reduce((s, c) => s + c.emails.sent, 0);
-    const totalClicks = filteredCampaigns.reduce((s, c) => s + c.emails.clicked, 0);
-    const totalTasks = filteredCampaigns.reduce((s, c) => s + c.tasks.total, 0);
-    const doneTasks = filteredCampaigns.reduce((s, c) => s + c.tasks.done, 0);
+    // Aggregate stats
+    const allBrokerData = filteredCampaigns.flatMap(c => c.brokers);
+    const totalEmails = allBrokerData.reduce((s, b) => s + b.sent, 0);
+    const totalClicks = allBrokerData.reduce((s, b) => s + b.clicked, 0);
+    const totalTasks = allBrokerData.reduce((s, b) => s + b.tasks.total, 0);
+    const doneTasks = allBrokerData.reduce((s, b) => s + b.tasks.done, 0);
+    const overdueBrokers = allBrokerData.filter(b => b.status === "overdue");
+    const notLaunchedBrokers = allBrokerData.filter(b => b.status === "not_launched");
+
+    // Status color/icon helpers
+    const statusConfig = {
+      overdue: { color: colors.danger, bg: colors.dangerBg, label: "Overdue", icon: AlertCircle },
+      not_launched: { color: "#D97706", bg: colors.warningBg, label: "Not Launched", icon: Clock },
+      launched: { color: colors.info, bg: colors.infoBg, label: "Launched", icon: Send },
+      completed: { color: colors.success, bg: colors.successBg, label: "Completed", icon: CheckCircle2 },
+    };
+
+    const sortBrokers = (brokers) => {
+      const statusPriority = { overdue: 0, not_launched: 1, launched: 2, completed: 3 };
+      let filtered = brokerStatusFilter ? brokers.filter(b => b.status === brokerStatusFilter) : brokers;
+      if (filterAM) {
+        filtered = filtered.filter(b => {
+          const ams = getBrokerAMs(b.brokerId);
+          return ams.some(a => a.name === filterAM);
+        });
+      }
+      return [...filtered].sort((a, b) => {
+        if (brokerSortBy === "status") return (statusPriority[a.status] ?? 9) - (statusPriority[b.status] ?? 9);
+        if (brokerSortBy === "name") return a.brokerName.localeCompare(b.brokerName);
+        if (brokerSortBy === "tasks") return (b.tasks.overdue + b.tasks.pending) - (a.tasks.overdue + a.tasks.pending);
+        if (brokerSortBy === "emails") return b.clicked - a.clicked;
+        return 0;
+      });
+    };
 
     return (
       <div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
           <div>
             <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: colors.text }}>Campaign Dashboard</h2>
-            <p style={{ margin: "4px 0 0", fontSize: 13, color: colors.textSecondary }}>Monitor all running branded campaigns and broker performance</p>
+            <p style={{ margin: "4px 0 0", fontSize: 13, color: colors.textSecondary }}>Monitor campaigns, spot issues, and follow up on broker performance</p>
           </div>
         </div>
 
-        {/* Stats */}
-        <div style={{ display: "flex", gap: 14, marginBottom: 24 }}>
+        {/* Stats Row */}
+        <div style={{ display: "flex", gap: 14, marginBottom: 20 }}>
           <StatCard icon={Layers} label="Active Campaigns" value={CAMPAIGNS.filter(c => c.status === "active").length} color={colors.primary} />
           <StatCard icon={Send} label="Emails Sent" value={totalEmails.toLocaleString()} color={colors.info} />
           <StatCard icon={MousePointerClick} label="Total Clicks" value={totalClicks.toLocaleString()} color={colors.success} />
-          <StatCard icon={ListChecks} label="Tasks Completed" value={`${doneTasks}/${totalTasks}`} color={colors.warning} />
+          <StatCard icon={ListChecks} label="Tasks Done" value={`${doneTasks}/${totalTasks}`} color={colors.warning} />
         </div>
 
+        {/* Attention Banner */}
+        {(overdueBrokers.length > 0 || notLaunchedBrokers.length > 0) && (
+          <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
+            {overdueBrokers.length > 0 && (
+              <div style={{
+                flex: 1, padding: "14px 18px", borderRadius: 10, background: colors.dangerBg,
+                border: `1px solid ${colors.danger}30`, display: "flex", alignItems: "center", gap: 12,
+              }}>
+                <div style={{ width: 36, height: 36, borderRadius: 8, background: `${colors.danger}20`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <AlertCircle size={18} color={colors.danger} />
+                </div>
+                <div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: colors.danger }}>{overdueBrokers.length}</div>
+                  <div style={{ fontSize: 12, color: colors.danger }}>Brokers overdue on tasks</div>
+                </div>
+                <button onClick={() => { setBrokerStatusFilter("overdue"); setExpandedCampaign(filteredCampaigns.find(c => c.brokers.some(b => b.status === "overdue"))?.id || null); }} style={{
+                  marginLeft: "auto", padding: "6px 14px", borderRadius: 6, border: `1px solid ${colors.danger}40`,
+                  background: colors.white, color: colors.danger, fontSize: 12, fontWeight: 600, cursor: "pointer",
+                }}>Show all</button>
+              </div>
+            )}
+            {notLaunchedBrokers.length > 0 && (
+              <div style={{
+                flex: 1, padding: "14px 18px", borderRadius: 10, background: colors.warningBg,
+                border: `1px solid ${colors.warning}30`, display: "flex", alignItems: "center", gap: 12,
+              }}>
+                <div style={{ width: 36, height: 36, borderRadius: 8, background: `${colors.warning}20`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Clock size={18} color="#D97706" />
+                </div>
+                <div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: "#D97706" }}>{notLaunchedBrokers.length}</div>
+                  <div style={{ fontSize: 12, color: "#D97706" }}>Brokers haven't launched yet</div>
+                </div>
+                <button onClick={() => { setBrokerStatusFilter("not_launched"); setExpandedCampaign(filteredCampaigns.find(c => c.brokers.some(b => b.status === "not_launched"))?.id || null); }} style={{
+                  marginLeft: "auto", padding: "6px 14px", borderRadius: 6, border: `1px solid ${colors.warning}40`,
+                  background: colors.white, color: "#D97706", fontSize: 12, fontWeight: 600, cursor: "pointer",
+                }}>Show all</button>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Filters */}
-        <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
           <FilterDropdown label="Campaign" options={CAMPAIGNS.map(c => c.name)} value={filterCampaign ? CAMPAIGNS.find(c => c.id === filterCampaign)?.name : ""} onChange={v => setFilterCampaign(v ? CAMPAIGNS.find(c => c.name === v)?.id : "")} />
-          <FilterDropdown label="Status" options={["active", "completed", "scheduled"]} value={filterStatus} onChange={setFilterStatus} />
+          <FilterDropdown label="Campaign Status" options={["active", "completed", "scheduled"]} value={filterStatus} onChange={setFilterStatus} />
           <FilterDropdown label="Account Manager" options={allAccountManagers} value={filterAM} onChange={setFilterAM} />
+          <FilterDropdown label="Broker Status" options={["overdue", "not_launched", "launched", "completed"]} value={brokerStatusFilter} onChange={setBrokerStatusFilter} />
+          {(filterCampaign || filterStatus || filterAM || brokerStatusFilter) && (
+            <button onClick={() => { setFilterCampaign(""); setFilterStatus(""); setFilterAM(""); setBrokerStatusFilter(""); }} style={{
+              padding: "8px 14px", borderRadius: 8, border: "none", background: colors.dangerBg,
+              color: colors.danger, fontSize: 12, fontWeight: 600, cursor: "pointer",
+            }}>Clear all filters</button>
+          )}
         </div>
 
         {/* Campaign Cards */}
-        <div style={{ display: "grid", gap: 16 }}>
-          {filteredCampaigns.map(campaign => (
-            <div key={campaign.id} style={{ background: colors.white, borderRadius: 12, border: `1px solid ${colors.border}`, overflow: "hidden" }}>
-              {/* Campaign Header */}
-              <div style={{ padding: "16px 20px", borderBottom: `1px solid ${colors.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ display: "grid", gap: 12 }}>
+          {filteredCampaigns.map(campaign => {
+            const isExpanded = expandedCampaign === campaign.id;
+            const sortedBrokers = sortBrokers(campaign.brokers);
+            const cOverdue = campaign.brokers.filter(b => b.status === "overdue").length;
+            const cNotLaunched = campaign.brokers.filter(b => b.status === "not_launched").length;
+            const cLaunched = campaign.brokers.filter(b => b.status === "launched").length;
+            const cCompleted = campaign.brokers.filter(b => b.status === "completed").length;
+            const cTotalSent = campaign.brokers.reduce((s, b) => s + b.sent, 0);
+            const cTotalClicked = campaign.brokers.reduce((s, b) => s + b.clicked, 0);
+            const cTasksDone = campaign.brokers.reduce((s, b) => s + b.tasks.done, 0);
+            const cTasksTotal = campaign.brokers.reduce((s, b) => s + b.tasks.total, 0);
+            const taskPct = cTasksTotal ? Math.round(cTasksDone / cTasksTotal * 100) : 0;
+
+            return (
+              <div key={campaign.id} style={{ background: colors.white, borderRadius: 12, border: `1px solid ${cOverdue > 0 ? colors.danger + "40" : colors.border}`, overflow: "hidden" }}>
+                {/* Compact Campaign Header — clickable */}
+                <div onClick={() => setExpandedCampaign(isExpanded ? null : campaign.id)} style={{
+                  padding: "14px 20px", cursor: "pointer", display: "flex", alignItems: "center", gap: 16,
+                  background: isExpanded ? "#FAFBFF" : colors.white, transition: "background 0.15s",
+                }}>
+                  {/* Icon + Name */}
                   <div style={{
-                    width: 40, height: 40, borderRadius: 10,
+                    width: 36, height: 36, borderRadius: 8, flexShrink: 0,
                     background: campaign.type === "Life" ? colors.successBg : colors.infoBg,
                     display: "flex", alignItems: "center", justifyContent: "center",
                   }}>
-                    <Shield size={18} color={campaign.type === "Life" ? colors.success : colors.info} />
+                    <Shield size={16} color={campaign.type === "Life" ? colors.success : colors.info} />
                   </div>
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: 15, color: colors.text }}>{campaign.name}</div>
-                    <div style={{ fontSize: 12, color: colors.textSecondary }}>{campaign.insurer} · {campaign.type} · Week {campaign.week}</div>
+                  <div style={{ minWidth: 200 }}>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: colors.text }}>{campaign.name}</div>
+                    <div style={{ fontSize: 11, color: colors.textSecondary }}>{campaign.insurer} · {campaign.type} · W{campaign.week}</div>
                   </div>
-                </div>
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <Badge variant={campaign.status === "active" ? "success" : campaign.status === "completed" ? "muted" : "warning"}>
-                    {campaign.status}
-                  </Badge>
-                </div>
-              </div>
 
-              {/* Email & Task Metrics */}
-              <div style={{ padding: "12px 20px", display: "flex", gap: 20, borderBottom: `1px solid ${colors.borderLight}` }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
-                  <Send size={13} color={colors.info} />
-                  <span style={{ color: colors.textSecondary }}>Sent:</span>
-                  <strong style={{ color: colors.text }}>{campaign.emails.sent.toLocaleString()}</strong>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
-                  <Eye size={13} color={colors.warning} />
-                  <span style={{ color: colors.textSecondary }}>Opened:</span>
-                  <strong style={{ color: colors.text }}>{campaign.emails.opened.toLocaleString()}</strong>
-                  <span style={{ color: colors.textMuted }}>({campaign.emails.sent ? Math.round(campaign.emails.opened / campaign.emails.sent * 100) : 0}%)</span>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
-                  <MousePointerClick size={13} color={colors.success} />
-                  <span style={{ color: colors.textSecondary }}>Clicked:</span>
-                  <strong style={{ color: colors.text }}>{campaign.emails.clicked.toLocaleString()}</strong>
-                  <span style={{ color: colors.textMuted }}>({campaign.emails.sent ? Math.round(campaign.emails.clicked / campaign.emails.sent * 100) : 0}%)</span>
-                </div>
-                <div style={{ marginLeft: "auto", display: "flex", gap: 12, fontSize: 12 }}>
-                  <span style={{ display: "flex", alignItems: "center", gap: 4 }}><CheckCircle2 size={12} color={colors.success} /> {campaign.tasks.done} done</span>
-                  <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Forward size={12} color={colors.info} /> {campaign.tasks.delegated} delegated</span>
-                  <span style={{ display: "flex", alignItems: "center", gap: 4 }}><PhoneCall size={12} color={colors.warning} /> {campaign.tasks.called} called</span>
-                  <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Clock size={12} color={colors.textMuted} /> {campaign.tasks.pending} pending</span>
-                </div>
-              </div>
+                  {/* Status summary pills */}
+                  <div style={{ display: "flex", gap: 6, flex: 1 }}>
+                    {cOverdue > 0 && <Badge variant="danger">{cOverdue} overdue</Badge>}
+                    {cNotLaunched > 0 && <Badge variant="warning">{cNotLaunched} not launched</Badge>}
+                    <Badge variant="info">{cLaunched} active</Badge>
+                    {cCompleted > 0 && <Badge variant="success">{cCompleted} done</Badge>}
+                  </div>
 
-              {/* Broker Rows */}
-              <div>
-                {campaign.brokers.map((brokerId, bi) => {
-                  const broker = getBrokerById(brokerId);
-                  const ams = getBrokerAMs(brokerId);
-                  const enrichment = ENRICHMENT_DATA[brokerId];
-                  if (!broker) return null;
-                  // Simulated per-broker metrics
-                  const brokerEmails = { sent: Math.round(campaign.emails.sent / campaign.brokers.length * (0.7 + Math.random() * 0.6)), opened: 0, clicked: 0 };
-                  brokerEmails.opened = Math.round(brokerEmails.sent * (0.55 + Math.random() * 0.2));
-                  brokerEmails.clicked = Math.round(brokerEmails.opened * (0.35 + Math.random() * 0.25));
-                  const brokerTasks = { done: Math.floor(Math.random() * 8) + 2, delegated: Math.floor(Math.random() * 4), called: Math.floor(Math.random() * 3), pending: Math.floor(Math.random() * 2) };
-
-                  return (
-                    <div key={brokerId} style={{
-                      display: "flex", alignItems: "center", padding: "10px 20px", gap: 16,
-                      borderBottom: bi < campaign.brokers.length - 1 ? `1px solid ${colors.borderLight}` : "none",
-                      fontSize: 12,
-                    }}>
-                      {/* Broker */}
-                      <div style={{ width: 180, display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-                        <div style={{
-                          width: 28, height: 28, borderRadius: 6, background: colors.primaryLight,
-                          display: "flex", alignItems: "center", justifyContent: "center",
-                          fontWeight: 700, fontSize: 11, color: colors.primary,
-                        }}>{broker.name[0]}</div>
-                        <div>
-                          <div style={{ fontWeight: 600, color: colors.text, fontSize: 12 }}>{broker.name}</div>
-                          <div style={{ fontSize: 10, color: colors.textMuted }}>{broker.city}</div>
-                        </div>
+                  {/* Quick metrics */}
+                  <div style={{ display: "flex", gap: 16, alignItems: "center", flexShrink: 0 }}>
+                    <div style={{ textAlign: "center" }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: colors.text }}>{cTotalSent > 0 ? Math.round(cTotalClicked / cTotalSent * 100) : 0}%</div>
+                      <div style={{ fontSize: 10, color: colors.textMuted }}>CTR</div>
+                    </div>
+                    <div style={{ width: 80 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
+                        <span style={{ fontSize: 10, color: colors.textMuted }}>Tasks</span>
+                        <span style={{ fontSize: 10, fontWeight: 600, color: taskPct >= 75 ? colors.success : taskPct >= 40 ? colors.warning : colors.danger }}>{taskPct}%</span>
                       </div>
-
-                      {/* Email metrics */}
-                      <div style={{ display: "flex", gap: 12, flex: 1 }}>
-                        <span style={{ color: colors.textSecondary }}><strong>{brokerEmails.sent}</strong> sent</span>
-                        <span style={{ color: colors.textSecondary }}><strong>{brokerEmails.opened}</strong> opened</span>
-                        <span style={{ color: colors.success }}><strong>{brokerEmails.clicked}</strong> clicked</span>
-                      </div>
-
-                      {/* Tasks */}
-                      <div style={{ display: "flex", gap: 8 }}>
-                        <Badge variant="success" size="xs">{brokerTasks.done} done</Badge>
-                        <Badge variant="info" size="xs">{brokerTasks.delegated} del.</Badge>
-                        <Badge variant="warning" size="xs">{brokerTasks.called} called</Badge>
-                        {brokerTasks.pending > 0 && <Badge variant="muted" size="xs">{brokerTasks.pending} pend.</Badge>}
-                      </div>
-
-                      {/* Account Managers */}
-                      <div style={{ width: 200, flexShrink: 0 }}>
-                        {ams.length > 0 ? (
-                          <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                            {ams.slice(0, 3).map((am, ai) => (
-                              <span key={ai} title={`${am.name} — ${am.role}`} style={{
-                                display: "inline-flex", alignItems: "center", gap: 3,
-                                padding: "2px 6px", borderRadius: 4, fontSize: 10,
-                                background: am.division === "Life" ? colors.successBg : am.division === "Non-Life" ? colors.infoBg : colors.warningBg,
-                                color: am.division === "Life" ? colors.success : am.division === "Non-Life" ? colors.info : colors.warning,
-                                fontWeight: 500,
-                              }}>{am.name.split(" ")[0]} {am.name.split(" ").slice(-1)[0][0]}.</span>
-                            ))}
-                            {ams.length > 3 && <span style={{ fontSize: 10, color: colors.textMuted }}>+{ams.length - 3}</span>}
-                          </div>
-                        ) : (
-                          <span style={{ fontSize: 11, color: colors.textMuted }}>No AM assigned</span>
-                        )}
+                      <div style={{ height: 4, borderRadius: 2, background: "#E2E8F0" }}>
+                        <div style={{ width: `${taskPct}%`, height: "100%", borderRadius: 2, background: taskPct >= 75 ? colors.success : taskPct >= 40 ? colors.warning : colors.danger }} />
                       </div>
                     </div>
-                  );
-                })}
+                    <div style={{ fontSize: 11, color: colors.textSecondary }}>{campaign.brokers.length} brokers</div>
+                    <Badge variant={campaign.status === "active" ? "success" : campaign.status === "completed" ? "muted" : "warning"}>
+                      {campaign.status}
+                    </Badge>
+                    {isExpanded ? <ChevronUp size={16} color={colors.textMuted} /> : <ChevronDown size={16} color={colors.textMuted} />}
+                  </div>
+                </div>
+
+                {/* Expanded Broker Table */}
+                {isExpanded && (
+                  <div>
+                    {/* Sort bar */}
+                    <div style={{ padding: "8px 20px", background: "#F8FAFC", borderTop: `1px solid ${colors.border}`, borderBottom: `1px solid ${colors.border}`, display: "flex", alignItems: "center", gap: 8, fontSize: 11 }}>
+                      <span style={{ color: colors.textSecondary, marginRight: 4 }}>Sort by:</span>
+                      {[
+                        { id: "status", label: "Status (priority)" },
+                        { id: "name", label: "Name" },
+                        { id: "tasks", label: "Pending tasks" },
+                        { id: "emails", label: "Clicks" },
+                      ].map(s => (
+                        <button key={s.id} onClick={() => setBrokerSortBy(s.id)} style={{
+                          padding: "3px 10px", borderRadius: 4, border: "none", fontSize: 11, cursor: "pointer",
+                          background: brokerSortBy === s.id ? colors.primaryLight : "transparent",
+                          color: brokerSortBy === s.id ? colors.primary : colors.textSecondary,
+                          fontWeight: brokerSortBy === s.id ? 600 : 400,
+                        }}>{s.label}</button>
+                      ))}
+                      <span style={{ marginLeft: "auto", color: colors.textMuted }}>{sortedBrokers.length} of {campaign.brokers.length} brokers shown</span>
+                    </div>
+
+                    {/* Broker rows */}
+                    <div style={{ maxHeight: 480, overflow: "auto" }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                        <thead>
+                          <tr style={{ background: "#FDFDFE" }}>
+                            <th style={{ padding: "8px 20px", textAlign: "left", fontWeight: 600, color: colors.textSecondary, fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5, width: "4%" }}>Status</th>
+                            <th style={{ padding: "8px 10px", textAlign: "left", fontWeight: 600, color: colors.textSecondary, fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5, width: "18%" }}>Broker</th>
+                            <th style={{ padding: "8px 10px", textAlign: "left", fontWeight: 600, color: colors.textSecondary, fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5, width: "14%" }}>Emails</th>
+                            <th style={{ padding: "8px 10px", textAlign: "left", fontWeight: 600, color: colors.textSecondary, fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5, width: "20%" }}>Tasks</th>
+                            <th style={{ padding: "8px 10px", textAlign: "left", fontWeight: 600, color: colors.textSecondary, fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5, width: "10%" }}>Last Active</th>
+                            <th style={{ padding: "8px 10px", textAlign: "left", fontWeight: 600, color: colors.textSecondary, fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5, width: "20%" }}>Account Manager</th>
+                            <th style={{ padding: "8px 10px", textAlign: "left", fontWeight: 600, color: colors.textSecondary, fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5, width: "6%" }}></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {sortedBrokers.map((bd, bi) => {
+                            const sc = statusConfig[bd.status];
+                            const ams = getBrokerAMs(bd.brokerId);
+                            const taskPctBroker = bd.tasks.total ? Math.round(bd.tasks.done / bd.tasks.total * 100) : 0;
+                            return (
+                              <tr key={bd.brokerId} style={{
+                                borderBottom: `1px solid ${colors.borderLight}`,
+                                background: bd.status === "overdue" ? `${colors.danger}05` : bd.status === "not_launched" ? `${colors.warning}05` : "transparent",
+                              }}>
+                                {/* Status indicator */}
+                                <td style={{ padding: "10px 20px" }}>
+                                  <div title={sc.label} style={{
+                                    width: 26, height: 26, borderRadius: 6, background: sc.bg,
+                                    display: "flex", alignItems: "center", justifyContent: "center",
+                                  }}>
+                                    <sc.icon size={13} color={sc.color} />
+                                  </div>
+                                </td>
+
+                                {/* Broker name */}
+                                <td style={{ padding: "10px 10px" }}>
+                                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                    <div style={{
+                                      width: 26, height: 26, borderRadius: 6, background: colors.primaryLight,
+                                      display: "flex", alignItems: "center", justifyContent: "center",
+                                      fontWeight: 700, fontSize: 10, color: colors.primary, flexShrink: 0,
+                                    }}>{bd.brokerName[0]}</div>
+                                    <div>
+                                      <div style={{ fontWeight: 600, color: colors.text, fontSize: 12 }}>{bd.brokerName}</div>
+                                      <div style={{ fontSize: 10, color: colors.textMuted }}>{bd.city}</div>
+                                    </div>
+                                  </div>
+                                </td>
+
+                                {/* Emails */}
+                                <td style={{ padding: "10px 10px" }}>
+                                  {bd.sent > 0 ? (
+                                    <div>
+                                      <div style={{ display: "flex", gap: 8, fontSize: 11, marginBottom: 3 }}>
+                                        <span style={{ color: colors.textSecondary }}>{bd.sent} sent</span>
+                                        <span style={{ color: colors.success, fontWeight: 600 }}>{bd.clicked} clicks</span>
+                                      </div>
+                                      <div style={{ height: 3, borderRadius: 2, background: "#E2E8F0", width: 80 }}>
+                                        <div style={{ width: `${bd.sent ? Math.round(bd.clicked / bd.sent * 100) : 0}%`, height: "100%", borderRadius: 2, background: colors.success }} />
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <span style={{ fontSize: 11, color: colors.textMuted }}>—</span>
+                                  )}
+                                </td>
+
+                                {/* Tasks */}
+                                <td style={{ padding: "10px 10px" }}>
+                                  {bd.tasks.total > 0 ? (
+                                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                      <div style={{ display: "flex", gap: 3 }}>
+                                        {bd.tasks.done > 0 && <Badge variant="success" size="xs">{bd.tasks.done}</Badge>}
+                                        {bd.tasks.delegated > 0 && <Badge variant="info" size="xs">{bd.tasks.delegated} del</Badge>}
+                                        {bd.tasks.called > 0 && <Badge variant="warning" size="xs">{bd.tasks.called} call</Badge>}
+                                        {bd.tasks.overdue > 0 && <Badge variant="danger" size="xs">{bd.tasks.overdue} overdue</Badge>}
+                                        {bd.tasks.pending > 0 && <Badge variant="muted" size="xs">{bd.tasks.pending} pend</Badge>}
+                                      </div>
+                                      <span style={{ fontSize: 10, color: colors.textMuted, flexShrink: 0 }}>{taskPctBroker}%</span>
+                                    </div>
+                                  ) : (
+                                    <span style={{ fontSize: 11, color: colors.textMuted }}>—</span>
+                                  )}
+                                </td>
+
+                                {/* Last active */}
+                                <td style={{ padding: "10px 10px" }}>
+                                  <div>
+                                    {bd.lastActivity ? (
+                                      <span style={{ fontSize: 11, color: colors.textSecondary }}>{bd.lastActivity}</span>
+                                    ) : (
+                                      <span style={{ fontSize: 11, color: colors.textMuted, fontStyle: "italic" }}>Never</span>
+                                    )}
+                                    {bd.daysOverdue > 0 && (
+                                      <div style={{ fontSize: 10, color: colors.danger, fontWeight: 600, marginTop: 2 }}>{bd.daysOverdue}d overdue</div>
+                                    )}
+                                  </div>
+                                </td>
+
+                                {/* Account Managers */}
+                                <td style={{ padding: "10px 10px" }}>
+                                  {ams.length > 0 ? (
+                                    <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+                                      {ams.slice(0, 2).map((am, ai) => (
+                                        <span key={ai} title={`${am.name} — ${am.role}\n${am.email}\n${am.phone}`} style={{
+                                          display: "inline-flex", alignItems: "center", gap: 3,
+                                          padding: "2px 6px", borderRadius: 4, fontSize: 10, fontWeight: 500,
+                                          background: am.division === "Life" ? colors.successBg : am.division === "Non-Life" ? colors.infoBg : colors.warningBg,
+                                          color: am.division === "Life" ? colors.success : am.division === "Non-Life" ? colors.info : colors.warning,
+                                          cursor: "default",
+                                        }}>{am.name.split(" ")[0]} {am.name.split(" ").slice(-1)[0][0]}.</span>
+                                      ))}
+                                      {ams.length > 2 && <span style={{ fontSize: 9, color: colors.textMuted }}>+{ams.length - 2}</span>}
+                                    </div>
+                                  ) : <span style={{ fontSize: 10, color: colors.textMuted }}>—</span>}
+                                </td>
+
+                                {/* Action */}
+                                <td style={{ padding: "10px 10px" }}>
+                                  {(bd.status === "overdue" || bd.status === "not_launched") && (
+                                    <button title="Send reminder" style={{
+                                      width: 26, height: 26, borderRadius: 6, border: `1px solid ${bd.status === "overdue" ? colors.danger : colors.warning}40`,
+                                      background: bd.status === "overdue" ? colors.dangerBg : colors.warningBg,
+                                      display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
+                                    }}>
+                                      <Send size={11} color={bd.status === "overdue" ? colors.danger : "#D97706"} />
+                                    </button>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     );
@@ -1531,7 +1753,7 @@ function InsurerEnvironment({ onBack }) {
     });
 
     const getCampaignsForBrokerWeek = (brokerId, week) => {
-      return CAMPAIGNS.filter(c => c.week === week && c.brokers.includes(brokerId));
+      return CAMPAIGNS.filter(c => c.week === week && c.brokerIds.includes(brokerId));
     };
 
     const toggleWeekSelection = (brokerId, week) => {
