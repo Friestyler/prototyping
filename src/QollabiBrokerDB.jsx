@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { Search, ChevronDown, ChevronUp, Filter, RefreshCw, Plus, X, ExternalLink, Building2, Phone, Mail, Globe, MapPin, FileText, Users, BarChart3, Zap, Clock, CheckCircle2, AlertCircle, ChevronLeft, ChevronRight, ArrowUpDown, Settings, Database, TrendingUp, UserPlus, Shield, Eye, Edit3, Save, Loader2, Newspaper, Share2, PieChart, Target, Sparkles, MessageCircle, ThumbsUp, Repeat2, TrendingDown, Heart, Activity } from "lucide-react";
+import { Search, ChevronDown, ChevronUp, Filter, RefreshCw, Plus, X, ExternalLink, Building2, Phone, Mail, Globe, MapPin, FileText, Users, BarChart3, Zap, Clock, CheckCircle2, AlertCircle, ChevronLeft, ChevronRight, ArrowUpDown, Settings, Database, TrendingUp, UserPlus, Shield, Eye, Edit3, Save, Loader2, Newspaper, Share2, PieChart, Target, Sparkles, MessageCircle, ThumbsUp, Repeat2, TrendingDown, Heart, Activity, ArrowLeft, Download, Upload, Calendar, Send, MousePointerClick, ListChecks, PhoneCall, Forward, CalendarDays, ShoppingCart, Layers } from "lucide-react";
 
 // ── Sample Data (loaded from Google Sheets OVIO-Broker DATABASE) ─────────
 const SAMPLE_BROKERS = [
@@ -1123,8 +1123,664 @@ function FilterDropdown({ label, options, value, onChange, icon: Icon }) {
   );
 }
 
+// ── Campaign Sample Data ────────────────────────────────────────────────
+const CAMPAIGNS = [
+  { id: "C001", name: "Spring Non-Life Promo", type: "Non-Life", insurer: "AXA Belgium", status: "active", week: 12, year: 2026, brokers: ["476238978", "345678901", "123456789"], emails: { sent: 2450, opened: 1680, clicked: 890 }, tasks: { total: 45, done: 28, delegated: 8, called: 6, pending: 3 } },
+  { id: "C002", name: "Pension Awareness Q1", type: "Life", insurer: "AG Insurance", status: "active", week: 10, year: 2026, brokers: ["430316833", "512789345", "123456789", "345678901"], emails: { sent: 3200, opened: 2100, clicked: 1250 }, tasks: { total: 62, done: 41, delegated: 12, called: 5, pending: 4 } },
+  { id: "C003", name: "SME Fire Package", type: "Non-Life", insurer: "Ethias", status: "active", week: 13, year: 2026, brokers: ["430316833", "512789345", "234567890"], emails: { sent: 1800, opened: 1120, clicked: 560 }, tasks: { total: 38, done: 20, delegated: 10, called: 5, pending: 3 } },
+  { id: "C004", name: "Investment Life Launch", type: "Life", insurer: "Athora", status: "completed", week: 8, year: 2026, brokers: ["476238978", "123456789"], emails: { sent: 1200, opened: 890, clicked: 445 }, tasks: { total: 24, done: 24, delegated: 0, called: 0, pending: 0 } },
+  { id: "C005", name: "Fleet Insurance Drive", type: "Non-Life", insurer: "Baloise", status: "active", week: 14, year: 2026, brokers: ["832851798", "512789345", "123456789"], emails: { sent: 950, opened: 620, clicked: 310 }, tasks: { total: 30, done: 12, delegated: 6, called: 8, pending: 4 } },
+  { id: "C006", name: "Health Top-Up Campaign", type: "Life", insurer: "Vivium", status: "scheduled", week: 16, year: 2026, brokers: ["476238978", "345678901"], emails: { sent: 0, opened: 0, clicked: 0 }, tasks: { total: 0, done: 0, delegated: 0, called: 0, pending: 0 } },
+  { id: "C007", name: "Home Insurance Renewal", type: "Non-Life", insurer: "AG Insurance", status: "active", week: 11, year: 2026, brokers: ["512789345", "123456789", "234567890", "345678901"], emails: { sent: 4100, opened: 2870, clicked: 1640 }, tasks: { total: 78, done: 52, delegated: 15, called: 7, pending: 4 } },
+];
+
+// ── Insurer Environment ─────────────────────────────────────────────────
+function InsurerEnvironment({ onBack }) {
+  const [activeTab, setActiveTab] = useState("campaigns");
+  const [filterAM, setFilterAM] = useState("");
+  const [filterCampaign, setFilterCampaign] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
+  const [searchBroker, setSearchBroker] = useState("");
+  const [selectedWeeks, setSelectedWeeks] = useState({});
+  const [bookingBrokers, setBookingBrokers] = useState([]);
+  const [bookingType, setBookingType] = useState("");
+  const [bookingRegion, setBookingRegion] = useState("");
+  const [bookingInterest, setBookingInterest] = useState("");
+  const [showBookingModal, setShowBookingModal] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
+
+  // Collect all account managers from INSURER_CONTACTS
+  const allAccountManagers = useMemo(() => {
+    const ams = new Set();
+    Object.values(INSURER_CONTACTS).forEach(insurers => {
+      Object.values(insurers).forEach(contacts => {
+        contacts.forEach(c => ams.add(c.name));
+      });
+    });
+    return [...ams].sort();
+  }, []);
+
+  // Get AM for a broker
+  const getBrokerAMs = (brokerId) => {
+    const insurers = INSURER_CONTACTS[brokerId];
+    if (!insurers) return [];
+    const ams = [];
+    Object.entries(insurers).forEach(([, contacts]) => {
+      contacts.forEach(c => {
+        if (!ams.find(a => a.name === c.name)) ams.push(c);
+      });
+    });
+    return ams;
+  };
+
+  const getBrokerById = (id) => SAMPLE_BROKERS.find(b => b.id === id);
+
+  // Page 1: Campaign Dashboard
+  const renderCampaigns = () => {
+    const filteredCampaigns = CAMPAIGNS.filter(c => {
+      if (filterStatus && c.status !== filterStatus) return false;
+      if (filterCampaign && c.id !== filterCampaign) return false;
+      if (filterAM) {
+        const hasAM = c.brokers.some(bid => {
+          const ams = getBrokerAMs(bid);
+          return ams.some(a => a.name === filterAM);
+        });
+        if (!hasAM) return false;
+      }
+      return true;
+    });
+
+    const totalEmails = filteredCampaigns.reduce((s, c) => s + c.emails.sent, 0);
+    const totalClicks = filteredCampaigns.reduce((s, c) => s + c.emails.clicked, 0);
+    const totalTasks = filteredCampaigns.reduce((s, c) => s + c.tasks.total, 0);
+    const doneTasks = filteredCampaigns.reduce((s, c) => s + c.tasks.done, 0);
+
+    return (
+      <div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
+          <div>
+            <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: colors.text }}>Campaign Dashboard</h2>
+            <p style={{ margin: "4px 0 0", fontSize: 13, color: colors.textSecondary }}>Monitor all running branded campaigns and broker performance</p>
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div style={{ display: "flex", gap: 14, marginBottom: 24 }}>
+          <StatCard icon={Layers} label="Active Campaigns" value={CAMPAIGNS.filter(c => c.status === "active").length} color={colors.primary} />
+          <StatCard icon={Send} label="Emails Sent" value={totalEmails.toLocaleString()} color={colors.info} />
+          <StatCard icon={MousePointerClick} label="Total Clicks" value={totalClicks.toLocaleString()} color={colors.success} />
+          <StatCard icon={ListChecks} label="Tasks Completed" value={`${doneTasks}/${totalTasks}`} color={colors.warning} />
+        </div>
+
+        {/* Filters */}
+        <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
+          <FilterDropdown label="Campaign" options={CAMPAIGNS.map(c => c.name)} value={filterCampaign ? CAMPAIGNS.find(c => c.id === filterCampaign)?.name : ""} onChange={v => setFilterCampaign(v ? CAMPAIGNS.find(c => c.name === v)?.id : "")} />
+          <FilterDropdown label="Status" options={["active", "completed", "scheduled"]} value={filterStatus} onChange={setFilterStatus} />
+          <FilterDropdown label="Account Manager" options={allAccountManagers} value={filterAM} onChange={setFilterAM} />
+        </div>
+
+        {/* Campaign Cards */}
+        <div style={{ display: "grid", gap: 16 }}>
+          {filteredCampaigns.map(campaign => (
+            <div key={campaign.id} style={{ background: colors.white, borderRadius: 12, border: `1px solid ${colors.border}`, overflow: "hidden" }}>
+              {/* Campaign Header */}
+              <div style={{ padding: "16px 20px", borderBottom: `1px solid ${colors.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{
+                    width: 40, height: 40, borderRadius: 10,
+                    background: campaign.type === "Life" ? colors.successBg : colors.infoBg,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>
+                    <Shield size={18} color={campaign.type === "Life" ? colors.success : colors.info} />
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 15, color: colors.text }}>{campaign.name}</div>
+                    <div style={{ fontSize: 12, color: colors.textSecondary }}>{campaign.insurer} · {campaign.type} · Week {campaign.week}</div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <Badge variant={campaign.status === "active" ? "success" : campaign.status === "completed" ? "muted" : "warning"}>
+                    {campaign.status}
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Email & Task Metrics */}
+              <div style={{ padding: "12px 20px", display: "flex", gap: 20, borderBottom: `1px solid ${colors.borderLight}` }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
+                  <Send size={13} color={colors.info} />
+                  <span style={{ color: colors.textSecondary }}>Sent:</span>
+                  <strong style={{ color: colors.text }}>{campaign.emails.sent.toLocaleString()}</strong>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
+                  <Eye size={13} color={colors.warning} />
+                  <span style={{ color: colors.textSecondary }}>Opened:</span>
+                  <strong style={{ color: colors.text }}>{campaign.emails.opened.toLocaleString()}</strong>
+                  <span style={{ color: colors.textMuted }}>({campaign.emails.sent ? Math.round(campaign.emails.opened / campaign.emails.sent * 100) : 0}%)</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
+                  <MousePointerClick size={13} color={colors.success} />
+                  <span style={{ color: colors.textSecondary }}>Clicked:</span>
+                  <strong style={{ color: colors.text }}>{campaign.emails.clicked.toLocaleString()}</strong>
+                  <span style={{ color: colors.textMuted }}>({campaign.emails.sent ? Math.round(campaign.emails.clicked / campaign.emails.sent * 100) : 0}%)</span>
+                </div>
+                <div style={{ marginLeft: "auto", display: "flex", gap: 12, fontSize: 12 }}>
+                  <span style={{ display: "flex", alignItems: "center", gap: 4 }}><CheckCircle2 size={12} color={colors.success} /> {campaign.tasks.done} done</span>
+                  <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Forward size={12} color={colors.info} /> {campaign.tasks.delegated} delegated</span>
+                  <span style={{ display: "flex", alignItems: "center", gap: 4 }}><PhoneCall size={12} color={colors.warning} /> {campaign.tasks.called} called</span>
+                  <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Clock size={12} color={colors.textMuted} /> {campaign.tasks.pending} pending</span>
+                </div>
+              </div>
+
+              {/* Broker Rows */}
+              <div>
+                {campaign.brokers.map((brokerId, bi) => {
+                  const broker = getBrokerById(brokerId);
+                  const ams = getBrokerAMs(brokerId);
+                  const enrichment = ENRICHMENT_DATA[brokerId];
+                  if (!broker) return null;
+                  // Simulated per-broker metrics
+                  const brokerEmails = { sent: Math.round(campaign.emails.sent / campaign.brokers.length * (0.7 + Math.random() * 0.6)), opened: 0, clicked: 0 };
+                  brokerEmails.opened = Math.round(brokerEmails.sent * (0.55 + Math.random() * 0.2));
+                  brokerEmails.clicked = Math.round(brokerEmails.opened * (0.35 + Math.random() * 0.25));
+                  const brokerTasks = { done: Math.floor(Math.random() * 8) + 2, delegated: Math.floor(Math.random() * 4), called: Math.floor(Math.random() * 3), pending: Math.floor(Math.random() * 2) };
+
+                  return (
+                    <div key={brokerId} style={{
+                      display: "flex", alignItems: "center", padding: "10px 20px", gap: 16,
+                      borderBottom: bi < campaign.brokers.length - 1 ? `1px solid ${colors.borderLight}` : "none",
+                      fontSize: 12,
+                    }}>
+                      {/* Broker */}
+                      <div style={{ width: 180, display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                        <div style={{
+                          width: 28, height: 28, borderRadius: 6, background: colors.primaryLight,
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          fontWeight: 700, fontSize: 11, color: colors.primary,
+                        }}>{broker.name[0]}</div>
+                        <div>
+                          <div style={{ fontWeight: 600, color: colors.text, fontSize: 12 }}>{broker.name}</div>
+                          <div style={{ fontSize: 10, color: colors.textMuted }}>{broker.city}</div>
+                        </div>
+                      </div>
+
+                      {/* Email metrics */}
+                      <div style={{ display: "flex", gap: 12, flex: 1 }}>
+                        <span style={{ color: colors.textSecondary }}><strong>{brokerEmails.sent}</strong> sent</span>
+                        <span style={{ color: colors.textSecondary }}><strong>{brokerEmails.opened}</strong> opened</span>
+                        <span style={{ color: colors.success }}><strong>{brokerEmails.clicked}</strong> clicked</span>
+                      </div>
+
+                      {/* Tasks */}
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <Badge variant="success" size="xs">{brokerTasks.done} done</Badge>
+                        <Badge variant="info" size="xs">{brokerTasks.delegated} del.</Badge>
+                        <Badge variant="warning" size="xs">{brokerTasks.called} called</Badge>
+                        {brokerTasks.pending > 0 && <Badge variant="muted" size="xs">{brokerTasks.pending} pend.</Badge>}
+                      </div>
+
+                      {/* Account Managers */}
+                      <div style={{ width: 200, flexShrink: 0 }}>
+                        {ams.length > 0 ? (
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                            {ams.slice(0, 3).map((am, ai) => (
+                              <span key={ai} title={`${am.name} — ${am.role}`} style={{
+                                display: "inline-flex", alignItems: "center", gap: 3,
+                                padding: "2px 6px", borderRadius: 4, fontSize: 10,
+                                background: am.division === "Life" ? colors.successBg : am.division === "Non-Life" ? colors.infoBg : colors.warningBg,
+                                color: am.division === "Life" ? colors.success : am.division === "Non-Life" ? colors.info : colors.warning,
+                                fontWeight: 500,
+                              }}>{am.name.split(" ")[0]} {am.name.split(" ").slice(-1)[0][0]}.</span>
+                            ))}
+                            {ams.length > 3 && <span style={{ fontSize: 10, color: colors.textMuted }}>+{ams.length - 3}</span>}
+                          </div>
+                        ) : (
+                          <span style={{ fontSize: 11, color: colors.textMuted }}>No AM assigned</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // Page 2: Broker Directory (export/import)
+  const renderBrokerDirectory = () => {
+    const brokers = SAMPLE_BROKERS.filter(b => {
+      if (!searchBroker) return true;
+      const s = searchBroker.toLowerCase();
+      return b.name.toLowerCase().includes(s) || b.id.includes(s) || b.city.toLowerCase().includes(s);
+    });
+
+    const handleExport = () => {
+      const headers = ["VAT Number", "Name", "City", "ZIP", "Street", "Country", "Language", "Legal Form", "Product Types", "Contact 1 Name", "Contact 1 Role", "Contact 1 Email", "Contact 1 Phone", "Contact 2 Name", "Contact 2 Role", "Contact 2 Email", "Contact 2 Phone", "Contact 3 Name", "Contact 3 Role", "Contact 3 Email", "Contact 3 Phone"];
+      const rows = brokers.map(b => {
+        const enrichment = ENRICHMENT_DATA[b.id];
+        const contacts = enrichment?.contacts || [];
+        return [
+          b.id, b.name, b.city, b.zip, b.street, b.country, b.language, b.legalForm, b.productTypes,
+          contacts[0]?.name || "", contacts[0]?.role || "", contacts[0]?.email || "", contacts[0]?.phone || "",
+          contacts[1]?.name || "", contacts[1]?.role || "", contacts[1]?.email || "", contacts[1]?.phone || "",
+          contacts[2]?.name || "", contacts[2]?.role || "", contacts[2]?.email || "", contacts[2]?.phone || "",
+        ];
+      });
+      const csv = [headers, ...rows].map(r => r.map(c => `"${c}"`).join(",")).join("\n");
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "broker_directory_export.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+
+    return (
+      <div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
+          <div>
+            <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: colors.text }}>Broker Directory</h2>
+            <p style={{ margin: "4px 0 0", fontSize: 13, color: colors.textSecondary }}>Export broker data for matching, import account manager assignments</p>
+          </div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <button onClick={handleExport} style={{
+              padding: "10px 18px", borderRadius: 8, border: `1px solid ${colors.border}`,
+              background: colors.white, color: colors.text, fontSize: 13, fontWeight: 600,
+              cursor: "pointer", display: "flex", alignItems: "center", gap: 6,
+            }}>
+              <Download size={16} /> Export CSV
+            </button>
+            <button onClick={() => setImportModalOpen(true)} style={{
+              padding: "10px 18px", borderRadius: 8, border: "none",
+              background: colors.primary, color: colors.white, fontSize: 13, fontWeight: 600,
+              cursor: "pointer", display: "flex", alignItems: "center", gap: 6,
+            }}>
+              <Upload size={16} /> Import Account Managers
+            </button>
+          </div>
+        </div>
+
+        {/* Info card */}
+        <div style={{ padding: 16, borderRadius: 10, background: colors.infoBg, border: `1px solid ${colors.info}20`, marginBottom: 20, display: "flex", gap: 12, alignItems: "flex-start" }}>
+          <AlertCircle size={18} color={colors.info} style={{ marginTop: 2, flexShrink: 0 }} />
+          <div style={{ fontSize: 13, color: colors.text, lineHeight: 1.6 }}>
+            <strong>How it works:</strong> Export the broker list with VAT numbers and contact fields. Match it with your internal CRM, then import a CSV with columns: <code style={{ background: "#E0E7FF", padding: "1px 4px", borderRadius: 3, fontSize: 11 }}>VAT Number, AM Name, AM Division, AM Email, AM Phone</code> to assign account managers per division.
+          </div>
+        </div>
+
+        {/* Search */}
+        <div style={{
+          display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderRadius: 8,
+          border: `1px solid ${colors.border}`, background: colors.white, marginBottom: 16, maxWidth: 400,
+        }}>
+          <Search size={16} color={colors.textMuted} />
+          <input value={searchBroker} onChange={e => setSearchBroker(e.target.value)}
+            placeholder="Search broker..." style={{ border: "none", background: "none", outline: "none", flex: 1, fontSize: 13, color: colors.text }} />
+        </div>
+
+        {/* Table */}
+        <div style={{ background: colors.white, borderRadius: 12, border: `1px solid ${colors.border}`, overflow: "hidden" }}>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+              <thead>
+                <tr style={{ background: "#F8FAFC" }}>
+                  {["VAT Number", "Name", "City", "Language", "Product Types", "Contact Persons", "Account Managers"].map((h, i) => (
+                    <th key={i} style={{ padding: "10px 14px", textAlign: "left", fontWeight: 600, color: colors.textSecondary, fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5, borderBottom: `1px solid ${colors.border}`, whiteSpace: "nowrap" }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {brokers.slice(0, 20).map(broker => {
+                  const enrichment = ENRICHMENT_DATA[broker.id];
+                  const contacts = enrichment?.contacts || [];
+                  const ams = getBrokerAMs(broker.id);
+                  return (
+                    <tr key={broker.id} style={{ borderBottom: `1px solid ${colors.borderLight}` }}>
+                      <td style={{ padding: "10px 14px", fontFamily: "monospace", fontSize: 11, color: colors.textSecondary }}>{broker.id}</td>
+                      <td style={{ padding: "10px 14px", fontWeight: 600, color: colors.text }}>{broker.name}</td>
+                      <td style={{ padding: "10px 14px", color: colors.text }}>{broker.city}</td>
+                      <td style={{ padding: "10px 14px" }}><Badge variant="muted" size="xs">{broker.language}</Badge></td>
+                      <td style={{ padding: "10px 14px" }}>
+                        <div style={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
+                          {broker.productTypes?.split(",").slice(0, 2).map((p, j) => (
+                            <Badge key={j} variant="info" size="xs">{p.trim().replace("Life insurance with investment", "Life+").replace("Life insurance without investment", "Life").replace("Non-life insurance", "Non-life")}</Badge>
+                          ))}
+                        </div>
+                      </td>
+                      <td style={{ padding: "10px 14px" }}>
+                        {contacts.length > 0 ? (
+                          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                            {contacts.slice(0, 2).map((c, ci) => (
+                              <div key={ci} style={{ fontSize: 11 }}>
+                                <span style={{ fontWeight: 500, color: colors.text }}>{c.name}</span>
+                                <span style={{ color: colors.textMuted }}> · {c.email}</span>
+                              </div>
+                            ))}
+                            {contacts.length > 2 && <span style={{ fontSize: 10, color: colors.textMuted }}>+{contacts.length - 2} more</span>}
+                          </div>
+                        ) : <span style={{ color: colors.textMuted }}>—</span>}
+                      </td>
+                      <td style={{ padding: "10px 14px" }}>
+                        {ams.length > 0 ? (
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+                            {ams.slice(0, 3).map((am, ai) => (
+                              <span key={ai} style={{
+                                display: "inline-flex", padding: "2px 6px", borderRadius: 4, fontSize: 10, fontWeight: 500,
+                                background: am.division === "Life" ? colors.successBg : am.division === "Non-Life" ? colors.infoBg : colors.warningBg,
+                                color: am.division === "Life" ? colors.success : am.division === "Non-Life" ? colors.info : colors.warning,
+                              }}>{am.name.split(" ")[0]} · {am.division}</span>
+                            ))}
+                            {ams.length > 3 && <span style={{ fontSize: 10, color: colors.textMuted }}>+{ams.length - 3}</span>}
+                          </div>
+                        ) : <span style={{ color: colors.textMuted, fontSize: 11, fontStyle: "italic" }}>Not assigned</span>}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <div style={{ padding: "10px 20px", borderTop: `1px solid ${colors.border}`, fontSize: 12, color: colors.textSecondary }}>
+            Showing {Math.min(20, brokers.length)} of {brokers.length} brokers
+          </div>
+        </div>
+
+        {/* Import Modal */}
+        {importModalOpen && (
+          <>
+            <div onClick={() => setImportModalOpen(false)} style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", background: "rgba(0,0,0,0.4)", zIndex: 1000 }} />
+            <div style={{ position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: 520, background: colors.white, borderRadius: 16, padding: 32, zIndex: 1001, boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: colors.text }}>Import Account Managers</h3>
+                <button onClick={() => setImportModalOpen(false)} style={{ background: "none", border: "none", cursor: "pointer" }}><X size={20} color={colors.textSecondary} /></button>
+              </div>
+              <div style={{ padding: 20, borderRadius: 10, border: `2px dashed ${colors.border}`, textAlign: "center", marginBottom: 20, background: colors.bg }}>
+                <Upload size={32} color={colors.textMuted} style={{ marginBottom: 8 }} />
+                <div style={{ fontSize: 14, fontWeight: 500, color: colors.text, marginBottom: 4 }}>Drop your CSV file here or click to browse</div>
+                <div style={{ fontSize: 12, color: colors.textSecondary }}>Required columns: VAT Number, AM Name, AM Division, AM Email, AM Phone</div>
+                <button style={{
+                  marginTop: 12, padding: "8px 20px", borderRadius: 8, border: `1px solid ${colors.primary}`,
+                  background: colors.white, color: colors.primary, fontSize: 13, fontWeight: 600, cursor: "pointer",
+                }}>Browse Files</button>
+              </div>
+              <div style={{ padding: 14, borderRadius: 8, background: colors.warningBg, fontSize: 12, color: colors.text }}>
+                <strong>Note:</strong> Each row maps one account manager to a broker (by VAT number). Include one row per AM per division. Existing assignments will be updated, new ones will be created.
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
+
+  // Page 3: Campaign Marketplace
+  const renderMarketplace = () => {
+    const filteredBrokers = SAMPLE_BROKERS.filter(b => {
+      if (bookingRegion && b.city !== bookingRegion) return false;
+      if (bookingInterest && b.strategicInterest !== bookingInterest) return false;
+      return true;
+    });
+
+    const weeks = Array.from({ length: 12 }, (_, i) => {
+      const w = 14 + i;
+      return { week: w, label: `W${w}` };
+    });
+
+    const getCampaignsForBrokerWeek = (brokerId, week) => {
+      return CAMPAIGNS.filter(c => c.week === week && c.brokers.includes(brokerId));
+    };
+
+    const toggleWeekSelection = (brokerId, week) => {
+      const key = `${brokerId}-${week}`;
+      // Check conflict: same type already booked
+      const existing = getCampaignsForBrokerWeek(brokerId, week);
+      if (bookingType && existing.some(c => c.type === bookingType)) return; // blocked
+      setSelectedWeeks(prev => ({ ...prev, [key]: !prev[key] }));
+      if (!bookingBrokers.includes(brokerId)) {
+        setBookingBrokers(prev => [...prev, brokerId]);
+      }
+    };
+
+    const selectedCount = Object.values(selectedWeeks).filter(Boolean).length;
+
+    return (
+      <div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
+          <div>
+            <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: colors.text }}>Campaign Marketplace</h2>
+            <p style={{ margin: "4px 0 0", fontSize: 13, color: colors.textSecondary }}>Select brokers and book campaign slots by week</p>
+          </div>
+          <button onClick={() => { if (selectedCount > 0) setShowBookingModal(true); }} disabled={selectedCount === 0} style={{
+            padding: "10px 18px", borderRadius: 8, border: "none",
+            background: selectedCount > 0 ? colors.primary : colors.textMuted,
+            color: colors.white, fontSize: 13, fontWeight: 600,
+            cursor: selectedCount > 0 ? "pointer" : "default", display: "flex", alignItems: "center", gap: 6,
+          }}>
+            <ShoppingCart size={16} /> Book {selectedCount} slot{selectedCount !== 1 ? "s" : ""}
+          </button>
+        </div>
+
+        {/* Booking Config */}
+        <div style={{ background: colors.white, borderRadius: 12, border: `1px solid ${colors.border}`, padding: "16px 20px", marginBottom: 16 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: colors.textSecondary, marginBottom: 10, textTransform: "uppercase", letterSpacing: 0.5 }}>Campaign Configuration</div>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontSize: 13, color: colors.textSecondary }}>Type:</span>
+              <select value={bookingType} onChange={e => setBookingType(e.target.value)} style={{
+                padding: "6px 12px", borderRadius: 6, border: `1px solid ${colors.border}`, fontSize: 13, color: colors.text, background: colors.white,
+              }}>
+                <option value="">Select type...</option>
+                <option value="Life">Life</option>
+                <option value="Non-Life">Non-Life</option>
+              </select>
+            </div>
+            <FilterDropdown label="Region" options={[...new Set(SAMPLE_BROKERS.map(b => b.city))].sort()} value={bookingRegion} onChange={setBookingRegion} />
+            <FilterDropdown label="Interest" options={["High", "Medium", "Low"]} value={bookingInterest} onChange={setBookingInterest} />
+            {(bookingRegion || bookingInterest) && (
+              <button onClick={() => { setBookingRegion(""); setBookingInterest(""); }} style={{
+                padding: "6px 12px", borderRadius: 6, border: "none", background: colors.dangerBg,
+                color: colors.danger, fontSize: 12, fontWeight: 500, cursor: "pointer",
+              }}>Clear filters</button>
+            )}
+          </div>
+        </div>
+
+        {/* Scheduling Grid */}
+        <div style={{ background: colors.white, borderRadius: 12, border: `1px solid ${colors.border}`, overflow: "hidden" }}>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+              <thead>
+                <tr style={{ background: "#F8FAFC" }}>
+                  <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 600, color: colors.textSecondary, fontSize: 11, textTransform: "uppercase", borderBottom: `1px solid ${colors.border}`, position: "sticky", left: 0, background: "#F8FAFC", zIndex: 2, minWidth: 180 }}>Broker</th>
+                  <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 600, color: colors.textSecondary, fontSize: 11, textTransform: "uppercase", borderBottom: `1px solid ${colors.border}`, minWidth: 80 }}>Region</th>
+                  <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 600, color: colors.textSecondary, fontSize: 11, textTransform: "uppercase", borderBottom: `1px solid ${colors.border}`, minWidth: 60 }}>Interest</th>
+                  {weeks.map(w => (
+                    <th key={w.week} style={{ padding: "10px 6px", textAlign: "center", fontWeight: 600, color: colors.textSecondary, fontSize: 10, borderBottom: `1px solid ${colors.border}`, minWidth: 48 }}>
+                      <div>{w.label}</div>
+                      <div style={{ fontSize: 9, fontWeight: 400 }}>2026</div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filteredBrokers.map(broker => (
+                  <tr key={broker.id} style={{ borderBottom: `1px solid ${colors.borderLight}` }}>
+                    <td style={{ padding: "8px 14px", position: "sticky", left: 0, background: colors.white, zIndex: 1 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <div style={{
+                          width: 26, height: 26, borderRadius: 6, background: colors.primaryLight,
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          fontWeight: 700, fontSize: 10, color: colors.primary,
+                        }}>{broker.name[0]}</div>
+                        <div>
+                          <div style={{ fontWeight: 600, color: colors.text, fontSize: 11 }}>{broker.name}</div>
+                          <div style={{ fontSize: 9, color: colors.textMuted }}>{broker.id}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td style={{ padding: "8px 14px", fontSize: 11, color: colors.text }}>{broker.city}</td>
+                    <td style={{ padding: "8px 14px" }}>
+                      {broker.strategicInterest ? (
+                        <Badge variant={broker.strategicInterest === "High" ? "success" : broker.strategicInterest === "Medium" ? "warning" : "muted"} size="xs">{broker.strategicInterest}</Badge>
+                      ) : <span style={{ color: colors.textMuted }}>—</span>}
+                    </td>
+                    {weeks.map(w => {
+                      const existing = getCampaignsForBrokerWeek(broker.id, w.week);
+                      const key = `${broker.id}-${w.week}`;
+                      const isSelected = selectedWeeks[key];
+                      const hasConflict = bookingType && existing.some(c => c.type === bookingType);
+                      const hasOther = existing.length > 0;
+
+                      return (
+                        <td key={w.week} style={{ padding: "4px 3px", textAlign: "center" }}>
+                          {hasConflict ? (
+                            <div title={`Blocked: ${existing.find(c => c.type === bookingType)?.name}`} style={{
+                              width: 36, height: 28, borderRadius: 4, margin: "0 auto",
+                              background: colors.dangerBg, border: `1px solid ${colors.danger}40`,
+                              display: "flex", alignItems: "center", justifyContent: "center",
+                              fontSize: 9, color: colors.danger, fontWeight: 600,
+                            }}>
+                              <X size={12} />
+                            </div>
+                          ) : (
+                            <div onClick={() => bookingType && toggleWeekSelection(broker.id, w.week)}
+                              title={hasOther ? `Running: ${existing.map(c => c.name).join(", ")}` : "Available"}
+                              style={{
+                                width: 36, height: 28, borderRadius: 4, margin: "0 auto",
+                                background: isSelected ? colors.primary : hasOther ? colors.warningBg : colors.bg,
+                                border: `1px solid ${isSelected ? colors.primary : hasOther ? colors.warning + "40" : colors.border}`,
+                                cursor: bookingType ? "pointer" : "default",
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                                transition: "all 0.15s",
+                              }}>
+                              {isSelected && <CheckCircle2 size={12} color={colors.white} />}
+                              {!isSelected && hasOther && <span style={{ fontSize: 8, color: colors.warning, fontWeight: 700 }}>{existing.length}</span>}
+                            </div>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div style={{ padding: "12px 20px", borderTop: `1px solid ${colors.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", gap: 16, fontSize: 11 }}>
+              <span style={{ display: "flex", alignItems: "center", gap: 4 }}><div style={{ width: 12, height: 12, borderRadius: 2, background: colors.bg, border: `1px solid ${colors.border}` }} /> Available</span>
+              <span style={{ display: "flex", alignItems: "center", gap: 4 }}><div style={{ width: 12, height: 12, borderRadius: 2, background: colors.warningBg, border: `1px solid ${colors.warning}40` }} /> Other campaign running</span>
+              <span style={{ display: "flex", alignItems: "center", gap: 4 }}><div style={{ width: 12, height: 12, borderRadius: 2, background: colors.primary }} /> Selected</span>
+              <span style={{ display: "flex", alignItems: "center", gap: 4 }}><div style={{ width: 12, height: 12, borderRadius: 2, background: colors.dangerBg, border: `1px solid ${colors.danger}40` }} /> Conflict (same type)</span>
+            </div>
+            <span style={{ fontSize: 12, color: colors.textSecondary }}>{filteredBrokers.length} brokers · {selectedCount} slots selected</span>
+          </div>
+        </div>
+
+        {/* Booking Confirmation Modal */}
+        {showBookingModal && (
+          <>
+            <div onClick={() => setShowBookingModal(false)} style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", background: "rgba(0,0,0,0.4)", zIndex: 1000 }} />
+            <div style={{ position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: 480, background: colors.white, borderRadius: 16, padding: 32, zIndex: 1001, boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}>
+              <h3 style={{ margin: "0 0 16px", fontSize: 18, fontWeight: 700, color: colors.text }}>Confirm Campaign Booking</h3>
+              <div style={{ marginBottom: 16, padding: 14, borderRadius: 8, background: colors.primaryLight }}>
+                <div style={{ fontSize: 13, color: colors.textSecondary, marginBottom: 4 }}>Campaign Type</div>
+                <div style={{ fontSize: 16, fontWeight: 600, color: colors.primary }}>{bookingType || "Not selected"}</div>
+              </div>
+              <div style={{ marginBottom: 16, fontSize: 13, color: colors.text }}>
+                <strong>{selectedCount}</strong> slot{selectedCount !== 1 ? "s" : ""} selected across <strong>{new Set(Object.entries(selectedWeeks).filter(([, v]) => v).map(([k]) => k.split("-")[0])).size}</strong> broker{bookingBrokers.length !== 1 ? "s" : ""}
+              </div>
+              <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+                <button onClick={() => setShowBookingModal(false)} style={{
+                  padding: "10px 20px", borderRadius: 8, border: `1px solid ${colors.border}`,
+                  background: colors.white, color: colors.text, fontSize: 13, fontWeight: 600, cursor: "pointer",
+                }}>Cancel</button>
+                <button onClick={() => { setShowBookingModal(false); setSelectedWeeks({}); setBookingBrokers([]); }} style={{
+                  padding: "10px 20px", borderRadius: 8, border: "none",
+                  background: colors.primary, color: colors.white, fontSize: 13, fontWeight: 600, cursor: "pointer",
+                }}>Confirm Booking</button>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
+
+  const tabs = [
+    { id: "campaigns", label: "Campaign Dashboard", icon: Layers },
+    { id: "brokers", label: "Broker Directory", icon: Users },
+    { id: "marketplace", label: "Campaign Marketplace", icon: ShoppingCart },
+  ];
+
+  return (
+    <div style={{ display: "flex", minHeight: "100vh", background: colors.bg, fontFamily: "'Inter', -apple-system, sans-serif" }}>
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+
+      {/* Sidebar */}
+      <div style={{ width: 240, background: colors.white, borderRight: `1px solid ${colors.border}`, padding: "20px 0", flexShrink: 0 }}>
+        <div style={{ padding: "0 20px", marginBottom: 24, display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{
+            width: 32, height: 32, borderRadius: 8, background: "#F59E0B",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            color: colors.white, fontWeight: 800, fontSize: 14,
+          }}>IN</div>
+          <div>
+            <span style={{ fontSize: 16, fontWeight: 700, color: colors.text }}>Insurer Portal</span>
+            <div style={{ fontSize: 10, color: colors.textSecondary }}>AXA Belgium</div>
+          </div>
+        </div>
+
+        <button onClick={onBack} style={{
+          display: "flex", alignItems: "center", gap: 8, padding: "8px 20px", marginBottom: 16, width: "100%",
+          border: "none", background: "none", color: colors.textSecondary, fontSize: 13, cursor: "pointer",
+          textAlign: "left",
+        }}>
+          <ArrowLeft size={16} /> Back to Qollabi
+        </button>
+
+        <nav>
+          {tabs.map(tab => (
+            <div key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
+              display: "flex", alignItems: "center", gap: 10, padding: "10px 20px",
+              background: activeTab === tab.id ? "#FEF3C7" : "transparent",
+              color: activeTab === tab.id ? "#D97706" : colors.textSecondary,
+              fontSize: 14, fontWeight: activeTab === tab.id ? 600 : 400, cursor: "pointer",
+              borderLeft: activeTab === tab.id ? "3px solid #F59E0B" : "3px solid transparent",
+            }}>
+              <tab.icon size={18} /> {tab.label}
+            </div>
+          ))}
+        </nav>
+      </div>
+
+      {/* Main */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+        <div style={{ padding: "12px 32px", borderBottom: `1px solid ${colors.border}`, background: colors.white, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ fontSize: 13, color: colors.textSecondary }}>
+            Insurer Environment / <span style={{ color: colors.text, fontWeight: 500 }}>{tabs.find(t => t.id === activeTab)?.label}</span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 12, color: colors.textSecondary }}>AXA Belgium</span>
+            <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#FEF3C7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#D97706" }}>AX</div>
+          </div>
+        </div>
+        <div style={{ flex: 1, padding: 32, overflow: "auto" }}>
+          {activeTab === "campaigns" && renderCampaigns()}
+          {activeTab === "brokers" && renderBrokerDirectory()}
+          {activeTab === "marketplace" && renderMarketplace()}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main App ─────────────────────────────────────────────────────────────
 export default function QollabiBrokerDB() {
+  const [currentPage, setCurrentPage] = useState("broker-db");
   const [brokers, setBrokers] = useState(SAMPLE_BROKERS);
   const [search, setSearch] = useState("");
   const [sortField, setSortField] = useState("name");
@@ -1193,6 +1849,10 @@ export default function QollabiBrokerDB() {
     return sortDir === "asc" ? <ChevronUp size={12} color={colors.primary} /> : <ChevronDown size={12} color={colors.primary} />;
   };
 
+  if (currentPage === "insurer") {
+    return <InsurerEnvironment onBack={() => setCurrentPage("broker-db")} />;
+  }
+
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: colors.bg, fontFamily: "'Inter', -apple-system, sans-serif" }}>
       {/* Spin animation */}
@@ -1226,6 +1886,24 @@ export default function QollabiBrokerDB() {
               <item.icon size={18} /> {item.label}
             </div>
           ))}
+
+          <div style={{ margin: "16px 20px", borderTop: `1px solid ${colors.border}`, paddingTop: 16 }}>
+            <div style={{ fontSize: 10, fontWeight: 600, color: colors.textMuted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8 }}>Environments</div>
+            <div onClick={() => setCurrentPage("insurer")} style={{
+              display: "flex", alignItems: "center", gap: 10, padding: "10px 12px",
+              background: "linear-gradient(135deg, #FEF3C7, #FDE68A)", borderRadius: 8,
+              color: "#92400E", fontSize: 13, fontWeight: 600, cursor: "pointer",
+              border: "1px solid #F59E0B40",
+            }}>
+              <div style={{
+                width: 24, height: 24, borderRadius: 6, background: "#F59E0B",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                color: "#FFF", fontWeight: 800, fontSize: 9,
+              }}>IN</div>
+              Insurer Environment
+              <ExternalLink size={12} style={{ marginLeft: "auto" }} />
+            </div>
+          </div>
         </nav>
       </div>
 
