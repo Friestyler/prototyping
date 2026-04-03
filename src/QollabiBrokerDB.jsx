@@ -2137,7 +2137,7 @@ export default function QollabiBrokerDB() {
             Dashboard / <span style={{ color: colors.text, fontWeight: 500 }}>Broker Database</span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{ width: 32, height: 32, borderRadius: "50%", background: colors.primaryLight, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: colors.primary }}>FP</div>
+            <div style={{ width: 32, height: 32, borderRadius: "50%", background: colors.primaryLight, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: colors.primary }}>KK</div>
           </div>
         </div>
 
