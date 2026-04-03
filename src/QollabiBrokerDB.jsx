@@ -253,6 +253,120 @@ const SOCIODEMOGRAPHIC_DATA = {
   },
 };
 
+// ── Insurer Account Manager Contacts (per broker, per insurer) ──────────
+const INSURER_CONTACTS = {
+  "430316833": {
+    "Ethias": [
+      { name: "Luc Verhoeven", role: "Account Manager Non-Life", division: "Non-Life", email: "luc.verhoeven@ethias.be", phone: "+32 4 220 31 10" },
+      { name: "Sofie Lemmens", role: "Desk Account Manager", division: "Support Desk", email: "sofie.lemmens@ethias.be", phone: "+32 4 220 31 20" },
+    ],
+    "AG Insurance": [
+      { name: "Bart Willems", role: "Account Manager Life", division: "Life", email: "bart.willems@aginsurance.be", phone: "+32 2 664 81 11" },
+      { name: "Nathalie Dupont", role: "Account Manager Non-Life", division: "Non-Life", email: "nathalie.dupont@aginsurance.be", phone: "+32 2 664 81 22" },
+    ],
+    "AXA Belgium": [
+      { name: "Kristof Peeters", role: "Regional Account Manager", division: "Non-Life", email: "kristof.peeters@axa.be", phone: "+32 3 286 25 00" },
+    ],
+  },
+  "832851798": {
+    "Baloise": [
+      { name: "Dirk Van Damme", role: "Account Manager Non-Life", division: "Non-Life", email: "dirk.vandamme@baloise.be", phone: "+32 3 247 21 11" },
+      { name: "Eline Goossens", role: "Account Manager Life", division: "Life", email: "eline.goossens@baloise.be", phone: "+32 3 247 21 22" },
+      { name: "Youssef El Amrani", role: "Desk Account Manager", division: "Support Desk", email: "youssef.elamrani@baloise.be", phone: "+32 3 247 21 33" },
+    ],
+    "Fidea": [
+      { name: "Hilde Maes", role: "Account Manager", division: "Non-Life", email: "hilde.maes@fidea.be", phone: "+32 3 253 31 11" },
+    ],
+  },
+  "476238978": {
+    "AXA Belgium": [
+      { name: "Philippe Claessens", role: "Senior Account Manager Life", division: "Life", email: "philippe.claessens@axa.be", phone: "+32 3 286 25 10" },
+      { name: "Eva De Wilde", role: "Account Manager Non-Life", division: "Non-Life", email: "eva.dewilde@axa.be", phone: "+32 3 286 25 20" },
+      { name: "Rik Hendrickx", role: "Desk Account Manager", division: "Support Desk", email: "rik.hendrickx@axa.be", phone: "+32 3 286 25 30" },
+    ],
+    "Vivium": [
+      { name: "Griet Janssen", role: "Account Manager", division: "Non-Life", email: "griet.janssen@vivium.be", phone: "+32 2 406 35 11" },
+      { name: "Steven Hermans", role: "Account Manager Life & Pension", division: "Life", email: "steven.hermans@vivium.be", phone: "+32 2 406 35 22" },
+    ],
+    "NN Insurance": [
+      { name: "Anja Martens", role: "Account Manager Life", division: "Life", email: "anja.martens@nn.be", phone: "+32 2 403 77 11" },
+    ],
+    "Athora": [
+      { name: "Marc Debruyne", role: "Account Manager", division: "Life", email: "marc.debruyne@athora.com", phone: "+32 2 403 88 11" },
+      { name: "Ilse Vandenberghe", role: "Desk Account Manager", division: "Support Desk", email: "ilse.vandenberghe@athora.com", phone: "+32 2 403 88 22" },
+    ],
+  },
+  "512789345": {
+    "AG Insurance": [
+      { name: "Wouter Claes", role: "Senior Account Manager", division: "Non-Life", email: "wouter.claes@aginsurance.be", phone: "+32 2 664 82 11" },
+      { name: "Katrien Devos", role: "Account Manager Life", division: "Life", email: "katrien.devos@aginsurance.be", phone: "+32 2 664 82 22" },
+      { name: "Mohammed Benali", role: "Desk Account Manager", division: "Support Desk", email: "mohammed.benali@aginsurance.be", phone: "+32 2 664 82 33" },
+    ],
+    "Ethias": [
+      { name: "Luc Verhoeven", role: "Account Manager Non-Life", division: "Non-Life", email: "luc.verhoeven@ethias.be", phone: "+32 4 220 31 10" },
+      { name: "Céline Laurent", role: "Account Manager Life", division: "Life", email: "celine.laurent@ethias.be", phone: "+32 4 220 31 30" },
+    ],
+    "Baloise": [
+      { name: "Jan Michiels", role: "Account Manager", division: "Non-Life", email: "jan.michiels@baloise.be", phone: "+32 3 247 22 11" },
+    ],
+    "Fidea": [
+      { name: "Hilde Maes", role: "Account Manager", division: "Non-Life", email: "hilde.maes@fidea.be", phone: "+32 3 253 31 11" },
+      { name: "Tom Raes", role: "Account Manager Life", division: "Life", email: "tom.raes@fidea.be", phone: "+32 3 253 31 22" },
+    ],
+  },
+  "890345672": {
+    "Belfius": [
+      { name: "Isabelle Fontaine", role: "Account Manager", division: "Non-Life", email: "isabelle.fontaine@belfius.be", phone: "+32 2 222 11 11" },
+    ],
+    "DVV": [
+      { name: "Geert Coppens", role: "Account Manager Non-Life", division: "Non-Life", email: "geert.coppens@dvv.be", phone: "+32 2 286 61 11" },
+      { name: "Veerle Smeets", role: "Account Manager Life", division: "Life", email: "veerle.smeets@dvv.be", phone: "+32 2 286 61 22" },
+    ],
+  },
+  "345678901": {
+    "AXA Belgium": [
+      { name: "Philippe Claessens", role: "Senior Account Manager Life", division: "Life", email: "philippe.claessens@axa.be", phone: "+32 3 286 25 10" },
+      { name: "Eva De Wilde", role: "Account Manager Non-Life", division: "Non-Life", email: "eva.dewilde@axa.be", phone: "+32 3 286 25 20" },
+    ],
+    "AG Insurance": [
+      { name: "Nathalie Dupont", role: "Account Manager Non-Life", division: "Non-Life", email: "nathalie.dupont@aginsurance.be", phone: "+32 2 664 81 22" },
+      { name: "Bart Willems", role: "Account Manager Life", division: "Life", email: "bart.willems@aginsurance.be", phone: "+32 2 664 81 11" },
+      { name: "Sarah De Backer", role: "Desk Account Manager", division: "Support Desk", email: "sarah.debacker@aginsurance.be", phone: "+32 2 664 81 44" },
+    ],
+    "Vivium": [
+      { name: "Griet Janssen", role: "Account Manager", division: "Non-Life", email: "griet.janssen@vivium.be", phone: "+32 2 406 35 11" },
+    ],
+  },
+  "234567890": {
+    "Ethias": [
+      { name: "Pierre Lemaire", role: "Account Manager", division: "Non-Life", email: "pierre.lemaire@ethias.be", phone: "+32 4 220 32 10" },
+    ],
+    "NN Insurance": [
+      { name: "Anja Martens", role: "Account Manager Life", division: "Life", email: "anja.martens@nn.be", phone: "+32 2 403 77 11" },
+      { name: "Ruben Smits", role: "Desk Account Manager", division: "Support Desk", email: "ruben.smits@nn.be", phone: "+32 2 403 77 22" },
+    ],
+  },
+  "123456789": {
+    "AG Insurance": [
+      { name: "Wouter Claes", role: "Senior Account Manager", division: "Non-Life", email: "wouter.claes@aginsurance.be", phone: "+32 2 664 82 11" },
+      { name: "Katrien Devos", role: "Account Manager Life", division: "Life", email: "katrien.devos@aginsurance.be", phone: "+32 2 664 82 22" },
+      { name: "Sarah De Backer", role: "Desk Account Manager", division: "Support Desk", email: "sarah.debacker@aginsurance.be", phone: "+32 2 664 81 44" },
+    ],
+    "Baloise": [
+      { name: "Dirk Van Damme", role: "Account Manager Non-Life", division: "Non-Life", email: "dirk.vandamme@baloise.be", phone: "+32 3 247 21 11" },
+      { name: "Eline Goossens", role: "Account Manager Life", division: "Life", email: "eline.goossens@baloise.be", phone: "+32 3 247 21 22" },
+    ],
+    "AXA Belgium": [
+      { name: "Philippe Claessens", role: "Senior Account Manager Life", division: "Life", email: "philippe.claessens@axa.be", phone: "+32 3 286 25 10" },
+      { name: "Eva De Wilde", role: "Account Manager Non-Life", division: "Non-Life", email: "eva.dewilde@axa.be", phone: "+32 3 286 25 20" },
+      { name: "Rik Hendrickx", role: "Desk Account Manager", division: "Support Desk", email: "rik.hendrickx@axa.be", phone: "+32 3 286 25 30" },
+    ],
+    "Athora": [
+      { name: "Marc Debruyne", role: "Account Manager", division: "Life", email: "marc.debruyne@athora.com", phone: "+32 2 403 88 11" },
+    ],
+  },
+};
+
 // ── Styles ────────────────────────────────────────────────────────────────
 const colors = {
   primary: "#4F46E5",
@@ -459,7 +573,7 @@ function SyncPanel({ isOpen, onClose, onSync }) {
 }
 
 // ── Enrichment Panel ─────────────────────────────────────────────────────
-function EnrichmentPanel({ broker, enrichment, socialData, demoData, isOpen, onClose, onSave }) {
+function EnrichmentPanel({ broker, enrichment, socialData, demoData, insurerContacts, isOpen, onClose, onSave }) {
   const [activeTab, setActiveTab] = useState("overview");
   const [editing, setEditing] = useState(false);
   const [editData, setEditData] = useState({});
@@ -593,21 +707,81 @@ function EnrichmentPanel({ broker, enrichment, socialData, demoData, isOpen, onC
                 ))}
               </div>
             </div>
-            <h4 style={{ fontSize: 14, fontWeight: 600, color: colors.text }}>Insurance Partners</h4>
-            <div style={{ display: "grid", gap: 8 }}>
-              {[broker.productA, broker.productB, broker.productC, broker.productD].filter(Boolean).map((p, i) => (
-                <div key={i} style={{
-                  display: "flex", alignItems: "center", gap: 12, padding: 12, borderRadius: 8,
-                  border: `1px solid ${colors.border}`, background: colors.white,
-                }}>
-                  <div style={{
-                    width: 36, height: 36, borderRadius: 8, background: colors.primaryLight,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontWeight: 700, fontSize: 14, color: colors.primary,
-                  }}>{p[0]}</div>
-                  <span style={{ fontSize: 14, fontWeight: 500, color: colors.text }}>{p}</span>
-                </div>
-              ))}
+            <h4 style={{ fontSize: 14, fontWeight: 600, color: colors.text }}>Insurance Partners & Account Managers</h4>
+            <div style={{ display: "grid", gap: 12 }}>
+              {[broker.productA, broker.productB, broker.productC, broker.productD].filter(Boolean).map((partner, i) => {
+                const contacts = insurerContacts?.[partner] || [];
+                const divisions = [...new Set(contacts.map(c => c.division))];
+                return (
+                  <div key={i} style={{ borderRadius: 10, border: `1px solid ${colors.border}`, overflow: "hidden" }}>
+                    {/* Insurer Header */}
+                    <div style={{
+                      display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
+                      background: colors.primaryLight, borderBottom: contacts.length ? `1px solid ${colors.border}` : "none",
+                    }}>
+                      <div style={{
+                        width: 36, height: 36, borderRadius: 8, background: colors.white,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontWeight: 700, fontSize: 14, color: colors.primary, border: `1px solid ${colors.border}`,
+                      }}>{partner[0]}</div>
+                      <div style={{ flex: 1 }}>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: colors.text }}>{partner}</span>
+                      </div>
+                      {contacts.length > 0 && (
+                        <Badge variant="default" size="xs">{contacts.length} contact{contacts.length !== 1 ? "s" : ""}</Badge>
+                      )}
+                    </div>
+
+                    {/* Account Managers grouped by division */}
+                    {contacts.length > 0 ? (
+                      <div style={{ padding: "8px 14px 10px" }}>
+                        {divisions.map((div, di) => (
+                          <div key={di} style={{ marginBottom: di < divisions.length - 1 ? 10 : 0 }}>
+                            <div style={{
+                              fontSize: 10, fontWeight: 700, color: colors.textMuted, textTransform: "uppercase",
+                              letterSpacing: 0.8, marginBottom: 6, paddingBottom: 4,
+                              borderBottom: `1px solid ${colors.borderLight}`,
+                            }}>{div}</div>
+                            {contacts.filter(c => c.division === div).map((contact, ci) => (
+                              <div key={ci} style={{
+                                display: "flex", alignItems: "center", gap: 10, padding: "6px 0",
+                              }}>
+                                <div style={{
+                                  width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
+                                  background: div === "Life" ? colors.successBg : div === "Non-Life" ? colors.infoBg : colors.warningBg,
+                                  display: "flex", alignItems: "center", justifyContent: "center",
+                                  fontSize: 11, fontWeight: 700,
+                                  color: div === "Life" ? colors.success : div === "Non-Life" ? colors.info : colors.warning,
+                                }}>{contact.name.split(" ").map(n => n[0]).join("").slice(0, 2)}</div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ fontSize: 13, fontWeight: 500, color: colors.text }}>{contact.name}</div>
+                                  <div style={{ fontSize: 11, color: colors.textMuted }}>{contact.role}</div>
+                                </div>
+                                <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                                  <a href={`mailto:${contact.email}`} title={contact.email} style={{
+                                    width: 26, height: 26, borderRadius: 6, border: `1px solid ${colors.border}`,
+                                    display: "flex", alignItems: "center", justifyContent: "center",
+                                    textDecoration: "none", background: colors.white,
+                                  }}><Mail size={12} color={colors.textSecondary} /></a>
+                                  <a href={`tel:${contact.phone}`} title={contact.phone} style={{
+                                    width: 26, height: 26, borderRadius: 6, border: `1px solid ${colors.border}`,
+                                    display: "flex", alignItems: "center", justifyContent: "center",
+                                    textDecoration: "none", background: colors.white,
+                                  }}><Phone size={12} color={colors.textSecondary} /></a>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={{ padding: "10px 14px", fontSize: 12, color: colors.textMuted, fontStyle: "italic" }}>
+                        No account manager contacts yet — use "AI Enrich" to look up.
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
               {![broker.productA, broker.productB, broker.productC, broker.productD].some(Boolean) && (
                 <div style={{ textAlign: "center", padding: 24, color: colors.textMuted, fontSize: 13 }}>
                   No products known. Use "AI Enrich" to discover insurance products.
@@ -1278,6 +1452,7 @@ export default function QollabiBrokerDB() {
         enrichment={selectedBroker ? ENRICHMENT_DATA[selectedBroker.id] : null}
         socialData={selectedBroker ? SOCIAL_MEDIA_DATA[selectedBroker.id] : null}
         demoData={selectedBroker ? SOCIODEMOGRAPHIC_DATA[selectedBroker.id] : null}
+        insurerContacts={selectedBroker ? INSURER_CONTACTS[selectedBroker.id] : null}
         isOpen={!!selectedBroker}
         onClose={() => setSelectedBroker(null)}
       />
