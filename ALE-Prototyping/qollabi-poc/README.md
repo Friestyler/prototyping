@@ -98,6 +98,52 @@ DB_PATH=./data/qollabi.db     # Database location
 
 Without an API key, the system uses mock responses for smart updates.
 
+## Deploying to Vercel
+
+The app is deployed at **https://qollabi-poc.vercel.app** (password: `Qollabi123`).
+
+To activate all features, add the following **environment variables** in [Vercel Project Settings → Environment Variables](https://vercel.com/):
+
+| Variable | Required | Purpose |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | For AI updates | Powers Claude-based smart update generation (without it, mock reports are used) |
+| `OPENAI_API_KEY` | For web context | Enables web scraping of partner news and business signals via OpenAI |
+| `OPENAI_MODEL` | Optional | Model to use for web context (default: `gpt-4o-mini`) |
+| `POSTMARK_SERVER_TOKEN` | For email | Your Postmark server API token for sending emails |
+| `POSTMARK_FROM_ADDRESS` | For email | Verified sender address in Postmark (e.g. `frie@qollabi.com`) |
+| `POC_TEST_EMAIL` | PoC safety | All emails are redirected to this address during PoC (default: `frie@qollabi.com`) |
+
+### Deploy from CLI
+
+```bash
+cd ALE-Prototyping/qollabi-poc
+npx vercel --prod --yes --scope <your-team>
+```
+
+### Deploy via Git
+
+Push to the `ALE-Smart-Updates` branch — Vercel auto-deploys on push if connected.
+
+## Features
+
+### Smart Update Generator
+- AI-generated performance reports per account manager or for leadership
+- 4 built-in prompt templates + custom prompts
+- **Bulk Generate + Email**: Generate updates for all 76 account managers and send via Postmark
+- **Bulk Generate + PDF ZIP**: Generate all updates as PDFs in a single downloadable ZIP
+- **Web Context Enrichment**: Scrape partner news and business signals via OpenAI to enrich reports
+- Multi-channel delivery: email, PDF, FTP, webhook
+- Scheduling support for automated updates
+
+### Interactive Dashboards
+- Overview: KPI achievement across all metrics
+- Regional: Americas, Germany, EMEA comparison
+- Pipeline: Quarterly trend visualization
+- Performers: Top/bottom partner rankings
+- Segments: Performance by partner type
+- Manager View: Per-manager portfolio cards
+- AI Dashboard: Natural language data queries
+
 ## Engineering Plan
 
 See `docs/engineering-plan.md` for the detailed production roadmap, architecture decisions, sprint plan, and cost analysis.

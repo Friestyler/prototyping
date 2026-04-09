@@ -57,6 +57,12 @@ Use color classes like text-green-600, text-red-600, bg-blue-50, etc. for emphas
 Use &lt; and &gt; for angle brackets in text content, never raw < or >.
 Do NOT wrap the output in markdown code fences or ```html blocks.
 
+If web_intelligence data is provided in the context, integrate those findings into your analysis:
+- Reference specific partner news/developments in the relevant partner sections
+- Adjust recommendations based on business health signals (e.g. if a partner is restructuring, suggest different actions)
+- For at-risk partners with negative news, flag the connection between external factors and KPI underperformance
+- For top performers with positive news, highlight growth opportunities
+
 {custom_instructions if custom_instructions else ""}
 """
 

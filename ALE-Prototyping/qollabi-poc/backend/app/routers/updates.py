@@ -16,8 +16,8 @@ from app.services.delivery import (
     generate_zip_from_pdfs,
 )
 from app.services.context import (
-    fetch_partner_context,
-    fetch_batch_context,
+    identify_focus_partners,
+    fetch_focus_partners_context,
     format_context_for_prompt,
     format_context_html,
 )
@@ -118,6 +118,42 @@ def _build_manager_context(cursor, email: str, regions: Optional[List[str]] = No
 
 # ==================== HELPER: generate for one manager ====================
 
+def _enrich_with_web_context(data_context: dict) -> str:
+    """Identify focus partners, scrape web context, inject into data_context.
+
+    Returns HTML section to append to output. Also modifies data_context
+    in-place to add web_intelligence for the LLM prompt.
+    """
+    partners = data_context.get("partners", [])
+    kpis = data_context.get("kpis", [])
+    if not partners or not kpis:
+        return ""
+
+    try:
+        # Step 1: Score and pick focus partners (fast — pure computation)
+        at_risk, top = identify_focus_partners(partners, kpis, max_at_risk=3, max_top=2)
+
+        if not at_risk and not top:
+            return ""
+
+        # Step 2: Scrape only focus partners (3-5 OpenAI calls)
+        contexts = fetch_focus_partners_context(at_risk, top)
+
+        if not contexts:
+            return ""
+
+        # Step 3: Inject text into data_context for LLM prompt
+        prompt_text = format_context_for_prompt(contexts)
+        if prompt_text:
+            data_context["web_intelligence"] = prompt_text
+
+        # Step 4: Build HTML section for output
+        return format_context_html(contexts)
+
+    except Exception as e:
+        return f'<p class="text-xs text-red-500 mt-4">Web context error: {str(e)}</p>'
+
+
 def _generate_for_manager(
     cursor,
     email: str,
@@ -134,22 +170,10 @@ def _generate_for_manager(
     if additional_context:
         data_context["additional_context"] = additional_context
 
-    # Web context enrichment
+    # Web context: identify at-risk + top partners, scrape only those
     web_context_html = ""
-    if include_web_context and data_context.get("partners"):
-        partner_contexts = fetch_batch_context(data_context["partners"], max_partners=5)
-        # Add context to prompt
-        context_texts = []
-        for pid, ctx in partner_contexts.items():
-            text = format_context_for_prompt(ctx)
-            if text:
-                context_texts.append(text)
-            html = format_context_html(ctx)
-            if html:
-                web_context_html += html
-
-        if context_texts:
-            data_context["web_intelligence"] = "\n\n".join(context_texts)
+    if include_web_context:
+        web_context_html = _enrich_with_web_context(data_context)
 
     content = generate_smart_update(
         data_context=data_context,
@@ -158,9 +182,8 @@ def _generate_for_manager(
         custom_instructions=custom_prompt,
     )
 
-    # Append web context section if found
     if web_context_html:
-        content += f'\n<h4 class="font-semibold text-indigo-800 mt-6 mb-3">Web Intelligence</h4>\n{web_context_html}'
+        content += "\n" + web_context_html
 
     return content
 
@@ -285,7 +308,13 @@ def generate_update(body: GenerateRequest):
                 data_context["kpis"] = [dict(row) for row in cursor.fetchall()]
         else:
             cursor.execute("SELECT * FROM partners WHERE region IS NOT NULL LIMIT 100")
-            data_context["partners"] = [dict(row) for row in cursor.fetchall()]
+            partners = [dict(row) for row in cursor.fetchall()]
+            data_context["partners"] = partners
+            partner_ids = [p["account_id"] for p in partners]
+            if partner_ids:
+                ph = ",".join("?" * len(partner_ids))
+                cursor.execute(f"SELECT account_id, metric_name, period, result, target, achievement FROM kpi_metrics WHERE account_id IN ({ph})", partner_ids)
+                data_context["kpis"] = [dict(row) for row in cursor.fetchall()]
 
         # Summary stats
         cursor.execute("""
@@ -308,20 +337,10 @@ def generate_update(body: GenerateRequest):
         if body.additional_context:
             data_context["additional_context"] = body.additional_context
 
-        # Web context enrichment
+        # Web context: smart selection of at-risk + top partners, scrape only those
         web_context_html = ""
-        if body.include_web_context and data_context.get("partners"):
-            partner_contexts = fetch_batch_context(data_context["partners"], max_partners=5)
-            context_texts = []
-            for pid, ctx in partner_contexts.items():
-                text = format_context_for_prompt(ctx)
-                if text:
-                    context_texts.append(text)
-                html = format_context_html(ctx)
-                if html:
-                    web_context_html += html
-            if context_texts:
-                data_context["web_intelligence"] = "\n\n".join(context_texts)
+        if body.include_web_context:
+            web_context_html = _enrich_with_web_context(data_context)
 
         # Generate
         try:
@@ -332,7 +351,7 @@ def generate_update(body: GenerateRequest):
                 custom_instructions=body.custom_prompt,
             )
             if web_context_html:
-                content += f'\n<h4 class="font-semibold text-indigo-800 mt-6 mb-3">Web Intelligence</h4>\n{web_context_html}'
+                content += "\n" + web_context_html
         except Exception as e:
             content = f"Error generating update: {str(e)}"
 
