@@ -314,7 +314,20 @@ def custom_query(query: str = Query(None), question: str = Query(None)):
             }
 
     except Exception as e:
+        error_msg = str(e)
+        # Provide helpful hints for common SQL errors
+        hint = ""
+        if "no such column" in error_msg:
+            hint = " Hint: kpi_metrics has no 'region' column — JOIN with partners to get region."
+        elif "no such table" in error_msg:
+            hint = " Hint: Tables are: partners, kpi_metrics, account_managers."
+        elif "ambiguous column" in error_msg:
+            hint = " Hint: Use table prefix like p.name or k.achievement."
+
         return {
-            "error": str(e),
             "query": query,
-        }, 400
+            "sql": sql if 'sql' in dir() else "",
+            "results": [],
+            "count": 0,
+            "error": error_msg + hint,
+        }

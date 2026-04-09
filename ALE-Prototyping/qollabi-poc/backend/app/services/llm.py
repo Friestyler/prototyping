@@ -123,10 +123,15 @@ period values:
 region values: 'americas', 'germany', 'emea', 'apac', 'eeimea', 'france'
 segment values: 'yes', 'expert_1000', 'expert_200', 'distributor_1000', 'distributor'
 
-When asked about pipeline, use metric_name = 'Quarterly Pipeline vs Target'.
-When asked about at-risk partners, use achievement < 0.7.
-When asked about top performers, ORDER BY achievement DESC.
-Always LIMIT results to 50 unless specified otherwise.
+RULES:
+- Pipeline queries: use metric_name = 'Quarterly Pipeline vs Target'
+- At-risk partners: use achievement < 0.7
+- Top performers: ORDER BY achievement DESC
+- Region/country info is on the partners table, NOT kpi_metrics — always JOIN partners for region
+- Always SELECT specific columns, not SELECT *
+- Always LIMIT results to 50 unless specified otherwise
+- For aggregations, use ROUND() for readability
+- If the query asks about growth, compare periods using self-joins or CASE expressions
 """
 
     user_prompt = f"""Convert this question to SQL:

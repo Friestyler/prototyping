@@ -947,17 +947,36 @@ ${content}
                 if (!aiQuestion.trim()) return;
 
                 setLoading(true);
-                const data = await apiCall(`/dashboard/custom-query?question=${encodeURIComponent(aiQuestion)}`);
+                const raw = await apiCall(`/dashboard/custom-query?question=${encodeURIComponent(aiQuestion)}`);
 
-                if (data && !data.error) {
+                // Handle both normal response and array-wrapped error
+                const data = Array.isArray(raw) ? raw[0] : raw;
+
+                if (data && data.results && data.results.length > 0) {
                     setAiResults({
                         question: aiQuestion,
                         response: `Found ${data.count} result(s). SQL: ${data.sql}`,
                         data: data.results
                     });
-                    setToast({ type: 'success', message: 'Query processed!' });
+                    setToast({ type: 'success', message: `${data.count} results found` });
+                } else if (data && data.error) {
+                    setAiResults({
+                        question: aiQuestion,
+                        response: `SQL: ${data.sql || 'N/A'}`,
+                        data: null,
+                        error: data.error
+                    });
+                    setToast({ type: 'error', message: 'Query returned an error' });
+                } else if (data && data.count === 0) {
+                    setAiResults({
+                        question: aiQuestion,
+                        response: `SQL: ${data.sql}`,
+                        data: null,
+                        empty: true
+                    });
+                    setToast({ type: 'info', message: 'Query returned no results' });
                 } else {
-                    setToast({ type: 'error', message: data?.error || 'Failed to process query' });
+                    setToast({ type: 'error', message: 'Failed to process query' });
                 }
                 setLoading(false);
             };
@@ -1207,7 +1226,23 @@ ${content}
                                     <p className="text-sm text-gray-600 mb-4 bg-blue-50 p-3 rounded-lg">
                                         <span className="font-medium text-blue-800">Q:</span> {aiResults.question}
                                     </p>
-                                    {aiResults.data && aiResults.data.length > 0 ? (
+                                    {aiResults.error ? (
+                                        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                                            <p className="text-sm font-medium text-red-800 mb-1">Query Error</p>
+                                            <p className="text-sm text-red-700">{aiResults.error}</p>
+                                            <p className="text-xs text-gray-500 mt-2">The AI-generated SQL had an issue. Try rephrasing your question or be more specific.</p>
+                                        </div>
+                                    ) : aiResults.empty ? (
+                                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                                            <p className="text-sm font-medium text-amber-800 mb-1">No Results Found</p>
+                                            <p className="text-sm text-amber-700">The query executed successfully but returned no matching data. This could mean:</p>
+                                            <ul className="list-disc list-inside text-sm text-amber-700 mt-2 space-y-1">
+                                                <li>The filter criteria are too narrow</li>
+                                                <li>The data doesn't contain the specific combination you're looking for</li>
+                                                <li>Try broadening your question (e.g. "Show all regions" instead of a specific one)</li>
+                                            </ul>
+                                        </div>
+                                    ) : aiResults.data && aiResults.data.length > 0 ? (
                                         <div className="overflow-x-auto">
                                             <table className="w-full text-sm border-collapse">
                                                 <thead>
@@ -1239,9 +1274,7 @@ ${content}
                                                 <p className="text-xs text-gray-400 mt-2">Showing first 50 of {aiResults.data.length} results</p>
                                             )}
                                         </div>
-                                    ) : (
-                                        <p className="text-gray-500 text-sm">No results returned for this query.</p>
-                                    )}
+                                    ) : null}
                                     <p className="text-xs text-gray-400 mt-3 font-mono bg-gray-50 p-2 rounded">{aiResults.response}</p>
                                 </div>
                             )}
