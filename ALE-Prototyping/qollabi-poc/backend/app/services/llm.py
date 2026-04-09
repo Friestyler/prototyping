@@ -100,22 +100,39 @@ def generate_sql_from_query(natural_language: str, schema: str) -> str:
 
     system_prompt = """You are an SQL expert for SQLite databases.
 Convert natural language queries to valid SQLite SQL queries.
-Only return the SQL query, nothing else.
+Only return the SQL query, nothing else. No explanation, no markdown.
 Use proper JOINs and aggregations as needed.
-The database has tables: partners, kpi_metrics, account_managers.
 
-partners table has: account_id, name, region, country, segment, csm_emails
-kpi_metrics table has: id, account_id, metric_name, period, result, target, achievement
-account_managers table has: id, email, name, region
+TABLES:
+- partners: account_id (TEXT PK), name, region, country, segment, csm_emails
+- kpi_metrics: id, account_id (FK→partners), metric_name, period, result (REAL), target (REAL), achievement (REAL, 0-1 scale where 1.0 = 100%)
+- account_managers: id, email (UNIQUE), name, region
+
+IMPORTANT — Use ONLY these exact values (case-sensitive):
+
+metric_name values:
+  'Quarterly Pipeline vs Target', 'Certifications achievements vs recommended',
+  'Business Plan Setup and Acceptance', 'Sales IN Revenues vs Sales target',
+  'Communications Certifications', 'Networking Certifications', 'Marketing Plan'
+
+period values:
+  'Q1 2025', 'Q2 2025', 'Q3 2025', 'Q4 2025', '2025 Total',
+  'Q1 2026', 'Q2 2026', 'Q3 2026', 'Q4 2026', '2026 Total',
+  'Current' (for non-pipeline metrics)
+
+region values: 'americas', 'germany', 'emea', 'apac', 'eeimea', 'france'
+segment values: 'yes', 'expert_1000', 'expert_200', 'distributor_1000', 'distributor'
+
+When asked about pipeline, use metric_name = 'Quarterly Pipeline vs Target'.
+When asked about at-risk partners, use achievement < 0.7.
+When asked about top performers, ORDER BY achievement DESC.
+Always LIMIT results to 50 unless specified otherwise.
 """
 
-    user_prompt = f"""Database schema:
-{schema}
-
-Convert this question to SQL:
+    user_prompt = f"""Convert this question to SQL:
 {natural_language}
 
-Return ONLY the SQL query, no explanation.
+Return ONLY the SQL query.
 """
 
     if _get_openai_key():
