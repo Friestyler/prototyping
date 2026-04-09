@@ -205,6 +205,51 @@
             );
         };
 
+        // ==================== TEXT TO HTML CONVERTER ====================
+        const textToHtml = (text) => {
+            if (!text) return '';
+            // If already contains HTML tags, return as-is
+            if (/<[a-z][\s\S]*>/i.test(text)) return text;
+            // Convert plain text to styled HTML
+            return text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .split('\n\n')
+                .map(block => {
+                    block = block.trim();
+                    if (!block) return '';
+                    // Headings (ALL CAPS lines)
+                    if (/^[A-Z][A-Z\s\-&:]+$/.test(block.split('\n')[0])) {
+                        const lines = block.split('\n');
+                        const heading = `<h3 class="text-lg font-bold text-gray-800 mt-6 mb-3">${lines[0]}</h3>`;
+                        return heading + (lines.slice(1).join('\n') ? textToHtml(lines.slice(1).join('\n\n')) : '');
+                    }
+                    // Numbered lists
+                    if (/^\d+\.\s/.test(block)) {
+                        const items = block.split('\n').filter(l => l.trim()).map(l =>
+                            `<li class="ml-4">${l.replace(/^\d+\.\s*/, '')}</li>`
+                        ).join('');
+                        return `<ol class="list-decimal list-inside text-gray-700 space-y-1 mb-4">${items}</ol>`;
+                    }
+                    // Bullet lists
+                    if (/^[-•]\s/.test(block)) {
+                        const items = block.split('\n').filter(l => l.trim()).map(l =>
+                            `<li>${l.replace(/^[-•]\s*/, '')}</li>`
+                        ).join('');
+                        return `<ul class="list-disc list-inside text-gray-700 space-y-1 mb-4">${items}</ul>`;
+                    }
+                    // Sub-heading lines ending with colon
+                    if (/^[A-Z][A-Za-z\s]+:$/.test(block.split('\n')[0])) {
+                        const lines = block.split('\n');
+                        return `<h4 class="font-semibold text-gray-800 mt-4 mb-2">${lines[0]}</h4>` +
+                               (lines.length > 1 ? `<p class="text-gray-700 mb-3">${lines.slice(1).join('<br>')}</p>` : '');
+                    }
+                    return `<p class="text-gray-700 mb-3">${block.replace(/\n/g, '<br>')}</p>`;
+                })
+                .join('');
+        };
+
         // ==================== API HELPER ====================
         const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:8000/api' : '/api';
 
@@ -257,6 +302,8 @@
             const [toast, setToast] = useState(null);
             const [templates, setTemplates] = useState(MOCK_DATA.templates);
             const [accountManagers, setAccountManagers] = useState(MOCK_DATA.accountManagers);
+            const [bulkLoading, setBulkLoading] = useState(false);
+            const [bulkResults, setBulkResults] = useState(null);
 
             useEffect(() => {
                 loadTemplates();
@@ -368,11 +415,114 @@
             };
 
             const handleDownloadPDF = () => {
-                setToast({ type: 'success', message: 'PDF download initiated!' });
+                const content = textToHtml(generatedContent);
+                const html = `<!DOCTYPE html>
+<html><head>
+<meta charset="UTF-8">
+<title>Qollabi Update Report</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; color: #1f2937; line-height: 1.6; }
+  h3 { font-size: 1.25rem; font-weight: 700; color: #1e3a5f; margin-top: 1.5rem; }
+  h4 { font-size: 1rem; font-weight: 600; color: #374151; margin-top: 1rem; }
+  table { width: 100%; border-collapse: collapse; margin: 0.75rem 0; font-size: 0.875rem; }
+  th { background: #f3f4f6; padding: 8px 12px; text-align: left; font-weight: 600; }
+  td { padding: 8px 12px; border-bottom: 1px solid #e5e7eb; }
+  ul, ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+  li { margin: 0.25rem 0; }
+  .text-green-600 { color: #16a34a; } .text-red-600 { color: #dc2626; }
+  .text-blue-700 { color: #1d4ed8; } .text-teal-700 { color: #0f766e; }
+  .text-amber-700 { color: #b45309; }
+  .bg-blue-50, .bg-teal-50, .bg-amber-50, .bg-red-50, .bg-green-50 { padding: 12px; border-radius: 8px; text-align: center; margin: 4px; }
+  .bg-blue-50 { background: #eff6ff; } .bg-teal-50 { background: #f0fdfa; }
+  .bg-amber-50 { background: #fffbeb; } .bg-red-50 { background: #fef2f2; }
+  .bg-green-50 { background: #f0fdf4; }
+  .grid { display: flex; gap: 12px; margin: 12px 0; }
+  .grid > div { flex: 1; }
+  p { margin: 0.5rem 0; }
+  @media print { body { margin: 20px; } }
+</style>
+</head><body>
+<div style="border-bottom: 3px solid #1e3a5f; padding-bottom: 12px; margin-bottom: 20px;">
+  <h2 style="color: #1e3a5f; margin: 0;">Qollabi 2.0 | Partner Intelligence Report</h2>
+  <p style="color: #6b7280; font-size: 0.8rem; margin: 4px 0 0;">Generated: ${new Date().toLocaleString()}</p>
+</div>
+${content}
+<div style="border-top: 1px solid #e5e7eb; margin-top: 30px; padding-top: 12px; color: #9ca3af; font-size: 0.75rem;">
+  Qollabi 2.0 &mdash; ALE Partner Intelligence Platform
+</div>
+</body></html>`;
+
+                const printWindow = window.open('', '_blank');
+                printWindow.document.write(html);
+                printWindow.document.close();
+                printWindow.onload = () => {
+                    printWindow.print();
+                };
+                setToast({ type: 'success', message: 'PDF ready — use Print dialog to save as PDF' });
             };
 
             const handleSendEmail = () => {
                 setToast({ type: 'success', message: 'Email sent successfully!' });
+            };
+
+            const buildBulkPayload = () => ({
+                prompt_template_id: template === 'custom' ? undefined : parseInt(template),
+                custom_prompt: template === 'custom' ? customPrompt : undefined,
+                include_web_context: includeWeb,
+                regions: regions.length > 0 ? regions : undefined,
+                additional_context: additionalContext || undefined,
+            });
+
+            const handleBulkEmail = async () => {
+                if (!confirm(`This will generate updates for ALL account managers and send emails.\n\nIn PoC mode, all emails go to frie@qollabi.com.\n\nContinue?`)) return;
+                setBulkLoading(true);
+                setBulkResults(null);
+                setToast({ type: 'info', message: 'Generating updates for all managers... This may take a minute.' });
+
+                const data = await apiCall('/updates/bulk-generate-email', {
+                    method: 'POST',
+                    body: JSON.stringify(buildBulkPayload()),
+                });
+
+                setBulkLoading(false);
+                if (data) {
+                    setBulkResults(data);
+                    setToast({ type: 'success', message: `Done! ${data.sent} sent, ${data.failed} failed out of ${data.total_managers} managers.` });
+                    loadRecentUpdates();
+                } else {
+                    setToast({ type: 'error', message: 'Bulk email generation failed.' });
+                }
+            };
+
+            const handleBulkPDF = async () => {
+                setBulkLoading(true);
+                setToast({ type: 'info', message: 'Generating PDFs for all managers... This may take a minute.' });
+
+                try {
+                    const response = await fetch(`${API_BASE}/updates/bulk-generate-pdf`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(buildBulkPayload()),
+                    });
+
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `Qollabi_Updates_${new Date().toISOString().slice(0,10)}.zip`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(url);
+
+                    setToast({ type: 'success', message: 'ZIP file downloaded!' });
+                    loadRecentUpdates();
+                } catch (e) {
+                    setToast({ type: 'error', message: `PDF generation failed: ${e.message}` });
+                }
+                setBulkLoading(false);
             };
 
             return (
@@ -537,11 +687,57 @@
                         {/* Generate Button */}
                         <button
                             onClick={handleGenerateUpdate}
-                            disabled={loading}
+                            disabled={loading || bulkLoading}
                             className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-3 rounded-lg transition-colors mb-4"
                         >
                             {loading ? 'Generating...' : 'Generate Update'}
                         </button>
+
+                        {/* Bulk Actions */}
+                        <div className="border-t pt-4 mb-4">
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Bulk Actions (All Managers)</p>
+                            <div className="space-y-2">
+                                <button
+                                    onClick={handleBulkEmail}
+                                    disabled={bulkLoading}
+                                    className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-medium py-2.5 rounded-lg transition-colors text-sm flex items-center justify-center gap-2"
+                                >
+                                    {bulkLoading ? 'Processing...' : 'Send All via Email'}
+                                </button>
+                                <button
+                                    onClick={handleBulkPDF}
+                                    disabled={bulkLoading}
+                                    className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white font-medium py-2.5 rounded-lg transition-colors text-sm flex items-center justify-center gap-2"
+                                >
+                                    {bulkLoading ? 'Processing...' : 'Download All as PDF (ZIP)'}
+                                </button>
+                            </div>
+                            <p className="text-xs text-gray-400 mt-2">Uses selected template, regions &amp; web context settings.</p>
+                        </div>
+
+                        {/* Bulk Results */}
+                        {bulkResults && (
+                            <div className="border-t pt-4 mb-4">
+                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Bulk Results</p>
+                                <div className="grid grid-cols-3 gap-2 mb-2">
+                                    <div className="bg-blue-50 rounded p-2 text-center">
+                                        <p className="text-lg font-bold text-blue-700">{bulkResults.total_managers}</p>
+                                        <p className="text-xs text-gray-500">Total</p>
+                                    </div>
+                                    <div className="bg-green-50 rounded p-2 text-center">
+                                        <p className="text-lg font-bold text-green-700">{bulkResults.sent}</p>
+                                        <p className="text-xs text-gray-500">Sent</p>
+                                    </div>
+                                    <div className="bg-red-50 rounded p-2 text-center">
+                                        <p className="text-lg font-bold text-red-700">{bulkResults.failed}</p>
+                                        <p className="text-xs text-gray-500">Failed</p>
+                                    </div>
+                                </div>
+                                {bulkResults.results && bulkResults.results.some(r => r.mock) && (
+                                    <p className="text-xs text-amber-600">Note: Emails were mock-sent (no Postmark token configured).</p>
+                                )}
+                            </div>
+                        )}
 
                         {/* Schedule Section */}
                         <div className="border-t pt-4">
@@ -584,7 +780,7 @@
                             <h3 className="text-lg font-semibold text-gray-800 mb-4">Update Preview</h3>
                             <div
                                 className="prose prose-sm max-w-none text-gray-700"
-                                dangerouslySetInnerHTML={{ __html: generatedContent }}
+                                dangerouslySetInnerHTML={{ __html: textToHtml(generatedContent) }}
                             />
 
                             {/* Action Buttons */}

@@ -1,10 +1,20 @@
 import os
+import shutil
 import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Generator
 
-DATABASE_PATH = Path(os.environ.get("DB_PATH", str(Path(__file__).parent.parent / "data" / "qollabi.db")))
+_SOURCE_DB = Path(os.environ.get("DB_PATH", str(Path(__file__).parent.parent / "data" / "qollabi.db")))
+
+# On Vercel (read-only filesystem), copy DB to /tmp for write support
+if os.environ.get("VERCEL") and _SOURCE_DB.exists():
+    _TMP_DB = Path("/tmp/qollabi.db")
+    if not _TMP_DB.exists():
+        shutil.copy2(str(_SOURCE_DB), str(_TMP_DB))
+    DATABASE_PATH = _TMP_DB
+else:
+    DATABASE_PATH = _SOURCE_DB
 
 
 @contextmanager
