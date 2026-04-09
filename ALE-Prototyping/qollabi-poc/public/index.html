@@ -1200,15 +1200,49 @@ ${content}
 
                             {aiResults && (
                                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 fade-in">
-                                    <h4 className="font-semibold text-gray-800 mb-4">Response</h4>
-                                    <p className="text-gray-700 mb-4">{aiResults.response}</p>
-                                    {aiResults.data && (
-                                        <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                                            <pre className="text-sm text-gray-600 overflow-x-auto">
-                                                {JSON.stringify(aiResults.data, null, 2)}
-                                            </pre>
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h4 className="font-semibold text-gray-800">Results</h4>
+                                        <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">{aiResults.data ? aiResults.data.length : 0} row(s)</span>
+                                    </div>
+                                    <p className="text-sm text-gray-600 mb-4 bg-blue-50 p-3 rounded-lg">
+                                        <span className="font-medium text-blue-800">Q:</span> {aiResults.question}
+                                    </p>
+                                    {aiResults.data && aiResults.data.length > 0 ? (
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-sm border-collapse">
+                                                <thead>
+                                                    <tr className="bg-gray-50 border-b border-gray-200">
+                                                        {Object.keys(aiResults.data[0]).map(key => (
+                                                            <th key={key} className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wide">
+                                                                {key.replace(/_/g, ' ')}
+                                                            </th>
+                                                        ))}
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {aiResults.data.slice(0, 50).map((row, idx) => (
+                                                        <tr key={idx} className={`border-b border-gray-100 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition-colors`}>
+                                                            {Object.values(row).map((val, vidx) => (
+                                                                <td key={vidx} className="px-4 py-2.5 text-gray-700">
+                                                                    {typeof val === 'number' ? (
+                                                                        val % 1 !== 0 ? val.toFixed(2) : val.toLocaleString()
+                                                                    ) : val === null ? (
+                                                                        <span className="text-gray-400 italic">—</span>
+                                                                    ) : String(val)}
+                                                                </td>
+                                                            ))}
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                            {aiResults.data.length > 50 && (
+                                                <p className="text-xs text-gray-400 mt-2">Showing first 50 of {aiResults.data.length} results</p>
+                                            )}
                                         </div>
+                                    ) : (
+                                        <p className="text-gray-500 text-sm">No results returned for this query.</p>
                                     )}
+                                    <p className="text-xs text-gray-400 mt-3 font-mono bg-gray-50 p-2 rounded">{aiResults.response}</p>
                                 </div>
                             )}
                         </div>
