@@ -1,0 +1,1087 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qollabi 2.0 | Partner Intelligence Platform</title>
+
+    <!-- CDN Imports -->
+    <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prop-types/15.8.1/prop-types.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/recharts@2.10.4/umd/Recharts.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .slide-in {
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .toast {
+            animation: slideInUp 0.3s ease-out;
+        }
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div id="root"></div>
+
+    <script type="text/babel" data-type="module">
+        const { useState, useEffect, useCallback, useRef } = React;
+        const Recharts = window.Recharts || {};
+        const { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = Recharts;
+
+        // ==================== MOCK DATA ====================
+        const MOCK_DATA = {
+            templates: [
+                { id: '1', name: 'Monthly Executive Summary' },
+                { id: '2', name: 'Weekly Operations Report' },
+                { id: '3', name: 'Partner Feedback Summary' },
+                { id: '4', name: 'Pipeline Opportunity Report' }
+            ],
+            accountManagers: [
+                { id: '1', name: 'Alice Johnson' },
+                { id: '2', name: 'Bob Smith' },
+                { id: '3', name: 'Carol White' },
+                { id: '4', name: 'David Brown' }
+            ],
+            generatedUpdate: `<h3 class="text-lg font-semibold mb-4 text-gray-800">Executive Summary - Q1 2026 Update</h3>
+                <p class="text-gray-700 mb-3">This quarter demonstrates strong momentum across our partner network with notable achievements in pipeline growth and customer satisfaction.</p>
+                <h4 class="font-semibold text-gray-800 mb-2">Key Highlights:</h4>
+                <ul class="list-disc list-inside text-gray-700 space-y-1 mb-4">
+                    <li>Pipeline growth of 15.3% quarter-over-quarter</li>
+                    <li>Customer satisfaction scores increased to 8.7/10</li>
+                    <li>Regional performance gap narrowing significantly</li>
+                    <li>Top performers exceeding targets by 22%</li>
+                </ul>
+                <h4 class="font-semibold text-gray-800 mb-2">Opportunities:</h4>
+                <ul class="list-disc list-inside text-gray-700 space-y-1">
+                    <li>Increased focus on German market penetration</li>
+                    <li>Strategic partnerships in emerging segments</li>
+                    <li>Training initiatives for underperforming regions</li>
+                </ul>`,
+            recentUpdates: [
+                { id: '1', title: 'Q1 2026 Executive Summary', timestamp: '2 hours ago', status: 'generated' },
+                { id: '2', title: 'Monthly Operations Report', timestamp: '1 day ago', status: 'sent' },
+                { id: '3', title: 'Pipeline Opportunity Report', timestamp: '3 days ago', status: 'scheduled' }
+            ],
+            dashboardOverview: [
+                { category: 'Pipeline Achievement', value: 87 },
+                { category: 'Customer Satisfaction', value: 8.7 },
+                { category: 'Target Attainment', value: 92 },
+                { category: 'Growth Rate', value: 15.3 }
+            ],
+            regionalPerformance: [
+                { region: 'Americas', pipeline: 450, target: 400, satisfaction: 8.9 },
+                { region: 'Germany', pipeline: 280, target: 320, satisfaction: 8.2 },
+                { region: 'EMEA', pipeline: 320, target: 300, satisfaction: 8.5 }
+            ],
+            pipelineTrend: [
+                { quarter: 'Q1 2025', result: 280, target: 250 },
+                { quarter: 'Q2 2025', result: 310, target: 280 },
+                { quarter: 'Q3 2025', result: 360, target: 320 },
+                { quarter: 'Q4 2025', result: 420, target: 380 },
+                { quarter: 'Q1 2026', result: 485, target: 450 },
+                { quarter: 'Q2 2026', result: 520, target: 480 },
+                { quarter: 'Q3 2026', result: 495, target: 510 },
+                { quarter: 'Q4 2026', result: 540, target: 550 }
+            ],
+            topPerformers: [
+                { id: '1', name: 'TechCorp Solutions', region: 'Americas', achievement: 115 },
+                { id: '2', name: 'Global Systems Inc', region: 'EMEA', achievement: 108 },
+                { id: '3', name: 'Digital Innovation GmbH', region: 'Germany', achievement: 105 },
+                { id: '4', name: 'Enterprise Partners', region: 'Americas', achievement: 103 },
+                { id: '5', name: 'Strategy First Ltd', region: 'EMEA', achievement: 101 }
+            ],
+            bottomPerformers: [
+                { id: '6', name: 'Regional Distributor A', region: 'Germany', achievement: 62 },
+                { id: '7', name: 'Emerging Markets LLC', region: 'EMEA', achievement: 68 },
+                { id: '8', name: 'Growth Ventures', region: 'Americas', achievement: 71 },
+                { id: '9', name: 'Partnership Network', region: 'Germany', achievement: 74 },
+                { id: '10', name: 'Development Partners', region: 'EMEA', achievement: 76 }
+            ],
+            bySegment: [
+                { segment: 'Enterprise', pipeline: 420, target: 380, satisfaction: 8.8 },
+                { segment: 'Mid-Market', pipeline: 310, target: 300, satisfaction: 8.6 },
+                { segment: 'SMB', pipeline: 220, target: 200, satisfaction: 8.4 }
+            ],
+            managerPerformance: [
+                { manager: 'Alice Johnson', partnersCount: 12, avgAchievement: 98, pipeline: 380 },
+                { manager: 'Bob Smith', partnersCount: 10, avgAchievement: 94, pipeline: 320 },
+                { manager: 'Carol White', partnersCount: 15, avgAchievement: 89, pipeline: 350 },
+                { manager: 'David Brown', partnersCount: 8, avgAchievement: 105, pipeline: 275 }
+            ]
+        };
+
+        // ==================== PASSWORD GATE ====================
+        const PASSWORD = 'Qollabi123';
+
+        const LoginScreen = ({ onLogin }) => {
+            const [password, setPassword] = useState('');
+            const [error, setError] = useState(false);
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                if (password === PASSWORD) {
+                    sessionStorage.setItem('qollabi_auth', 'true');
+                    onLogin();
+                } else {
+                    setError(true);
+                    setTimeout(() => setError(false), 2000);
+                }
+            };
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-blue-900 flex items-center justify-center">
+                    <div className="bg-white rounded-2xl shadow-2xl p-10 w-full max-w-md">
+                        <div className="text-center mb-8">
+                            <h1 className="text-3xl font-bold text-blue-900 mb-2">Qollabi 2.0</h1>
+                            <p className="text-gray-500">Partner Intelligence Platform</p>
+                        </div>
+                        <form onSubmit={handleSubmit}>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                            <input
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                placeholder="Enter access password"
+                                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 mb-4 ${error ? 'border-red-500 shake' : 'border-gray-300'}`}
+                                autoFocus
+                            />
+                            {error && <p className="text-red-500 text-sm mb-4">Incorrect password. Try again.</p>}
+                            <button
+                                type="submit"
+                                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-colors"
+                            >
+                                Access Platform
+                            </button>
+                        </form>
+                        <p className="text-center text-xs text-gray-400 mt-6">ALE Partner Management - Restricted Access</p>
+                    </div>
+                </div>
+            );
+        };
+
+        // ==================== API HELPER ====================
+        const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:8000/api' : '/api';
+
+        const apiCall = async (endpoint, options = {}) => {
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    headers: { 'Content-Type': 'application/json' },
+                    ...options
+                });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return await response.json();
+            } catch (error) {
+                console.warn(`API error on ${endpoint}:`, error.message);
+                return null;
+            }
+        };
+
+        // ==================== TOAST NOTIFICATION ====================
+        const Toast = ({ message, type = 'success', onClose }) => {
+            useEffect(() => {
+                const timer = setTimeout(onClose, 3000);
+                return () => clearTimeout(timer);
+            }, [onClose]);
+
+            const bgColor = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500';
+
+            return (
+                <div className={`toast ${bgColor} text-white px-6 py-3 rounded-lg shadow-lg`}>
+                    {message}
+                </div>
+            );
+        };
+
+        // ==================== SMART UPDATE GENERATOR ====================
+        const SmartUpdateGenerator = () => {
+            const [targetGroup, setTargetGroup] = useState('leadership');
+            const [accountManager, setAccountManager] = useState('');
+            const [regions, setRegions] = useState(['americas']);
+            const [template, setTemplate] = useState('1');
+            const [customPrompt, setCustomPrompt] = useState('');
+            const [additionalContext, setAdditionalContext] = useState('');
+            const [includeWeb, setIncludeWeb] = useState(true);
+            const [outputFormat, setOutputFormat] = useState('html');
+            const [deliveryChannels, setDeliveryChannels] = useState(['preview']);
+            const [loading, setLoading] = useState(false);
+            const [generatedContent, setGeneratedContent] = useState(MOCK_DATA.generatedUpdate);
+            const [recentUpdates, setRecentUpdates] = useState(MOCK_DATA.recentUpdates);
+            const [scheduleVisible, setScheduleVisible] = useState(false);
+            const [frequency, setFrequency] = useState('weekly');
+            const [toast, setToast] = useState(null);
+            const [templates, setTemplates] = useState(MOCK_DATA.templates);
+            const [accountManagers, setAccountManagers] = useState(MOCK_DATA.accountManagers);
+
+            useEffect(() => {
+                loadTemplates();
+                loadAccountManagers();
+                loadRecentUpdates();
+            }, []);
+
+            const loadTemplates = async () => {
+                const data = await apiCall('/updates/templates');
+                if (data && Array.isArray(data)) setTemplates(data);
+            };
+
+            const loadAccountManagers = async () => {
+                const data = await apiCall('/partners/account-managers');
+                if (data && Array.isArray(data)) setAccountManagers(data.map(m => ({ id: m.email, name: m.name })));
+            };
+
+            const loadRecentUpdates = async () => {
+                const data = await apiCall('/updates?limit=10');
+                if (data && data.data) {
+                    setRecentUpdates(data.data.map(u => ({
+                        id: u.id.toString(),
+                        title: u.target_group === 'leadership' ? 'Leadership Update' : `Update for ${u.account_manager_email || 'N/A'}`,
+                        timestamp: new Date(u.created_at).toLocaleString(),
+                        status: u.status
+                    })));
+                }
+            };
+
+            const toggleRegion = (region) => {
+                setRegions(prev =>
+                    prev.includes(region)
+                        ? prev.filter(r => r !== region)
+                        : [...prev, region]
+                );
+            };
+
+            const toggleDelivery = (channel) => {
+                setDeliveryChannels(prev =>
+                    prev.includes(channel)
+                        ? prev.filter(c => c !== channel)
+                        : [...prev, channel]
+                );
+            };
+
+            const handleGenerateUpdate = async () => {
+                setLoading(true);
+                const payload = {
+                    target_group: targetGroup,
+                    account_manager_email: targetGroup === 'account_manager' ? accountManager : undefined,
+                    prompt_template_id: template === 'custom' ? undefined : parseInt(template),
+                    custom_prompt: template === 'custom' ? customPrompt : undefined,
+                    additional_context: additionalContext,
+                    include_web_context: includeWeb,
+                    format: outputFormat,
+                    regions,
+                    delivery_channels: deliveryChannels
+                };
+
+                const data = await apiCall('/updates/generate', {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+
+                if (data && data.content) {
+                    setGeneratedContent(data.content);
+                    setToast({ type: 'success', message: 'Update generated successfully!' });
+                    // Add to recent updates
+                    const newUpdate = {
+                        id: Date.now().toString(),
+                        title: `Generated Update - ${new Date().toLocaleDateString()}`,
+                        timestamp: 'just now',
+                        status: 'generated'
+                    };
+                    setRecentUpdates(prev => [newUpdate, ...prev.slice(0, 9)]);
+                } else {
+                    setToast({ type: 'error', message: 'Failed to generate update' });
+                }
+                setLoading(false);
+            };
+
+            const handleSchedule = async () => {
+                const payload = {
+                    name: `Scheduled ${targetGroup} update (${frequency})`,
+                    prompt_template_id: template === 'custom' ? 1 : parseInt(template),
+                    target_group: targetGroup,
+                    frequency,
+                    delivery_channel: deliveryChannels[0] || 'email'
+                };
+
+                const data = await apiCall('/updates/schedules', {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+
+                if (data) {
+                    setToast({ type: 'success', message: `Update scheduled ${frequency}!` });
+                    setScheduleVisible(false);
+                } else {
+                    setToast({ type: 'error', message: 'Failed to schedule update' });
+                }
+            };
+
+            const handleCopy = () => {
+                const div = document.createElement('div');
+                div.innerHTML = generatedContent;
+                navigator.clipboard.writeText(div.innerText);
+                setToast({ type: 'success', message: 'Copied to clipboard!' });
+            };
+
+            const handleDownloadPDF = () => {
+                setToast({ type: 'success', message: 'PDF download initiated!' });
+            };
+
+            const handleSendEmail = () => {
+                setToast({ type: 'success', message: 'Email sent successfully!' });
+            };
+
+            return (
+                <div className="flex h-[calc(100vh-140px)] gap-6 p-6 bg-gray-50 overflow-hidden">
+                    {/* Left Sidebar */}
+                    <div className="w-[30%] bg-white rounded-xl shadow-sm border border-gray-200 p-6 overflow-y-auto custom-scrollbar">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-6">Configuration</h3>
+
+                        {/* Target Group */}
+                        <div className="mb-6">
+                            <label className="block text-sm font-medium text-gray-700 mb-3">Target Group</label>
+                            <div className="space-y-2">
+                                <label className="flex items-center cursor-pointer">
+                                    <input
+                                        type="radio"
+                                        value="leadership"
+                                        checked={targetGroup === 'leadership'}
+                                        onChange={(e) => setTargetGroup(e.target.value)}
+                                        className="w-4 h-4 text-blue-600"
+                                    />
+                                    <span className="ml-3 text-gray-700">Leadership</span>
+                                </label>
+                                <label className="flex items-center cursor-pointer">
+                                    <input
+                                        type="radio"
+                                        value="account_manager"
+                                        checked={targetGroup === 'account_manager'}
+                                        onChange={(e) => setTargetGroup(e.target.value)}
+                                        className="w-4 h-4 text-blue-600"
+                                    />
+                                    <span className="ml-3 text-gray-700">Account Manager</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        {/* Account Manager Selector */}
+                        {targetGroup === 'account_manager' && (
+                            <div className="mb-6">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Select Account Manager</label>
+                                <select
+                                    value={accountManager}
+                                    onChange={(e) => setAccountManager(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
+                                >
+                                    <option value="">Choose a manager...</option>
+                                    {accountManagers.map(mgr => (
+                                        <option key={mgr.id} value={mgr.id}>{mgr.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+
+                        {/* Region Filter */}
+                        <div className="mb-6">
+                            <label className="block text-sm font-medium text-gray-700 mb-3">Regions</label>
+                            <div className="space-y-2">
+                                {['americas', 'germany', 'emea'].map(region => (
+                                    <label key={region} className="flex items-center cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={regions.includes(region)}
+                                            onChange={() => toggleRegion(region)}
+                                            className="w-4 h-4 text-teal-600 rounded"
+                                        />
+                                        <span className="ml-3 text-gray-700 capitalize">{region}</span>
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Prompt Template */}
+                        <div className="mb-6">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Template</label>
+                            <select
+                                value={template}
+                                onChange={(e) => setTemplate(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
+                            >
+                                {templates.map(t => (
+                                    <option key={t.id} value={t.id}>{t.name}</option>
+                                ))}
+                                <option value="custom">(Custom)</option>
+                            </select>
+                        </div>
+
+                        {/* Custom Prompt */}
+                        {template === 'custom' && (
+                            <div className="mb-6">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Custom Prompt</label>
+                                <textarea
+                                    value={customPrompt}
+                                    onChange={(e) => setCustomPrompt(e.target.value)}
+                                    placeholder="Enter your custom prompt here..."
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 text-sm resize-none"
+                                    rows="4"
+                                />
+                            </div>
+                        )}
+
+                        {/* Additional Context */}
+                        <div className="mb-6">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Additional Context</label>
+                            <textarea
+                                value={additionalContext}
+                                onChange={(e) => setAdditionalContext(e.target.value)}
+                                placeholder="Add any extra context for the update..."
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 text-sm resize-none"
+                                rows="3"
+                            />
+                        </div>
+
+                        {/* Include Web Context */}
+                        <div className="mb-6">
+                            <label className="flex items-center cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={includeWeb}
+                                    onChange={(e) => setIncludeWeb(e.target.checked)}
+                                    className="w-4 h-4 text-teal-600 rounded"
+                                />
+                                <span className="ml-3 text-gray-700 text-sm">Include Web Context</span>
+                            </label>
+                        </div>
+
+                        {/* Output Format */}
+                        <div className="mb-6">
+                            <label className="block text-sm font-medium text-gray-700 mb-3">Output Format</label>
+                            <div className="space-y-2">
+                                {['text', 'html', 'pdf', 'email'].map(format => (
+                                    <label key={format} className="flex items-center cursor-pointer">
+                                        <input
+                                            type="radio"
+                                            value={format}
+                                            checked={outputFormat === format}
+                                            onChange={(e) => setOutputFormat(e.target.value)}
+                                            className="w-4 h-4 text-blue-600"
+                                        />
+                                        <span className="ml-3 text-gray-700 capitalize">{format}</span>
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Delivery Channels */}
+                        <div className="mb-6">
+                            <label className="block text-sm font-medium text-gray-700 mb-3">Delivery Channels</label>
+                            <div className="space-y-2">
+                                {['preview', 'email', 'pdf', 'ftp', 'webhook'].map(channel => (
+                                    <label key={channel} className="flex items-center cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={deliveryChannels.includes(channel)}
+                                            onChange={() => toggleDelivery(channel)}
+                                            className="w-4 h-4 text-teal-600 rounded"
+                                        />
+                                        <span className="ml-3 text-gray-700 capitalize text-sm">{channel.replace('_', ' ')}</span>
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Generate Button */}
+                        <button
+                            onClick={handleGenerateUpdate}
+                            disabled={loading}
+                            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-3 rounded-lg transition-colors mb-4"
+                        >
+                            {loading ? 'Generating...' : 'Generate Update'}
+                        </button>
+
+                        {/* Schedule Section */}
+                        <div className="border-t pt-4">
+                            <button
+                                onClick={() => setScheduleVisible(!scheduleVisible)}
+                                className="w-full text-left font-medium text-gray-700 text-sm flex justify-between items-center"
+                            >
+                                Schedule Update
+                                <span className="text-lg">{scheduleVisible ? '▼' : '▶'}</span>
+                            </button>
+                            {scheduleVisible && (
+                                <div className="mt-4 space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Frequency</label>
+                                        <select
+                                            value={frequency}
+                                            onChange={(e) => setFrequency(e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
+                                        >
+                                            <option value="daily">Daily</option>
+                                            <option value="weekly">Weekly</option>
+                                            <option value="monthly">Monthly</option>
+                                        </select>
+                                    </div>
+                                    <button
+                                        onClick={handleSchedule}
+                                        className="w-full bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2 rounded-lg transition-colors"
+                                    >
+                                        Schedule
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Right Main Area */}
+                    <div className="flex-1 flex flex-col gap-6 overflow-hidden">
+                        {/* Preview Section */}
+                        <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 p-6 overflow-y-auto custom-scrollbar">
+                            <h3 className="text-lg font-semibold text-gray-800 mb-4">Update Preview</h3>
+                            <div
+                                className="prose prose-sm max-w-none text-gray-700"
+                                dangerouslySetInnerHTML={{ __html: generatedContent }}
+                            />
+
+                            {/* Action Buttons */}
+                            <div className="flex gap-3 mt-6 pt-4 border-t">
+                                <button
+                                    onClick={handleCopy}
+                                    className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-medium transition-colors"
+                                >
+                                    Copy
+                                </button>
+                                <button
+                                    onClick={handleDownloadPDF}
+                                    className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-medium transition-colors"
+                                >
+                                    Download PDF
+                                </button>
+                                <button
+                                    onClick={handleSendEmail}
+                                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                                >
+                                    Send Email
+                                </button>
+                                <button
+                                    className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium transition-colors"
+                                >
+                                    Save
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* History Section */}
+                        <div className="h-48 bg-white rounded-xl shadow-sm border border-gray-200 p-6 overflow-y-auto custom-scrollbar">
+                            <h4 className="font-semibold text-gray-800 mb-3">Recent Updates</h4>
+                            <div className="space-y-2">
+                                {recentUpdates.map(update => (
+                                    <div key={update.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors">
+                                        <div>
+                                            <p className="font-medium text-gray-800 text-sm">{update.title}</p>
+                                            <p className="text-xs text-gray-600">{update.timestamp}</p>
+                                        </div>
+                                        <span className={`px-2 py-1 text-xs rounded-full font-medium ${
+                                            update.status === 'sent' ? 'bg-green-100 text-green-800' :
+                                            update.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
+                                            'bg-gray-200 text-gray-800'
+                                        }`}>
+                                            {update.status}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Toast */}
+                    {toast && (
+                        <div className="fixed bottom-8 right-8 z-50">
+                            <Toast
+                                message={toast.message}
+                                type={toast.type}
+                                onClose={() => setToast(null)}
+                            />
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // ==================== DASHBOARD MODULE ====================
+        const Dashboard = () => {
+            const [activeTab, setActiveTab] = useState('overview');
+            const [aiQuestion, setAiQuestion] = useState('');
+            const [aiResults, setAiResults] = useState(null);
+            const [loading, setLoading] = useState(false);
+            const [toast, setToast] = useState(null);
+            const [dashboardData, setDashboardData] = useState({
+                overview: MOCK_DATA.dashboardOverview,
+                regional: MOCK_DATA.regionalPerformance,
+                pipeline: MOCK_DATA.pipelineTrend,
+                topPerformers: MOCK_DATA.topPerformers,
+                bottomPerformers: MOCK_DATA.bottomPerformers,
+                bySegment: MOCK_DATA.bySegment,
+                managerPerformance: MOCK_DATA.managerPerformance
+            });
+
+            useEffect(() => {
+                loadDashboardData();
+            }, []);
+
+            const loadDashboardData = async () => {
+                // Overview
+                const overview = await apiCall('/dashboard/overview');
+                if (overview && overview.by_metric) {
+                    setDashboardData(prev => ({ ...prev, overview: overview.by_metric.map(m => ({
+                        category: m.metric_name,
+                        value: m.avg_achievement
+                    }))}));
+                }
+
+                // Regional
+                const regional = await apiCall('/dashboard/regional');
+                if (regional && Array.isArray(regional)) {
+                    setDashboardData(prev => ({ ...prev, regional: regional.map(r => ({
+                        region: r.region,
+                        pipeline: Math.round(r.avg_result),
+                        target: Math.round(r.avg_target),
+                        satisfaction: parseFloat((r.avg_achievement / 10).toFixed(1))
+                    }))}));
+                }
+
+                // Pipeline trend
+                const pipeline = await apiCall('/dashboard/pipeline-trend');
+                if (pipeline && Array.isArray(pipeline)) {
+                    setDashboardData(prev => ({ ...prev, pipeline: pipeline.map(p => ({
+                        quarter: p.period,
+                        result: Math.round(p.avg_result),
+                        target: Math.round(p.avg_target)
+                    }))}));
+                }
+
+                // Top performers
+                const top = await apiCall('/dashboard/top-performers?limit=10');
+                if (top && Array.isArray(top)) {
+                    setDashboardData(prev => ({ ...prev, topPerformers: top.map(p => ({
+                        name: p.name,
+                        region: p.region || p.segment,
+                        achievement: Math.round(p.avg_achievement || p.achievement)
+                    }))}));
+                }
+
+                // Bottom performers
+                const bottom = await apiCall('/dashboard/bottom-performers?limit=10');
+                if (bottom && Array.isArray(bottom)) {
+                    setDashboardData(prev => ({ ...prev, bottomPerformers: bottom.map(p => ({
+                        name: p.name,
+                        region: p.region || p.segment,
+                        achievement: Math.round(p.avg_achievement || p.achievement)
+                    }))}));
+                }
+
+                // By segment
+                const segments = await apiCall('/dashboard/by-segment');
+                if (segments && Array.isArray(segments)) {
+                    setDashboardData(prev => ({ ...prev, bySegment: segments.map(s => ({
+                        segment: s.segment,
+                        pipeline: Math.round(s.avg_result),
+                        target: Math.round(s.avg_target),
+                        satisfaction: parseFloat((s.avg_achievement / 10).toFixed(1))
+                    }))}));
+                }
+
+                // Manager performance
+                const managers = await apiCall('/dashboard/manager-performance');
+                if (managers && Array.isArray(managers)) {
+                    setDashboardData(prev => ({ ...prev, managerPerformance: managers.slice(0, 20).map(m => ({
+                        manager: m.name,
+                        partnersCount: m.partner_count,
+                        avgAchievement: Math.round(m.avg_achievement),
+                        pipeline: Math.round(m.avg_result)
+                    }))}));
+                }
+            };
+
+            const handleAIQuery = async () => {
+                if (!aiQuestion.trim()) return;
+
+                setLoading(true);
+                const data = await apiCall(`/dashboard/custom-query?question=${encodeURIComponent(aiQuestion)}`);
+
+                if (data && !data.error) {
+                    setAiResults({
+                        question: aiQuestion,
+                        response: `Found ${data.count} result(s). SQL: ${data.sql}`,
+                        data: data.results
+                    });
+                    setToast({ type: 'success', message: 'Query processed!' });
+                } else {
+                    setToast({ type: 'error', message: data?.error || 'Failed to process query' });
+                }
+                setLoading(false);
+            };
+
+            const examplePrompts = [
+                'Which region has the best pipeline growth?',
+                'Show me partners at risk',
+                'Compare Q1 vs Q2 2026 pipeline'
+            ];
+
+            const TabButton = ({ id, label }) => (
+                <button
+                    onClick={() => setActiveTab(id)}
+                    className={`px-4 py-2 font-medium rounded-lg transition-colors ${
+                        activeTab === id
+                            ? 'bg-blue-600 text-white'
+                            : 'text-gray-700 hover:bg-gray-200'
+                    }`}
+                >
+                    {label}
+                </button>
+            );
+
+            return (
+                <div className="p-6 bg-gray-50 overflow-y-auto custom-scrollbar h-[calc(100vh-140px)]">
+                    <div className="flex gap-2 mb-6 pb-4 border-b overflow-x-auto">
+                        <TabButton id="overview" label="Overview" />
+                        <TabButton id="regional" label="Regional Performance" />
+                        <TabButton id="pipeline" label="Pipeline Trends" />
+                        <TabButton id="performers" label="Top/Bottom Performers" />
+                        <TabButton id="segment" label="By Segment" />
+                        <TabButton id="manager" label="Manager View" />
+                        <TabButton id="ai" label="AI Dashboard" />
+                    </div>
+
+                    {/* Overview Tab */}
+                    {activeTab === 'overview' && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            {dashboardData.overview.map((kpi, idx) => (
+                                <div key={idx} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                                    <p className="text-sm text-gray-600 mb-2">{kpi.category}</p>
+                                    <p className="text-3xl font-bold text-blue-600">{typeof kpi.value === 'number' ? kpi.value.toFixed(1) : kpi.value}</p>
+                                    <p className="text-xs text-gray-500 mt-2">vs target: 100%</p>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Regional Performance */}
+                    {activeTab === 'regional' && (
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                                <h3 className="font-semibold text-gray-800 mb-4">Pipeline vs Target by Region</h3>
+                                <ResponsiveContainer width="100%" height={300}>
+                                    <BarChart data={dashboardData.regional}>
+                                        <CartesianGrid strokeDasharray="3 3" />
+                                        <XAxis dataKey="region" />
+                                        <YAxis />
+                                        <Tooltip />
+                                        <Legend />
+                                        <Bar dataKey="pipeline" fill="#1E40AF" name="Pipeline" />
+                                        <Bar dataKey="target" fill="#0D9488" name="Target" />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                                <h3 className="font-semibold text-gray-800 mb-4">Satisfaction by Region</h3>
+                                <div className="space-y-4">
+                                    {dashboardData.regional.map((reg, idx) => (
+                                        <div key={idx}>
+                                            <div className="flex justify-between text-sm mb-1">
+                                                <span className="font-medium text-gray-700">{reg.region}</span>
+                                                <span className="text-gray-600">{reg.satisfaction}/10</span>
+                                            </div>
+                                            <div className="w-full bg-gray-200 rounded-full h-2">
+                                                <div
+                                                    className="bg-teal-500 h-2 rounded-full"
+                                                    style={{ width: `${(reg.satisfaction / 10) * 100}%` }}
+                                                />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Pipeline Trends */}
+                    {activeTab === 'pipeline' && (
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                            <h3 className="font-semibold text-gray-800 mb-4">Quarterly Pipeline Trend (2025-2026)</h3>
+                            <ResponsiveContainer width="100%" height={400}>
+                                <LineChart data={dashboardData.pipeline}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="quarter" />
+                                    <YAxis />
+                                    <Tooltip />
+                                    <Legend />
+                                    <Line type="monotone" dataKey="result" stroke="#1E40AF" strokeWidth={2} name="Actual" />
+                                    <Line type="monotone" dataKey="target" stroke="#0D9488" strokeWidth={2} name="Target" />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        </div>
+                    )}
+
+                    {/* Top/Bottom Performers */}
+                    {activeTab === 'performers' && (
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                                <h3 className="font-semibold text-gray-800 mb-4 text-green-600">Top 10 Performers</h3>
+                                <div className="space-y-2">
+                                    {dashboardData.topPerformers.map((partner, idx) => (
+                                        <div key={idx} className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                                            <div>
+                                                <p className="font-medium text-gray-800">{idx + 1}. {partner.name}</p>
+                                                <p className="text-xs text-gray-600">{partner.region}</p>
+                                            </div>
+                                            <span className="font-bold text-green-600">{partner.achievement}%</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                                <h3 className="font-semibold text-gray-800 mb-4 text-red-600">Bottom 10 Performers</h3>
+                                <div className="space-y-2">
+                                    {dashboardData.bottomPerformers.map((partner, idx) => (
+                                        <div key={idx} className="flex justify-between items-center p-3 bg-red-50 rounded-lg">
+                                            <div>
+                                                <p className="font-medium text-gray-800">{idx + 1}. {partner.name}</p>
+                                                <p className="text-xs text-gray-600">{partner.region}</p>
+                                            </div>
+                                            <span className="font-bold text-red-600">{partner.achievement}%</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* By Segment */}
+                    {activeTab === 'segment' && (
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                                <h3 className="font-semibold text-gray-800 mb-4">Pipeline by Segment</h3>
+                                <ResponsiveContainer width="100%" height={300}>
+                                    <BarChart data={dashboardData.bySegment}>
+                                        <CartesianGrid strokeDasharray="3 3" />
+                                        <XAxis dataKey="segment" />
+                                        <YAxis />
+                                        <Tooltip />
+                                        <Legend />
+                                        <Bar dataKey="pipeline" fill="#1E40AF" name="Pipeline" />
+                                        <Bar dataKey="target" fill="#0D9488" name="Target" />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                                <h3 className="font-semibold text-gray-800 mb-4">Segment Distribution</h3>
+                                <ResponsiveContainer width="100%" height={300}>
+                                    <PieChart>
+                                        <Pie
+                                            data={dashboardData.bySegment}
+                                            dataKey="pipeline"
+                                            nameKey="segment"
+                                            cx="50%"
+                                            cy="50%"
+                                            outerRadius={100}
+                                            label
+                                        >
+                                            <Cell fill="#1E40AF" />
+                                            <Cell fill="#0D9488" />
+                                            <Cell fill="#06B6D4" />
+                                        </Pie>
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Manager View */}
+                    {activeTab === 'manager' && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {dashboardData.managerPerformance.map((manager, idx) => (
+                                <div key={idx} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                                    <h4 className="font-semibold text-gray-800 mb-4">{manager.manager}</h4>
+                                    <div className="space-y-3">
+                                        <div>
+                                            <p className="text-sm text-gray-600">Partners Count</p>
+                                            <p className="text-2xl font-bold text-blue-600">{manager.partnersCount}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm text-gray-600">Avg Achievement</p>
+                                            <p className="text-2xl font-bold text-teal-600">{manager.avgAchievement}%</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm text-gray-600">Pipeline</p>
+                                            <p className="text-2xl font-bold text-gray-800">${manager.pipeline}K</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* AI Dashboard */}
+                    {activeTab === 'ai' && (
+                        <div className="space-y-6">
+                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                                <h3 className="font-semibold text-gray-800 mb-4">AI-Powered Query</h3>
+                                <div className="flex gap-2 mb-4">
+                                    <input
+                                        type="text"
+                                        value={aiQuestion}
+                                        onChange={(e) => setAiQuestion(e.target.value)}
+                                        onKeyPress={(e) => e.key === 'Enter' && handleAIQuery()}
+                                        placeholder="Ask a question about your data..."
+                                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                    <button
+                                        onClick={handleAIQuery}
+                                        disabled={loading}
+                                        className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg font-medium transition-colors"
+                                    >
+                                        {loading ? 'Asking...' : 'Ask'}
+                                    </button>
+                                </div>
+
+                                <div className="flex gap-2 flex-wrap">
+                                    {examplePrompts.map((prompt, idx) => (
+                                        <button
+                                            key={idx}
+                                            onClick={() => setAiQuestion(prompt)}
+                                            className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full transition-colors"
+                                        >
+                                            {prompt}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {aiResults && (
+                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 fade-in">
+                                    <h4 className="font-semibold text-gray-800 mb-4">Response</h4>
+                                    <p className="text-gray-700 mb-4">{aiResults.response}</p>
+                                    {aiResults.data && (
+                                        <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                                            <pre className="text-sm text-gray-600 overflow-x-auto">
+                                                {JSON.stringify(aiResults.data, null, 2)}
+                                            </pre>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Toast */}
+                    {toast && (
+                        <div className="fixed bottom-8 right-8 z-50">
+                            <Toast
+                                message={toast.message}
+                                type={toast.type}
+                                onClose={() => setToast(null)}
+                            />
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // ==================== MAIN APP ====================
+        const App = () => {
+            const [authenticated, setAuthenticated] = useState(sessionStorage.getItem('qollabi_auth') === 'true');
+            const [activeModule, setActiveModule] = useState('update');
+
+            if (!authenticated) {
+                return <LoginScreen onLogin={() => setAuthenticated(true)} />;
+            }
+
+            return (
+                <div className="h-screen bg-gray-50 flex flex-col">
+                    {/* Header */}
+                    <header className="bg-gradient-to-r from-blue-900 to-blue-800 text-white shadow-md">
+                        <div className="px-8 py-4 flex justify-between items-center">
+                            <h1 className="text-2xl font-bold">Qollabi 2.0 | Partner Intelligence Platform</h1>
+                            <div className="flex gap-4">
+                                <button
+                                    onClick={() => setActiveModule('update')}
+                                    className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+                                        activeModule === 'update'
+                                            ? 'bg-white text-blue-900'
+                                            : 'bg-blue-700 hover:bg-blue-600'
+                                    }`}
+                                >
+                                    Smart Update Generator
+                                </button>
+                                <button
+                                    onClick={() => setActiveModule('dashboard')}
+                                    className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+                                        activeModule === 'dashboard'
+                                            ? 'bg-white text-blue-900'
+                                            : 'bg-blue-700 hover:bg-blue-600'
+                                    }`}
+                                >
+                                    Dashboards
+                                </button>
+                            </div>
+                        </div>
+                    </header>
+
+                    {/* Main Content */}
+                    <main className="flex-1 overflow-hidden">
+                        {activeModule === 'update' ? <SmartUpdateGenerator /> : <Dashboard />}
+                    </main>
+                </div>
+            );
+        };
+
+        // ==================== RENDER ====================
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+</html>
