@@ -1,0 +1,62 @@
+export interface Customer {
+  id: string;
+  type: string;
+  name: string;
+  firstName: string;
+  lastName: string;
+  dateOfBirth: string;
+}
+
+export interface Lead {
+  id: string;
+  externalId?: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  company: string;
+  offerPdfLink: string;
+  offerPdfName: string;
+  owner: string;
+  ownerColor: string;
+  ownerInitials: string;
+}
+
+export interface Campaign {
+  id: string;
+  name: string;
+  icon: "check" | "star" | "text" | "mail";
+  iconBg: string;
+  iconColor: string;
+  targetGroup: "Customers" | "Leads";
+  description: string;
+  status: "Draft" | "Active" | "Stopped" | "Complete";
+  recipients: number;
+  emailsSent: number;
+  sentCount: number;
+}
+
+export interface SmartList {
+  id: string;
+  name: string;
+  type: "Static" | "Dynamic";
+  count: number;
+  entityType: "customer" | "lead";
+}
+
+export type FilterOperator =
+  | "contains"
+  | "does not contain"
+  | "is"
+  | "is not"
+  | "is empty"
+  | "is not empty";
+
+export interface Filter {
+  attribute: string;
+  operator: FilterOperator;
+  value: string;
+}
+
+export type WizardStep = 1 | 2 | 3 | 4 | 5;
+
+export type TargetGroup = "Customers" | "Leads";
