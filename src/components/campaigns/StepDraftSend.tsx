@@ -1,39 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Search, Send, CheckCircle } from "lucide-react";
+import { Search, Send, CheckCircle, AlertCircle } from "lucide-react";
+import { leads } from "@/data/leads";
+import { getOwnerMeta } from "@/data/users";
 
 interface StepDraftSendProps {
   autoSend: boolean;
   onPrev: () => void;
 }
-
-const draftLeads = [
-  {
-    name: "Sophie Janssens",
-    init: "SJ",
-    color: "#5B5BD6",
-    email: "s.janssens@artex.be",
-    company: "Artex Group",
-    owner: "Kevin Kools",
-  },
-  {
-    name: "Marc De Backer",
-    init: "MD",
-    color: "#059669",
-    email: "marc.debacker@fingroup.be",
-    company: "FinGroup NV",
-    owner: "Raciel Rodriguez",
-  },
-  {
-    name: "Lena Vermeersch",
-    init: "LV",
-    color: "#D97706",
-    email: "l.vermeersch@brokervision.be",
-    company: "BrokerVision BVBA",
-    owner: "Kevin Kools",
-  },
-];
 
 type DraftFilter = "All" | "Sent" | "Pending";
 
@@ -42,9 +17,28 @@ export default function StepDraftSend({ autoSend, onPrev }: StepDraftSendProps) 
   const [activeFilter, setActiveFilter] = useState<DraftFilter>("All");
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Use shared lead data so the no-email lead (L-005) appears.
+  const draftLeads = leads;
   const selected = draftLeads[selectedIdx];
+  const selectedOwner = getOwnerMeta(selected.owner);
+  const selectedComplete = !!selected.email;
 
   const ctaLabel = autoSend ? "Activate campaign" : "Send all";
+
+  const fullName = (l: typeof leads[number]) =>
+    `${l.firstName || ""} ${l.lastName || ""}`.trim() || "Unnamed lead";
+  const initials = (l: typeof leads[number]) => {
+    const a = (l.firstName || "")[0] || "";
+    const b = (l.lastName || "")[0] || "";
+    return (a + b).toUpperCase() || "?";
+  };
+  const colorFor = (l: typeof leads[number]) => {
+    const palette = ["#5B5BD6", "#059669", "#D97706", "#DB2777", "#0EA5E9"];
+    const seed = (l.firstName || "") + (l.lastName || "");
+    let h = 0;
+    for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+    return palette[h % palette.length];
+  };
 
   return (
     <>
@@ -96,31 +90,42 @@ export default function StepDraftSend({ autoSend, onPrev }: StepDraftSendProps) 
           </div>
 
           <div className="overflow-y-auto flex-1">
-            {draftLeads.map((lead, i) => (
-              <button
-                key={i}
-                onClick={() => setSelectedIdx(i)}
-                className={`flex items-center gap-2.5 px-4 py-[11px] border-b border-gray-50 cursor-pointer w-full text-left transition-colors ${
-                  selectedIdx === i ? "bg-brand-light" : "hover:bg-gray-50"
-                }`}
-              >
-                <div
-                  className="w-8 h-8 rounded-full text-white text-[11px] font-semibold flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: lead.color }}
+            {draftLeads.map((lead, i) => {
+              const incomplete = !lead.email;
+              return (
+                <button
+                  key={lead.id}
+                  onClick={() => setSelectedIdx(i)}
+                  className={`flex items-center gap-2.5 px-4 py-[11px] border-b border-gray-50 cursor-pointer w-full text-left transition-colors ${
+                    selectedIdx === i ? "bg-brand-light" : "hover:bg-gray-50"
+                  }`}
                 >
-                  {lead.init}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-[13px] font-medium">{lead.name}</div>
-                  <div className="text-xs text-muted truncate">
-                    {lead.email} &middot; {lead.company}
+                  <div
+                    className="w-8 h-8 rounded-full text-white text-[11px] font-semibold flex items-center justify-center flex-shrink-0"
+                    style={{ backgroundColor: colorFor(lead) }}
+                  >
+                    {initials(lead)}
                   </div>
-                </div>
-                <span className="text-xs py-0.5 px-2 border border-b2 rounded-[5px] cursor-pointer text-muted hover:border-red-500 hover:text-red-500 flex-shrink-0 transition-colors font-sans">
-                  Exclude
-                </span>
-              </button>
-            ))}
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[13px] font-medium flex items-center gap-1.5">
+                      {fullName(lead)}
+                      {incomplete && (
+                        <span className="inline-flex items-center gap-1 text-[10.5px] font-medium px-1.5 py-px rounded-full bg-amber-50 text-amber-700">
+                          <AlertCircle className="w-[10px] h-[10px]" />
+                          Incomplete information
+                        </span>
+                      )}
+                    </div>
+                    <div className={`text-xs truncate ${incomplete ? "text-amber-700" : "text-muted"}`}>
+                      {incomplete ? "No email address" : `${lead.email} \u00b7 ${lead.company || ""}`}
+                    </div>
+                  </div>
+                  <span className="text-xs py-0.5 px-2 border border-b2 rounded-[5px] cursor-pointer text-muted hover:border-red-500 hover:text-red-500 flex-shrink-0 transition-colors font-sans">
+                    Exclude
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -132,14 +137,15 @@ export default function StepDraftSend({ autoSend, onPrev }: StepDraftSendProps) 
               <div className="text-sm font-semibold flex items-center gap-2">
                 <div
                   className="w-7 h-7 rounded-full text-white text-[10px] font-semibold flex items-center justify-center"
-                  style={{ backgroundColor: selected.color }}
+                  style={{ backgroundColor: colorFor(selected) }}
                 >
-                  {selected.init}
+                  {initials(selected)}
                 </div>
-                {selected.name}
+                {fullName(selected)}
               </div>
               <div className="text-xs text-muted mt-0.5">
-                {selected.email} &middot; {selected.company} &middot; Owner: {selected.owner}
+                {selectedComplete ? selected.email : <span className="text-amber-700">No email address</span>}{" "}
+                &middot; {selected.company || "—"} &middot; Owner: {selectedOwner?.name || "—"}
               </div>
             </div>
             <button className="text-xs py-0.5 px-2 border border-b2 rounded-[5px] cursor-pointer text-muted hover:border-red-500 hover:text-red-500 transition-colors font-sans">
@@ -152,20 +158,28 @@ export default function StepDraftSend({ autoSend, onPrev }: StepDraftSendProps) 
             <div className="flex items-center gap-2.5 p-[11px] px-3.5 border-b border-gray-50">
               <div
                 className="w-8 h-8 rounded-full text-white text-[11px] font-semibold flex items-center justify-center flex-shrink-0"
-                style={{ backgroundColor: selected.color }}
+                style={{ backgroundColor: colorFor(selected) }}
               >
-                {selected.init}
+                {initials(selected)}
               </div>
               <div className="flex-1">
-                <div className="text-[13px] font-medium">{selected.name}</div>
+                <div className="text-[13px] font-medium">{fullName(selected)}</div>
                 <div className="text-xs text-muted">
-                  {selected.email} &middot; {selected.company}
+                  {selectedComplete ? selected.email : <span className="text-amber-700">No email address</span>}{" "}
+                  &middot; {selected.company || "—"}
                 </div>
               </div>
-              <span className="inline-flex items-center gap-1 text-[11.5px] font-medium px-2 py-0.5 rounded-full bg-green-50 text-green-600">
-                <CheckCircle className="w-[10px] h-[10px]" />
-                Information complete
-              </span>
+              {selectedComplete ? (
+                <span className="inline-flex items-center gap-1 text-[11.5px] font-medium px-2 py-0.5 rounded-full bg-green-50 text-green-600">
+                  <CheckCircle className="w-[10px] h-[10px]" />
+                  Information complete
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-[11.5px] font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">
+                  <AlertCircle className="w-[10px] h-[10px]" />
+                  Incomplete lead information
+                </span>
+              )}
               <button className="text-xs py-0.5 px-2 border border-b2 rounded-[5px] cursor-pointer text-muted hover:border-red-500 hover:text-red-500 ml-2 transition-colors font-sans">
                 Exclude
               </button>
@@ -181,14 +195,28 @@ export default function StepDraftSend({ autoSend, onPrev }: StepDraftSendProps) 
                   1
                 </div>
                 Email Preview{" "}
-                <span className="text-xs text-muted font-normal">To: {selected.name}</span>
+                <span className="text-xs text-muted font-normal">To: {fullName(selected)}</span>
               </div>
               <div className="flex gap-2 items-center">
-                <span className="inline-flex items-center gap-1 text-[11.5px] font-medium px-2 py-0.5 rounded-full bg-green-50 text-green-600">
-                  <CheckCircle className="w-[10px] h-[10px]" />
-                  Ready to send
-                </span>
-                <button className="inline-flex items-center gap-1.5 py-1.5 px-[13px] bg-brand text-white border-none rounded-md font-sans text-[12.5px] font-medium cursor-pointer hover:bg-brand-hover transition-colors">
+                {selectedComplete ? (
+                  <span className="inline-flex items-center gap-1 text-[11.5px] font-medium px-2 py-0.5 rounded-full bg-green-50 text-green-600">
+                    <CheckCircle className="w-[10px] h-[10px]" />
+                    Ready to send
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-[11.5px] font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">
+                    <AlertCircle className="w-[10px] h-[10px]" />
+                    Incomplete lead information
+                  </span>
+                )}
+                <button
+                  disabled={!selectedComplete}
+                  className={`inline-flex items-center gap-1.5 py-1.5 px-[13px] border-none rounded-md font-sans text-[12.5px] font-medium transition-colors ${
+                    selectedComplete
+                      ? "bg-brand text-white cursor-pointer hover:bg-brand-hover"
+                      : "bg-gray-200 text-light cursor-not-allowed"
+                  }`}
+                >
                   <Send className="w-[11px] h-[11px]" />
                   Send
                 </button>
@@ -241,7 +269,7 @@ export default function StepDraftSend({ autoSend, onPrev }: StepDraftSendProps) 
                   Your personalised offer is ready:
                   <br />
                   <code className="font-mono text-[11.5px] px-1 py-px rounded bg-green-50 text-green-600">
-                    {"{{lead.offerPdfLink}}"}
+                    {"{{lead.attachmentLink}}"}
                   </code>
                   <br />
                   <br />

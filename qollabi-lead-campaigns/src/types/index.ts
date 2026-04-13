@@ -10,15 +10,13 @@ export interface Customer {
 export interface Lead {
   id: string;
   externalId?: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  company: string;
-  offerPdfLink: string;
-  offerPdfName: string;
-  owner: string;
-  ownerColor: string;
-  ownerInitials: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  company?: string;
+  attachmentLink?: string;
+  source?: string;
+  owner?: string;
 }
 
 export interface Campaign {
@@ -27,12 +25,22 @@ export interface Campaign {
   icon: "check" | "star" | "text" | "mail";
   iconBg: string;
   iconColor: string;
-  targetGroup: "Customers" | "Leads";
+  targetGroup: TargetGroup;
   description: string;
   status: "Draft" | "Active" | "Stopped" | "Complete";
   recipients: number;
   emailsSent: number;
   sentCount: number;
+}
+
+export interface Template {
+  id: string;
+  name: string;
+  icon: "check" | "star" | "text" | "mail";
+  iconBg: string;
+  iconColor: string;
+  targetGroup: TargetGroup;
+  description: string;
 }
 
 export interface SmartList {

@@ -15,6 +15,7 @@ import {
   Pencil,
 } from "lucide-react";
 import { campaigns, campaignStats } from "@/data/campaigns";
+import { templates } from "@/data/templates";
 
 const statCards = [
   { label: "Emails Sent", value: campaignStats.emailsSent, icon: Mail },
@@ -107,7 +108,51 @@ export default function CampaignsPage() {
           </div>
         )}
 
+        {/* Templates grid */}
+        {activeTab === "templates" && (
+          <div className="grid grid-cols-3 gap-3.5 mb-6">
+            {templates.map((t) => {
+              const Icon = iconMap[t.icon] || Mail;
+              return (
+                <div
+                  key={t.id}
+                  className="bg-white border border-border rounded-[10px] p-4 hover:shadow-sm transition-shadow flex flex-col"
+                >
+                  <div className="flex items-start justify-between mb-2.5">
+                    <div
+                      className="w-9 h-9 rounded-[7px] flex items-center justify-center flex-shrink-0"
+                      style={{ backgroundColor: t.iconBg, color: t.iconColor }}
+                    >
+                      <Icon className="w-4 h-4" />
+                    </div>
+                    <span
+                      className={`inline-flex items-center text-[11.5px] font-medium px-2.5 py-0.5 rounded-full ${
+                        t.targetGroup === "Leads"
+                          ? "bg-brand-light text-brand"
+                          : "bg-gray-100 text-muted"
+                      }`}
+                    >
+                      {t.targetGroup}
+                    </span>
+                  </div>
+                  <div className="text-[14px] font-medium mb-1">{t.name}</div>
+                  <p className="text-xs text-muted leading-relaxed mb-3.5 flex-1">
+                    {t.description}
+                  </p>
+                  <Link
+                    href={`/campaigns/create?templateId=${t.id}`}
+                    className="inline-flex items-center justify-center gap-1.5 py-[7px] px-3.5 bg-white text-gray-900 border border-b2 rounded-lg font-sans text-[12.5px] font-medium cursor-pointer hover:bg-gray-50 transition-colors no-underline"
+                  >
+                    Use template
+                  </Link>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
         {/* Campaign table */}
+        {activeTab === "campaigns" && (
         <div className="bg-white border border-border rounded-[10px] overflow-hidden">
           <table className="w-full border-collapse">
             <thead>
@@ -194,6 +239,7 @@ export default function CampaignsPage() {
             </tbody>
           </table>
         </div>
+        )}
       </div>
     </div>
   );

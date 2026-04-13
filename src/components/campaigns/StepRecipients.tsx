@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Users, CheckCircle, AlertCircle, Info } from "lucide-react";
+import { Users, CheckCircle, AlertCircle } from "lucide-react";
 import { leads, leadSmartLists } from "@/data/leads";
+import { getOwnerMeta } from "@/data/users";
 import { TargetGroup } from "@/types";
 
 interface StepRecipientsProps {
@@ -11,7 +12,7 @@ interface StepRecipientsProps {
   onNext: () => void;
 }
 
-export default function StepRecipients({ targetGroup, onPrev, onNext }: StepRecipientsProps) {
+export default function StepRecipients({ onPrev, onNext }: StepRecipientsProps) {
   const [activeListTab, setActiveListTab] = useState<"static" | "dynamic" | "selected">("static");
   const [selectedLists, setSelectedLists] = useState<Set<string>>(new Set(["ls-1"]));
 
@@ -55,16 +56,6 @@ export default function StepRecipients({ targetGroup, onPrev, onNext }: StepReci
             Missing info
           </div>
           <div className="text-lg font-semibold text-amber-600">{leadsMissingInfo}</div>
-        </div>
-      </div>
-
-      {/* Info banner */}
-      <div className="bg-brand-light border border-indigo-200 rounded-lg p-3 px-3.5 text-[12.5px] text-blue-800 mb-3.5 flex gap-2.5 items-start leading-relaxed">
-        <Info className="w-[13px] h-[13px] flex-shrink-0 mt-0.5" />
-        <div>
-          <strong>Target group: {targetGroup}.</strong> Only{" "}
-          {targetGroup === "Leads" ? "lead" : "customer"} smart lists are shown below.{" "}
-          {targetGroup === "Leads" ? "Customer" : "Lead"} lists are not available for this campaign.
         </div>
       </div>
 
@@ -152,25 +143,32 @@ export default function StepRecipients({ targetGroup, onPrev, onNext }: StepReci
             </tr>
           </thead>
           <tbody>
-            {recipientLeads.map((l) => (
-              <tr key={l.id} className="border-b border-gray-50 last:border-b-0">
-                <td className="px-[13px] py-[11px] text-[13px] font-medium">{l.firstName}</td>
-                <td className="px-[13px] py-[11px] text-[13px] font-medium">{l.lastName}</td>
-                <td className="px-[13px] py-[11px] text-[13px] text-muted">{l.email}</td>
-                <td className="px-[13px] py-[11px] text-[13px]">{l.company}</td>
-                <td className="px-[13px] py-[11px] text-[13px]">
-                  <div className="flex items-center gap-[7px]">
-                    <div
-                      className="w-6 h-6 rounded-full text-white text-[10px] font-semibold flex items-center justify-center flex-shrink-0"
-                      style={{ backgroundColor: l.ownerColor }}
-                    >
-                      {l.ownerInitials}
-                    </div>
-                    {l.owner}
-                  </div>
-                </td>
-              </tr>
-            ))}
+            {recipientLeads.map((l) => {
+              const ownerMeta = getOwnerMeta(l.owner);
+              return (
+                <tr key={l.id} className="border-b border-gray-50 last:border-b-0">
+                  <td className="px-[13px] py-[11px] text-[13px] font-medium">{l.firstName || <span className="text-light">&ndash;</span>}</td>
+                  <td className="px-[13px] py-[11px] text-[13px] font-medium">{l.lastName || <span className="text-light">&ndash;</span>}</td>
+                  <td className="px-[13px] py-[11px] text-[13px] text-muted">{l.email || <span className="text-light">&ndash;</span>}</td>
+                  <td className="px-[13px] py-[11px] text-[13px]">{l.company || <span className="text-light">&ndash;</span>}</td>
+                  <td className="px-[13px] py-[11px] text-[13px]">
+                    {ownerMeta ? (
+                      <div className="flex items-center gap-[7px]">
+                        <div
+                          className="w-6 h-6 rounded-full text-white text-[10px] font-semibold flex items-center justify-center flex-shrink-0"
+                          style={{ backgroundColor: ownerMeta.color }}
+                        >
+                          {ownerMeta.initials}
+                        </div>
+                        {ownerMeta.name}
+                      </div>
+                    ) : (
+                      <span className="text-light">&ndash;</span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

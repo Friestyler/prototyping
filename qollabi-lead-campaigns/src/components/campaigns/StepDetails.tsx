@@ -1,13 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Upload } from "lucide-react";
+import { Upload, Lock, AlertTriangle } from "lucide-react";
 import { TargetGroup } from "@/types";
+import Modal from "@/components/ui/Modal";
 
 interface StepDetailsProps {
   targetGroup: TargetGroup;
   onTargetGroupChange: (tg: TargetGroup) => void;
   onNext: () => void;
+  sentCount?: number;
 }
 
 const icons = [
@@ -21,8 +23,26 @@ const icons = [
   { emoji: "\u2709\uFE0F", bg: "#6B7280" },
 ];
 
-export default function StepDetails({ targetGroup, onTargetGroupChange, onNext }: StepDetailsProps) {
+export default function StepDetails({
+  targetGroup,
+  onTargetGroupChange,
+  onNext,
+  sentCount = 0,
+}: StepDetailsProps) {
   const [selectedIcon, setSelectedIcon] = useState(7);
+  const [pendingChange, setPendingChange] = useState<TargetGroup | null>(null);
+
+  const locked = sentCount > 0;
+
+  const tryChange = (tg: TargetGroup) => {
+    if (locked || tg === targetGroup) return;
+    setPendingChange(tg);
+  };
+
+  const confirmChange = () => {
+    if (pendingChange) onTargetGroupChange(pendingChange);
+    setPendingChange(null);
+  };
 
   return (
     <div className="max-w-[680px] mx-auto">
@@ -51,15 +71,29 @@ export default function StepDetails({ targetGroup, onTargetGroupChange, onNext }
         <p className="text-xs text-light mb-2.5 leading-relaxed">
           Determines who can receive this campaign. Cannot be changed after the first email is sent.
         </p>
-        <div className="grid grid-cols-2 gap-3">
+        {locked && (
+          <div className="flex items-center gap-2 mb-2.5 px-3 py-2 rounded-lg bg-gray-50 border border-b2 text-[12.5px] text-muted">
+            <Lock className="w-3.5 h-3.5 flex-shrink-0" />
+            The target group cannot be changed after emails have been sent.
+          </div>
+        )}
+        <div
+          className="grid grid-cols-2 gap-3"
+          title={
+            locked
+              ? "The target group cannot be changed after emails have been sent."
+              : undefined
+          }
+        >
           {/* Customers option */}
           <button
-            onClick={() => onTargetGroupChange("Customers")}
-            className={`border-[1.5px] rounded-[10px] p-3.5 cursor-pointer text-left transition-all ${
+            onClick={() => tryChange("Customers")}
+            disabled={locked}
+            className={`border-[1.5px] rounded-[10px] p-3.5 text-left transition-all ${
               targetGroup === "Customers"
                 ? "border-brand bg-brand-50"
                 : "border-b2 hover:border-indigo-300"
-            }`}
+            } ${locked ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
           >
             <div className="flex items-center gap-2 mb-1.5">
               <div
@@ -85,12 +119,13 @@ export default function StepDetails({ targetGroup, onTargetGroupChange, onNext }
 
           {/* Leads option */}
           <button
-            onClick={() => onTargetGroupChange("Leads")}
-            className={`border-[1.5px] rounded-[10px] p-3.5 cursor-pointer text-left transition-all ${
+            onClick={() => tryChange("Leads")}
+            disabled={locked}
+            className={`border-[1.5px] rounded-[10px] p-3.5 text-left transition-all ${
               targetGroup === "Leads"
                 ? "border-brand bg-brand-50"
                 : "border-b2 hover:border-indigo-300"
-            }`}
+            } ${locked ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
           >
             <div className="flex items-center gap-2 mb-1.5">
               <div
@@ -110,7 +145,7 @@ export default function StepDetails({ targetGroup, onTargetGroupChange, onNext }
               </span>
             </div>
             <p className="text-xs text-muted pl-6 leading-relaxed">
-              Send to leads from form submissions. Uses lead smart lists with company, email and offer PDF link.
+              Send to leads from form submissions. Uses lead smart lists with company, email and attachment link.
             </p>
           </button>
         </div>
@@ -184,6 +219,39 @@ export default function StepDetails({ targetGroup, onTargetGroupChange, onNext }
           Continue to Select Recipients &rarr;
         </button>
       </div>
+
+      {/* Destructive confirmation modal */}
+      <Modal
+        open={pendingChange !== null}
+        onClose={() => setPendingChange(null)}
+        title="Change target group?"
+        footer={
+          <>
+            <button
+              onClick={() => setPendingChange(null)}
+              className="inline-flex items-center gap-1.5 py-[7px] px-3.5 bg-white text-gray-900 border border-b2 rounded-lg font-sans text-[13px] font-medium cursor-pointer hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={confirmChange}
+              className="inline-flex items-center gap-1.5 py-2 px-[18px] bg-red-600 text-white border-none rounded-lg font-sans text-[13px] font-medium cursor-pointer hover:bg-red-700"
+            >
+              Change to {pendingChange}
+            </button>
+          </>
+        }
+      >
+        <div className="flex gap-3 items-start">
+          <div className="w-9 h-9 rounded-full bg-red-50 text-red-600 flex items-center justify-center flex-shrink-0">
+            <AlertTriangle className="w-4 h-4" />
+          </div>
+          <div className="text-[13px] leading-relaxed text-gray-900">
+            Changing the target group will <strong>remove all selected recipients</strong> and{" "}
+            <strong>delete all merge tags used in your email</strong>. This cannot be undone.
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

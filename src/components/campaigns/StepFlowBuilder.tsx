@@ -17,7 +17,7 @@ const leadMergeTags = [
   "lead.email",
   "lead.company",
   "lead.owner",
-  "lead.offerPdfLink",
+  "lead.attachmentLink",
 ];
 
 const customerMergeTags = [
@@ -58,7 +58,7 @@ export default function StepFlowBuilder({ targetGroup, onPrev, onNext }: StepFlo
               <code
                 key={tag}
                 className={`font-mono text-[11.5px] px-1.5 py-px rounded ${
-                  tag === "lead.offerPdfLink"
+                  tag === "lead.attachmentLink"
                     ? "bg-green-50 text-green-600"
                     : "bg-brand-light text-brand"
                 }`}

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { ArrowLeft, Check } from "lucide-react";
 import StepDetails from "@/components/campaigns/StepDetails";
 import StepRecipients from "@/components/campaigns/StepRecipients";
@@ -9,6 +10,7 @@ import StepFlowBuilder from "@/components/campaigns/StepFlowBuilder";
 import StepSettings from "@/components/campaigns/StepSettings";
 import StepDraftSend from "@/components/campaigns/StepDraftSend";
 import { TargetGroup, WizardStep } from "@/types";
+import { templates } from "@/data/templates";
 
 const steps = [
   { num: 1 as WizardStep, label: "Campaign Details", desc: "Configure campaign settings" },
@@ -19,8 +21,15 @@ const steps = [
 ];
 
 export default function CreateCampaignPage() {
+  const searchParams = useSearchParams();
+  const templateId = searchParams.get("templateId");
+  const sentCountParam = searchParams.get("sentCount");
+  const initialTargetGroup: TargetGroup =
+    (templateId && templates.find((t) => t.id === templateId)?.targetGroup) || "Leads";
+  const sentCount = sentCountParam ? Number(sentCountParam) || 0 : 0;
+
   const [currentStep, setCurrentStep] = useState<WizardStep>(1);
-  const [targetGroup, setTargetGroup] = useState<TargetGroup>("Leads");
+  const [targetGroup, setTargetGroup] = useState<TargetGroup>(initialTargetGroup);
   const [autoSend, setAutoSend] = useState(true);
 
   const goTo = (step: WizardStep) => {
@@ -101,6 +110,7 @@ export default function CreateCampaignPage() {
           targetGroup={targetGroup}
           onTargetGroupChange={setTargetGroup}
           onNext={() => goTo(2)}
+          sentCount={sentCount}
         />
       )}
       {currentStep === 2 && (
