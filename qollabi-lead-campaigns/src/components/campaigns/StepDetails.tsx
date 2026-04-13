@@ -3,7 +3,21 @@
 import { useState } from "react";
 import { Upload, Lock, AlertTriangle } from "lucide-react";
 import { TargetGroup } from "@/types";
-import Modal from "@/components/ui/Modal";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 
 interface StepDetailsProps {
   targetGroup: TargetGroup;
@@ -51,23 +65,22 @@ export default function StepDetails({
       </p>
 
       {/* Campaign Name */}
-      <div className="mb-5">
-        <label className="block text-[13px] font-medium mb-[7px]">
+      <div className="mb-5 grid gap-[7px]">
+        <Label htmlFor="campaign-name">
           Campaign Name <span className="text-red-600">*</span>
-        </label>
-        <input
-          type="text"
+        </Label>
+        <Input
+          id="campaign-name"
           placeholder="Campaign Name"
           defaultValue="AON Cybersecurity Follow-up"
-          className="w-full py-[9px] px-[13px] border border-b2 rounded-lg font-sans text-[13px] outline-none focus:border-brand focus:shadow-[0_0_0_3px_rgba(91,91,214,0.08)] transition-all"
         />
       </div>
 
       {/* Target Group */}
       <div className="mb-5">
-        <label className="block text-[13px] font-medium mb-[7px]">
+        <Label className="block mb-[7px]">
           Target Group <span className="text-red-600">*</span>
-        </label>
+        </Label>
         <p className="text-xs text-light mb-2.5 leading-relaxed">
           Determines who can receive this campaign. Cannot be changed after the first email is sent.
         </p>
@@ -85,104 +98,83 @@ export default function StepDetails({
               : undefined
           }
         >
-          {/* Customers option */}
-          <button
-            onClick={() => tryChange("Customers")}
-            disabled={locked}
-            className={`border-[1.5px] rounded-[10px] p-3.5 text-left transition-all ${
-              targetGroup === "Customers"
-                ? "border-brand bg-brand-50"
-                : "border-b2 hover:border-indigo-300"
-            } ${locked ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
-          >
-            <div className="flex items-center gap-2 mb-1.5">
-              <div
-                className={`w-4 h-4 rounded-full border-[1.5px] flex items-center justify-center flex-shrink-0 ${
-                  targetGroup === "Customers"
-                    ? "border-brand bg-brand"
-                    : "border-b2"
-                }`}
-              >
-                {targetGroup === "Customers" && (
-                  <div className="w-[5px] h-[5px] rounded-full bg-white" />
-                )}
+          {[
+            {
+              key: "Customers" as TargetGroup,
+              badge: <Badge variant="secondary">Default</Badge>,
+              desc: "Send to your customer portfolio using customer smart lists and contact records.",
+            },
+            {
+              key: "Leads" as TargetGroup,
+              badge: <Badge variant="default">New</Badge>,
+              desc: "Send to leads from form submissions. Uses lead smart lists with company, email and attachment link.",
+            },
+          ].map(({ key, badge, desc }) => (
+            <button
+              key={key}
+              onClick={() => tryChange(key)}
+              disabled={locked}
+              className={cn(
+                "border-[1.5px] rounded-lg p-3.5 text-left transition-all",
+                targetGroup === key
+                  ? "border-brand bg-brand-50"
+                  : "border-b2 hover:border-indigo-300",
+                locked ? "opacity-60 cursor-not-allowed" : "cursor-pointer"
+              )}
+            >
+              <div className="flex items-center gap-2 mb-1.5">
+                <div
+                  className={cn(
+                    "w-4 h-4 rounded-full border-[1.5px] flex items-center justify-center flex-shrink-0",
+                    targetGroup === key ? "border-brand bg-brand" : "border-b2"
+                  )}
+                >
+                  {targetGroup === key && (
+                    <div className="w-[5px] h-[5px] rounded-full bg-white" />
+                  )}
+                </div>
+                <span className="text-[13px] font-medium">{key}</span>
+                {badge}
               </div>
-              <span className="text-[13px] font-medium">Customers</span>
-              <span className="text-[10px] font-semibold px-[7px] py-0.5 rounded-[10px] bg-gray-100 text-muted ml-1">
-                Default
-              </span>
-            </div>
-            <p className="text-xs text-muted pl-6 leading-relaxed">
-              Send to your customer portfolio using customer smart lists and contact records.
-            </p>
-          </button>
-
-          {/* Leads option */}
-          <button
-            onClick={() => tryChange("Leads")}
-            disabled={locked}
-            className={`border-[1.5px] rounded-[10px] p-3.5 text-left transition-all ${
-              targetGroup === "Leads"
-                ? "border-brand bg-brand-50"
-                : "border-b2 hover:border-indigo-300"
-            } ${locked ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
-          >
-            <div className="flex items-center gap-2 mb-1.5">
-              <div
-                className={`w-4 h-4 rounded-full border-[1.5px] flex items-center justify-center flex-shrink-0 ${
-                  targetGroup === "Leads"
-                    ? "border-brand bg-brand"
-                    : "border-b2"
-                }`}
-              >
-                {targetGroup === "Leads" && (
-                  <div className="w-[5px] h-[5px] rounded-full bg-white" />
-                )}
-              </div>
-              <span className="text-[13px] font-medium">Leads</span>
-              <span className="text-[10px] font-semibold px-[7px] py-0.5 rounded-[10px] bg-brand-light text-brand ml-1">
-                New
-              </span>
-            </div>
-            <p className="text-xs text-muted pl-6 leading-relaxed">
-              Send to leads from form submissions. Uses lead smart lists with company, email and attachment link.
-            </p>
-          </button>
+              <p className="text-xs text-muted pl-6 leading-relaxed">{desc}</p>
+            </button>
+          ))}
         </div>
       </div>
 
       {/* Description */}
-      <div className="mb-5">
-        <label className="block text-[13px] font-medium mb-[7px]">Description</label>
-        <textarea
+      <div className="mb-5 grid gap-[7px]">
+        <Label htmlFor="campaign-description">Description</Label>
+        <Textarea
+          id="campaign-description"
           placeholder="Brief description of this campaign's purpose..."
           defaultValue="AON form leads — April 2026"
-          className="w-full py-[9px] px-[13px] border border-b2 rounded-lg font-sans text-[13px] outline-none focus:border-brand focus:shadow-[0_0_0_3px_rgba(91,91,214,0.08)] resize-y min-h-[88px] leading-relaxed transition-all"
         />
       </div>
 
       {/* Objective */}
-      <div className="mb-5">
-        <label className="block text-[13px] font-medium mb-[7px]">Objective</label>
-        <textarea
+      <div className="mb-5 grid gap-[7px]">
+        <Label htmlFor="campaign-objective">Objective</Label>
+        <Textarea
+          id="campaign-objective"
           placeholder="What outcome should this campaign achieve?"
-          className="w-full py-[9px] px-[13px] border border-b2 rounded-lg font-sans text-[13px] outline-none focus:border-brand focus:shadow-[0_0_0_3px_rgba(91,91,214,0.08)] resize-y min-h-[88px] leading-relaxed transition-all"
         />
       </div>
 
       {/* Icon selector */}
       <div className="mb-5">
-        <label className="block text-[13px] font-medium mb-[7px]">Choose Icon</label>
+        <Label className="block mb-[7px]">Choose Icon</Label>
         <div className="flex gap-2.5 flex-wrap">
           {icons.map((icon, i) => (
             <button
               key={i}
               onClick={() => setSelectedIcon(i)}
-              className={`w-[42px] h-[42px] rounded-[10px] cursor-pointer flex items-center justify-center text-lg border-2 transition-all hover:scale-110 ${
+              className={cn(
+                "w-[42px] h-[42px] rounded-lg flex items-center justify-center text-lg border-2 transition-all hover:scale-110",
                 selectedIcon === i
-                  ? "outline outline-[2.5px] outline-gray-900 outline-offset-1"
+                  ? "outline outline-[2.5px] outline-gray-900 outline-offset-1 border-transparent"
                   : "border-transparent"
-              }`}
+              )}
               style={{ backgroundColor: icon.bg }}
             >
               {icon.emoji}
@@ -193,16 +185,16 @@ export default function StepDetails({
 
       {/* Upload */}
       <div className="mb-5">
-        <label className="block text-[13px] font-medium mb-[7px]">Or Upload Image</label>
+        <Label className="block mb-[7px]">Or Upload Image</Label>
         <div className="border border-b2 rounded-lg p-3.5 flex items-center gap-3.5">
           <div className="w-[52px] h-[52px] border border-b2 rounded-lg flex items-center justify-center text-light flex-shrink-0">
             <Upload className="w-5 h-5" />
           </div>
           <div>
-            <button className="inline-flex items-center gap-1.5 py-1.5 px-3 bg-white text-gray-900 border border-b2 rounded-lg font-sans text-[12.5px] font-medium cursor-pointer hover:bg-gray-50 mb-1">
-              <Upload className="w-3 h-3" />
+            <Button variant="outline" size="sm" className="mb-1">
+              <Upload className="h-3 w-3" />
               Upload Image
-            </button>
+            </Button>
             <p className="text-xs text-light mt-1 leading-relaxed">
               Supported formats: JPG, PNG, SVG, WebP. Max file size: 5MB.
             </p>
@@ -212,46 +204,39 @@ export default function StepDetails({
 
       {/* Footer */}
       <div className="flex justify-end mt-1">
-        <button
-          onClick={onNext}
-          className="inline-flex items-center gap-1.5 py-2 px-[18px] bg-brand text-white border-none rounded-lg font-sans text-[13px] font-medium cursor-pointer hover:bg-brand-hover transition-colors"
-        >
-          Continue to Select Recipients &rarr;
-        </button>
+        <Button onClick={onNext}>Continue to Select Recipients →</Button>
       </div>
 
-      {/* Destructive confirmation modal */}
-      <Modal
+      {/* Destructive confirmation dialog */}
+      <Dialog
         open={pendingChange !== null}
-        onClose={() => setPendingChange(null)}
-        title="Change target group?"
-        footer={
-          <>
-            <button
-              onClick={() => setPendingChange(null)}
-              className="inline-flex items-center gap-1.5 py-[7px] px-3.5 bg-white text-gray-900 border border-b2 rounded-lg font-sans text-[13px] font-medium cursor-pointer hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={confirmChange}
-              className="inline-flex items-center gap-1.5 py-2 px-[18px] bg-red-600 text-white border-none rounded-lg font-sans text-[13px] font-medium cursor-pointer hover:bg-red-700"
-            >
-              Change to {pendingChange}
-            </button>
-          </>
-        }
+        onOpenChange={(o) => !o && setPendingChange(null)}
       >
-        <div className="flex gap-3 items-start">
-          <div className="w-9 h-9 rounded-full bg-red-50 text-red-600 flex items-center justify-center flex-shrink-0">
-            <AlertTriangle className="w-4 h-4" />
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change target group?</DialogTitle>
+            <DialogDescription>This action cannot be undone.</DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-3 items-start">
+            <div className="w-9 h-9 rounded-full bg-red-50 text-red-600 flex items-center justify-center flex-shrink-0">
+              <AlertTriangle className="w-4 h-4" />
+            </div>
+            <div className="text-[13px] leading-relaxed text-foreground">
+              Changing the target group will{" "}
+              <strong>remove all selected recipients</strong> and{" "}
+              <strong>delete all merge tags used in your email</strong>.
+            </div>
           </div>
-          <div className="text-[13px] leading-relaxed text-gray-900">
-            Changing the target group will <strong>remove all selected recipients</strong> and{" "}
-            <strong>delete all merge tags used in your email</strong>. This cannot be undone.
-          </div>
-        </div>
-      </Modal>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPendingChange(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmChange}>
+              Change to {pendingChange}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

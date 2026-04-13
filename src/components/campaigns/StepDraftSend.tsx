@@ -5,6 +5,12 @@ import { Search, Send, CheckCircle, AlertCircle } from "lucide-react";
 import { leads } from "@/data/leads";
 import { getOwnerMeta } from "@/data/users";
 
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+
 interface StepDraftSendProps {
   autoSend: boolean;
   onPrev: () => void;
@@ -17,7 +23,6 @@ export default function StepDraftSend({ autoSend, onPrev }: StepDraftSendProps) 
   const [activeFilter, setActiveFilter] = useState<DraftFilter>("All");
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Use shared lead data so the no-email lead (L-005) appears.
   const draftLeads = leads;
   const selected = draftLeads[selectedIdx];
   const selectedOwner = getOwnerMeta(selected.owner);
@@ -44,44 +49,40 @@ export default function StepDraftSend({ autoSend, onPrev }: StepDraftSendProps) 
     <>
       {/* Top bar */}
       <div className="flex items-center justify-between mb-3.5">
-        <button
-          onClick={onPrev}
-          className="inline-flex items-center gap-1.5 py-1.5 px-3 bg-white text-gray-900 border border-b2 rounded-lg font-sans text-[12.5px] font-medium cursor-pointer hover:bg-gray-50 transition-colors"
-        >
-          &larr; Previous
-        </button>
-        <button className="inline-flex items-center gap-1.5 py-2 px-[18px] bg-brand text-white border-none rounded-lg font-sans text-[13px] font-medium cursor-pointer hover:bg-brand-hover transition-colors">
-          <Send className="w-[13px] h-[13px]" />
+        <Button variant="outline" size="sm" onClick={onPrev}>
+          ← Previous
+        </Button>
+        <Button>
+          <Send className="h-[13px] w-[13px]" />
           {ctaLabel}
-        </button>
+        </Button>
       </div>
 
       {/* Main grid */}
       <div className="grid grid-cols-[360px_1fr] gap-3.5" style={{ height: "calc(100vh - 280px)" }}>
         {/* Left panel: lead list */}
-        <div className="bg-white border border-border rounded-[10px] flex flex-col overflow-hidden">
+        <Card className="flex flex-col overflow-hidden p-0">
           <div className="p-3 px-4 border-b border-border">
-            <div className="flex items-center gap-[7px] border border-b2 rounded-[7px] py-[7px] px-[11px] text-[13px]">
-              <input
-                type="text"
+            <div className="relative">
+              <Input
                 placeholder="Search leads..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="border-none outline-none font-sans text-[13px] text-gray-900 bg-transparent w-full placeholder:text-light"
+                className="pr-8"
               />
-              <Search className="w-[13px] h-[13px] text-light" />
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-light pointer-events-none" />
             </div>
-            {/* Filter tabs — no "With contacts" / "Without contacts" for leads */}
             <div className="flex gap-1 mt-2">
               {(["All", "Sent", "Pending"] as DraftFilter[]).map((f) => (
                 <button
                   key={f}
                   onClick={() => setActiveFilter(f)}
-                  className={`py-1 px-3 rounded-[7px] text-[12.5px] font-medium cursor-pointer transition-all ${
+                  className={cn(
+                    "py-1 px-3 rounded-md text-[12.5px] font-medium transition-colors",
                     activeFilter === f
                       ? "bg-brand text-white"
                       : "bg-gray-100 text-muted hover:bg-gray-200"
-                  }`}
+                  )}
                 >
                   {f}
                 </button>
@@ -92,13 +93,15 @@ export default function StepDraftSend({ autoSend, onPrev }: StepDraftSendProps) 
           <div className="overflow-y-auto flex-1">
             {draftLeads.map((lead, i) => {
               const incomplete = !lead.email;
+              const isActive = selectedIdx === i;
               return (
                 <button
                   key={lead.id}
                   onClick={() => setSelectedIdx(i)}
-                  className={`flex items-center gap-2.5 px-4 py-[11px] border-b border-gray-50 cursor-pointer w-full text-left transition-colors ${
-                    selectedIdx === i ? "bg-brand-light" : "hover:bg-gray-50"
-                  }`}
+                  className={cn(
+                    "flex items-center gap-2.5 px-4 py-[11px] border-b border-gray-50 cursor-pointer w-full text-left transition-colors",
+                    isActive ? "bg-brand-light" : "hover:bg-gray-50"
+                  )}
                 >
                   <div
                     className="w-8 h-8 rounded-full text-white text-[11px] font-semibold flex items-center justify-center flex-shrink-0"
@@ -110,27 +113,39 @@ export default function StepDraftSend({ autoSend, onPrev }: StepDraftSendProps) 
                     <div className="text-[13px] font-medium flex items-center gap-1.5">
                       {fullName(lead)}
                       {incomplete && (
-                        <span className="inline-flex items-center gap-1 text-[10.5px] font-medium px-1.5 py-px rounded-full bg-amber-50 text-amber-700">
-                          <AlertCircle className="w-[10px] h-[10px]" />
+                        <Badge variant="warning" className="text-[10.5px] py-px px-1.5">
+                          <AlertCircle className="h-[10px] w-[10px]" />
                           Incomplete information
-                        </span>
+                        </Badge>
                       )}
                     </div>
-                    <div className={`text-xs truncate ${incomplete ? "text-amber-700" : "text-muted"}`}>
-                      {incomplete ? "No email address" : `${lead.email} \u00b7 ${lead.company || ""}`}
+                    <div
+                      className={cn(
+                        "text-xs truncate",
+                        incomplete ? "text-amber-700" : "text-muted"
+                      )}
+                    >
+                      {incomplete
+                        ? "No email address"
+                        : `${lead.email} \u00b7 ${lead.company || ""}`}
                     </div>
                   </div>
-                  <span className="text-xs py-0.5 px-2 border border-b2 rounded-[5px] cursor-pointer text-muted hover:border-red-500 hover:text-red-500 flex-shrink-0 transition-colors font-sans">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-6 px-2 text-[11px] hover:border-red-500 hover:text-red-500"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     Exclude
-                  </span>
+                  </Button>
                 </button>
               );
             })}
           </div>
-        </div>
+        </Card>
 
         {/* Right panel: email preview */}
-        <div className="bg-white border border-border rounded-[10px] overflow-y-auto">
+        <Card className="overflow-y-auto p-0">
           {/* Lead header */}
           <div className="p-3.5 px-[18px] border-b border-border flex items-start justify-between">
             <div>
@@ -144,13 +159,17 @@ export default function StepDraftSend({ autoSend, onPrev }: StepDraftSendProps) 
                 {fullName(selected)}
               </div>
               <div className="text-xs text-muted mt-0.5">
-                {selectedComplete ? selected.email : <span className="text-amber-700">No email address</span>}{" "}
-                &middot; {selected.company || "—"} &middot; Owner: {selectedOwner?.name || "—"}
+                {selectedComplete ? (
+                  selected.email
+                ) : (
+                  <span className="text-amber-700">No email address</span>
+                )}{" "}
+                · {selected.company || "—"} · Owner: {selectedOwner?.name || "—"}
               </div>
             </div>
-            <button className="text-xs py-0.5 px-2 border border-b2 rounded-[5px] cursor-pointer text-muted hover:border-red-500 hover:text-red-500 transition-colors font-sans">
+            <Button variant="outline" size="sm" className="h-6 px-2 text-[11px]">
               Exclude
-            </button>
+            </Button>
           </div>
 
           {/* Lead info card */}
@@ -165,30 +184,33 @@ export default function StepDraftSend({ autoSend, onPrev }: StepDraftSendProps) 
               <div className="flex-1">
                 <div className="text-[13px] font-medium">{fullName(selected)}</div>
                 <div className="text-xs text-muted">
-                  {selectedComplete ? selected.email : <span className="text-amber-700">No email address</span>}{" "}
-                  &middot; {selected.company || "—"}
+                  {selectedComplete ? (
+                    selected.email
+                  ) : (
+                    <span className="text-amber-700">No email address</span>
+                  )}{" "}
+                  · {selected.company || "—"}
                 </div>
               </div>
               {selectedComplete ? (
-                <span className="inline-flex items-center gap-1 text-[11.5px] font-medium px-2 py-0.5 rounded-full bg-green-50 text-green-600">
-                  <CheckCircle className="w-[10px] h-[10px]" />
+                <Badge variant="success">
+                  <CheckCircle className="h-[10px] w-[10px]" />
                   Information complete
-                </span>
+                </Badge>
               ) : (
-                <span className="inline-flex items-center gap-1 text-[11.5px] font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">
-                  <AlertCircle className="w-[10px] h-[10px]" />
+                <Badge variant="warning">
+                  <AlertCircle className="h-[10px] w-[10px]" />
                   Incomplete lead information
-                </span>
+                </Badge>
               )}
-              <button className="text-xs py-0.5 px-2 border border-b2 rounded-[5px] cursor-pointer text-muted hover:border-red-500 hover:text-red-500 ml-2 transition-colors font-sans">
+              <Button variant="outline" size="sm" className="h-6 px-2 text-[11px] ml-2">
                 Exclude
-              </button>
+              </Button>
             </div>
           </div>
 
           {/* Email preview */}
-          <div className="mx-[18px] mt-0 mb-[18px] border border-border rounded-lg overflow-hidden mt-3.5">
-            {/* Email header */}
+          <div className="mx-[18px] my-[18px] border border-border rounded-lg overflow-hidden">
             <div className="flex items-center justify-between p-[11px] px-[13px] bg-gray-50 border-b border-border">
               <div className="text-[13px] font-semibold flex items-center gap-1.5">
                 <div className="w-5 h-5 rounded-full bg-brand text-white text-[11px] font-semibold flex items-center justify-center">
@@ -199,94 +221,94 @@ export default function StepDraftSend({ autoSend, onPrev }: StepDraftSendProps) 
               </div>
               <div className="flex gap-2 items-center">
                 {selectedComplete ? (
-                  <span className="inline-flex items-center gap-1 text-[11.5px] font-medium px-2 py-0.5 rounded-full bg-green-50 text-green-600">
-                    <CheckCircle className="w-[10px] h-[10px]" />
+                  <Badge variant="success">
+                    <CheckCircle className="h-[10px] w-[10px]" />
                     Ready to send
-                  </span>
+                  </Badge>
                 ) : (
-                  <span className="inline-flex items-center gap-1 text-[11.5px] font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">
-                    <AlertCircle className="w-[10px] h-[10px]" />
+                  <Badge variant="warning">
+                    <AlertCircle className="h-[10px] w-[10px]" />
                     Incomplete lead information
-                  </span>
+                  </Badge>
                 )}
-                <button
-                  disabled={!selectedComplete}
-                  className={`inline-flex items-center gap-1.5 py-1.5 px-[13px] border-none rounded-md font-sans text-[12.5px] font-medium transition-colors ${
-                    selectedComplete
-                      ? "bg-brand text-white cursor-pointer hover:bg-brand-hover"
-                      : "bg-gray-200 text-light cursor-not-allowed"
-                  }`}
-                >
-                  <Send className="w-[11px] h-[11px]" />
+                <Button size="sm" disabled={!selectedComplete}>
+                  <Send className="h-[11px] w-[11px]" />
                   Send
-                </button>
+                </Button>
               </div>
             </div>
 
             {/* Email fields */}
-            <div className="flex border-b border-gray-50">
-              <div className="text-[12.5px] text-muted p-2.5 px-[13px] min-w-[85px] border-r border-gray-50 bg-gray-50/50 flex-shrink-0">
-                From:
-              </div>
-              <div className="text-[12.5px] text-gray-900 p-2.5 px-[13px] flex-1">
-                Kevin Kools (via Qollabi)
-              </div>
-            </div>
-            <div className="flex border-b border-gray-50">
-              <div className="text-[12.5px] text-muted p-2.5 px-[13px] min-w-[85px] border-r border-gray-50 bg-gray-50/50 flex-shrink-0">
-                Subject:
-              </div>
-              <div className="text-[12.5px] text-gray-900 p-2.5 px-[13px] flex-1">
-                <span className="inline-flex items-center gap-1 text-[11.5px] text-brand cursor-pointer hover:underline mb-1">
-                  &#9998; Customize
-                </span>
-                <div>Your AON Cybersecurity offer is ready</div>
-              </div>
-            </div>
-            <div className="flex">
-              <div className="text-[12.5px] text-muted p-2.5 px-[13px] min-w-[85px] border-r border-gray-50 bg-gray-50/50 flex-shrink-0">
-                Content:
-              </div>
-              <div className="text-[12.5px] text-gray-900 p-2.5 px-[13px] flex-1 leading-[1.9]">
-                <span className="inline-flex items-center gap-1 text-[11.5px] text-brand cursor-pointer hover:underline mb-1">
-                  &#9998; Customize
-                </span>
-                <div className="mt-1">
-                  Dear{" "}
-                  <code className="font-mono text-[11.5px] px-1 py-px rounded bg-brand-light text-brand">
-                    {"{{lead.firstName}}"}
-                  </code>{" "}
-                  <code className="font-mono text-[11.5px] px-1 py-px rounded bg-brand-light text-brand">
-                    {"{{lead.lastName}}"}
-                  </code>{" "}
-                  &mdash;{" "}
-                  <code className="font-mono text-[11.5px] px-1 py-px rounded bg-brand-light text-brand">
-                    {"{{lead.company}}"}
-                  </code>
-                  ,
-                  <br />
-                  <br />
-                  Your personalised offer is ready:
-                  <br />
-                  <code className="font-mono text-[11.5px] px-1 py-px rounded bg-green-50 text-green-600">
-                    {"{{lead.attachmentLink}}"}
-                  </code>
-                  <br />
-                  <br />
-                  Kind regards,
-                  <br />
-                  <code className="font-mono text-[11.5px] px-1 py-px rounded bg-brand-light text-brand">
-                    {"{{sender.name}}"}
-                  </code>
-                  <br />
-                  <code className="font-mono text-[11.5px] px-1 py-px rounded bg-brand-light text-brand">
-                    {"{{sender.signature}}"}
-                  </code>
+            {[
+              { label: "From:", body: <>Kevin Kools (via Qollabi)</> },
+              {
+                label: "Subject:",
+                body: (
+                  <>
+                    <span className="inline-flex items-center gap-1 text-[11.5px] text-brand cursor-pointer hover:underline mb-1">
+                      ✎ Customize
+                    </span>
+                    <div>Your AON Cybersecurity offer is ready</div>
+                  </>
+                ),
+              },
+              {
+                label: "Content:",
+                body: (
+                  <>
+                    <span className="inline-flex items-center gap-1 text-[11.5px] text-brand cursor-pointer hover:underline mb-1">
+                      ✎ Customize
+                    </span>
+                    <div className="mt-1 leading-[1.9]">
+                      Dear{" "}
+                      <code className="font-mono text-[11.5px] px-1 py-px rounded bg-brand-light text-brand">
+                        {"{{lead.firstName}}"}
+                      </code>{" "}
+                      <code className="font-mono text-[11.5px] px-1 py-px rounded bg-brand-light text-brand">
+                        {"{{lead.lastName}}"}
+                      </code>{" "}
+                      —{" "}
+                      <code className="font-mono text-[11.5px] px-1 py-px rounded bg-brand-light text-brand">
+                        {"{{lead.company}}"}
+                      </code>
+                      ,
+                      <br />
+                      <br />
+                      Your personalised offer is ready:
+                      <br />
+                      <code className="font-mono text-[11.5px] px-1 py-px rounded bg-green-50 text-green-600">
+                        {"{{lead.attachmentLink}}"}
+                      </code>
+                      <br />
+                      <br />
+                      Kind regards,
+                      <br />
+                      <code className="font-mono text-[11.5px] px-1 py-px rounded bg-brand-light text-brand">
+                        {"{{sender.name}}"}
+                      </code>
+                      <br />
+                      <code className="font-mono text-[11.5px] px-1 py-px rounded bg-brand-light text-brand">
+                        {"{{sender.signature}}"}
+                      </code>
+                    </div>
+                  </>
+                ),
+              },
+            ].map((row, i, arr) => (
+              <div
+                key={row.label}
+                className={cn("flex", i < arr.length - 1 && "border-b border-gray-50")}
+              >
+                <div className="text-[12.5px] text-muted p-2.5 px-[13px] min-w-[85px] border-r border-gray-50 bg-gray-50/50 flex-shrink-0">
+                  {row.label}
+                </div>
+                <div className="text-[12.5px] text-foreground p-2.5 px-[13px] flex-1">
+                  {row.body}
                 </div>
               </div>
-            </div>
+            ))}
           </div>
-        </div>
+        </Card>
       </div>
     </>
   );

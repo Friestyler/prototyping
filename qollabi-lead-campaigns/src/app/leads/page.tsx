@@ -317,10 +317,6 @@ export default function LeadsPage() {
         </div>
       </div>
 
-      <p className="px-7 py-2 text-[12.5px] text-muted bg-gray-50/50 border-b border-border">
-        Selecting a list will automatically include any leads added to that list in the future.
-      </p>
-
       {/* Saved Lists card grid */}
       {activeListTab === "Saved Lists" && (
         <div className="px-7 pt-4 pb-1 bg-white">
