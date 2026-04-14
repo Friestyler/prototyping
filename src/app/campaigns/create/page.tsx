@@ -11,6 +11,7 @@ import StepSettings from "@/components/campaigns/StepSettings";
 import StepDraftSend from "@/components/campaigns/StepDraftSend";
 import { TargetGroup, WizardStep } from "@/types";
 import { templates } from "@/data/templates";
+import { leads } from "@/data/leads";
 
 const steps = [
   { num: 1 as WizardStep, label: "Campaign Details", desc: "Configure campaign settings" },
@@ -40,10 +41,35 @@ function CreateCampaignWizard() {
   const [targetGroup, setTargetGroup] = useState<TargetGroup>(initialTargetGroup);
   const [autoSend, setAutoSend] = useState(true);
 
+  // Recipient selection (lifted so it can be cleared on target group change)
+  const [selectedLists, setSelectedLists] = useState<Set<string>>(new Set(["ls-1"]));
+  const [includedLeadIds, setIncludedLeadIds] = useState<Set<string>>(
+    () => new Set(leads.map((l) => l.id))
+  );
+
+  // Merge tags in the email body. False = body has been cleared of merge tags.
+  const [emailHasMergeTags, setEmailHasMergeTags] = useState(true);
+
   const goTo = (step: WizardStep) => {
     setCurrentStep(step);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+
+  // Destructive side effect: clears recipients + strips merge tags from body.
+  const handleTargetGroupChange = (tg: TargetGroup) => {
+    if (tg === targetGroup) return;
+    setTargetGroup(tg);
+    setSelectedLists(new Set());
+    setIncludedLeadIds(new Set());
+    setEmailHasMergeTags(false);
+  };
+
+  // Final recipient set — leads from any selected list, intersected with
+  // individually included ids. Empty if no list is selected.
+  const recipientLeads =
+    selectedLists.size === 0
+      ? []
+      : leads.filter((l) => includedLeadIds.has(l.id));
 
   return (
     <div className="px-8 py-7 overflow-y-auto h-full">
@@ -116,7 +142,7 @@ function CreateCampaignWizard() {
       {currentStep === 1 && (
         <StepDetails
           targetGroup={targetGroup}
-          onTargetGroupChange={setTargetGroup}
+          onTargetGroupChange={handleTargetGroupChange}
           onNext={() => goTo(2)}
           sentCount={sentCount}
         />
@@ -124,6 +150,10 @@ function CreateCampaignWizard() {
       {currentStep === 2 && (
         <StepRecipients
           targetGroup={targetGroup}
+          selectedLists={selectedLists}
+          onSelectedListsChange={setSelectedLists}
+          includedLeadIds={includedLeadIds}
+          onIncludedLeadIdsChange={setIncludedLeadIds}
           onPrev={() => goTo(1)}
           onNext={() => goTo(3)}
         />
@@ -147,7 +177,10 @@ function CreateCampaignWizard() {
       {currentStep === 5 && (
         <StepDraftSend
           autoSend={autoSend}
+          emailHasMergeTags={emailHasMergeTags}
+          recipients={recipientLeads}
           onPrev={() => goTo(4)}
+          onGoToRecipients={() => goTo(2)}
         />
       )}
     </div>

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Search, Send, CheckCircle, AlertCircle } from "lucide-react";
-import { leads } from "@/data/leads";
+import { Search, Send, CheckCircle, AlertCircle, Inbox } from "lucide-react";
+import { Lead } from "@/types";
 import { getOwnerMeta } from "@/data/users";
 
 import { Button } from "@/components/ui/button";
@@ -13,31 +13,41 @@ import { cn } from "@/lib/utils";
 
 interface StepDraftSendProps {
   autoSend: boolean;
+  emailHasMergeTags: boolean;
+  recipients: Lead[];
   onPrev: () => void;
+  onGoToRecipients: () => void;
 }
 
 type DraftFilter = "All" | "Sent" | "Pending";
 
-export default function StepDraftSend({ autoSend, onPrev }: StepDraftSendProps) {
+export default function StepDraftSend({
+  autoSend,
+  emailHasMergeTags,
+  recipients,
+  onPrev,
+  onGoToRecipients,
+}: StepDraftSendProps) {
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [activeFilter, setActiveFilter] = useState<DraftFilter>("All");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const draftLeads = leads;
-  const selected = draftLeads[selectedIdx];
-  const selectedOwner = getOwnerMeta(selected.owner);
-  const selectedComplete = !!selected.email;
+  const draftLeads = recipients;
+  const safeIdx = Math.min(selectedIdx, Math.max(0, draftLeads.length - 1));
+  const selected = draftLeads[safeIdx];
+  const selectedOwner = selected ? getOwnerMeta(selected.owner) : null;
+  const selectedComplete = !!selected?.email;
 
   const ctaLabel = autoSend ? "Activate campaign" : "Send all";
 
-  const fullName = (l: typeof leads[number]) =>
+  const fullName = (l: Lead) =>
     `${l.firstName || ""} ${l.lastName || ""}`.trim() || "Unnamed lead";
-  const initials = (l: typeof leads[number]) => {
+  const initials = (l: Lead) => {
     const a = (l.firstName || "")[0] || "";
     const b = (l.lastName || "")[0] || "";
     return (a + b).toUpperCase() || "?";
   };
-  const colorFor = (l: typeof leads[number]) => {
+  const colorFor = (l: Lead) => {
     const palette = ["#5B5BD6", "#059669", "#D97706", "#DB2777", "#0EA5E9"];
     const seed = (l.firstName || "") + (l.lastName || "");
     let h = 0;
@@ -52,13 +62,29 @@ export default function StepDraftSend({ autoSend, onPrev }: StepDraftSendProps) 
         <Button variant="outline" size="sm" onClick={onPrev}>
           ← Previous
         </Button>
-        <Button>
+        <Button disabled={draftLeads.length === 0}>
           <Send className="h-[13px] w-[13px]" />
           {ctaLabel}
         </Button>
       </div>
 
-      {/* Main grid */}
+      {draftLeads.length === 0 ? (
+        <Card>
+          <div className="py-16 px-10 text-center">
+            <div className="mx-auto w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+              <Inbox className="h-5 w-5 text-muted" />
+            </div>
+            <div className="text-sm font-medium text-foreground mb-4">
+              No recipients selected
+            </div>
+            <div>
+              <Button variant="outline" size="sm" onClick={onGoToRecipients}>
+                ← Back to Select Recipients
+              </Button>
+            </div>
+          </div>
+        </Card>
+      ) : (
       <div className="grid grid-cols-[360px_1fr] gap-3.5" style={{ height: "calc(100vh - 280px)" }}>
         {/* Left panel: lead list */}
         <Card className="flex flex-col overflow-hidden p-0">
@@ -259,38 +285,50 @@ export default function StepDraftSend({ autoSend, onPrev }: StepDraftSendProps) 
                     <span className="inline-flex items-center gap-1 text-[11.5px] text-brand cursor-pointer hover:underline mb-1">
                       ✎ Customize
                     </span>
-                    <div className="mt-1 leading-[1.9]">
-                      Dear{" "}
-                      <code className="font-mono text-[11.5px] px-1 py-px rounded bg-brand-light text-brand">
-                        {"{{lead.firstName}}"}
-                      </code>{" "}
-                      <code className="font-mono text-[11.5px] px-1 py-px rounded bg-brand-light text-brand">
-                        {"{{lead.lastName}}"}
-                      </code>{" "}
-                      —{" "}
-                      <code className="font-mono text-[11.5px] px-1 py-px rounded bg-brand-light text-brand">
-                        {"{{lead.company}}"}
-                      </code>
-                      ,
-                      <br />
-                      <br />
-                      Your personalised offer is ready:
-                      <br />
-                      <code className="font-mono text-[11.5px] px-1 py-px rounded bg-green-50 text-green-600">
-                        {"{{lead.attachmentLink}}"}
-                      </code>
-                      <br />
-                      <br />
-                      Kind regards,
-                      <br />
-                      <code className="font-mono text-[11.5px] px-1 py-px rounded bg-brand-light text-brand">
-                        {"{{sender.name}}"}
-                      </code>
-                      <br />
-                      <code className="font-mono text-[11.5px] px-1 py-px rounded bg-brand-light text-brand">
-                        {"{{sender.signature}}"}
-                      </code>
-                    </div>
+                    {emailHasMergeTags ? (
+                      <div className="mt-1 leading-[1.9]">
+                        Dear{" "}
+                        <code className="font-mono text-[11.5px] px-1 py-px rounded bg-brand-light text-brand">
+                          {"{{lead.firstName}}"}
+                        </code>{" "}
+                        <code className="font-mono text-[11.5px] px-1 py-px rounded bg-brand-light text-brand">
+                          {"{{lead.lastName}}"}
+                        </code>{" "}
+                        —{" "}
+                        <code className="font-mono text-[11.5px] px-1 py-px rounded bg-brand-light text-brand">
+                          {"{{lead.company}}"}
+                        </code>
+                        ,
+                        <br />
+                        <br />
+                        Your personalised offer is ready:
+                        <br />
+                        <code className="font-mono text-[11.5px] px-1 py-px rounded bg-green-50 text-green-600">
+                          {"{{lead.attachmentLink}}"}
+                        </code>
+                        <br />
+                        <br />
+                        Kind regards,
+                        <br />
+                        <code className="font-mono text-[11.5px] px-1 py-px rounded bg-brand-light text-brand">
+                          {"{{sender.name}}"}
+                        </code>
+                        <br />
+                        <code className="font-mono text-[11.5px] px-1 py-px rounded bg-brand-light text-brand">
+                          {"{{sender.signature}}"}
+                        </code>
+                      </div>
+                    ) : (
+                      <div className="mt-1 leading-[1.9]">
+                        Dear ,
+                        <br />
+                        <br />
+                        Your personalised offer is ready:
+                        <br />
+                        <br />
+                        Kind regards,
+                      </div>
+                    )}
                   </>
                 ),
               },
@@ -310,6 +348,7 @@ export default function StepDraftSend({ autoSend, onPrev }: StepDraftSendProps) 
           </div>
         </Card>
       </div>
+      )}
     </>
   );
 }

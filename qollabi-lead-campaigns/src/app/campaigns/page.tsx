@@ -135,16 +135,13 @@ export default function CampaignsPage() {
               return (
                 <Card key={t.id} className="hover:shadow-sm transition-shadow flex flex-col">
                   <CardContent className="p-4 pt-4 flex flex-col flex-1">
-                    <div className="flex items-start justify-between mb-2.5">
+                    <div className="mb-2.5">
                       <div
                         className="w-9 h-9 rounded-md flex items-center justify-center flex-shrink-0"
                         style={{ backgroundColor: t.iconBg, color: t.iconColor }}
                       >
                         <Icon className="h-4 w-4" />
                       </div>
-                      <Badge variant={t.targetGroup === "Leads" ? "default" : "secondary"}>
-                        {t.targetGroup}
-                      </Badge>
                     </div>
                     <div className="text-[14px] font-medium mb-1">{t.name}</div>
                     <p className="text-xs text-muted leading-relaxed mb-3.5 flex-1">

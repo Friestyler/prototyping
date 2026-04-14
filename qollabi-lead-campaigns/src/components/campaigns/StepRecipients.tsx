@@ -33,18 +33,25 @@ import { cn } from "@/lib/utils";
 
 interface StepRecipientsProps {
   targetGroup: TargetGroup;
+  selectedLists: Set<string>;
+  onSelectedListsChange: (next: Set<string>) => void;
+  includedLeadIds: Set<string>;
+  onIncludedLeadIdsChange: (next: Set<string>) => void;
   onPrev: () => void;
   onNext: () => void;
 }
 
 type SelectedFilter = "All" | "Has Email" | "Missing Info";
 
-export default function StepRecipients({ onPrev, onNext }: StepRecipientsProps) {
+export default function StepRecipients({
+  selectedLists,
+  onSelectedListsChange,
+  includedLeadIds,
+  onIncludedLeadIdsChange,
+  onPrev,
+  onNext,
+}: StepRecipientsProps) {
   const [activeListTab, setActiveListTab] = useState<string>("static");
-  const [selectedLists, setSelectedLists] = useState<Set<string>>(new Set(["ls-1"]));
-  const [includedLeadIds, setIncludedLeadIds] = useState<Set<string>>(
-    () => new Set(leads.map((l) => l.id))
-  );
   const [search, setSearch] = useState("");
   const [selectedFilter, setSelectedFilter] = useState<SelectedFilter>("All");
 
@@ -60,24 +67,25 @@ export default function StepRecipients({ onPrev, onNext }: StepRecipientsProps) 
   // Selecting/unselecting a list auto-toggles all of its leads (mock: all leads).
   useEffect(() => {
     if (selectedLists.size === 0) {
-      setIncludedLeadIds(new Set());
+      onIncludedLeadIdsChange(new Set());
     } else {
-      setIncludedLeadIds(new Set(leads.map((l) => l.id)));
+      onIncludedLeadIdsChange(new Set(leads.map((l) => l.id)));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedLists]);
 
   const toggleList = (id: string) => {
     const next = new Set(selectedLists);
     if (next.has(id)) next.delete(id);
     else next.add(id);
-    setSelectedLists(next);
+    onSelectedListsChange(next);
   };
 
   const toggleLead = (id: string) => {
     const next = new Set(includedLeadIds);
     if (next.has(id)) next.delete(id);
     else next.add(id);
-    setIncludedLeadIds(next);
+    onIncludedLeadIdsChange(next);
   };
 
   const allListLeadsIncluded =
@@ -90,7 +98,7 @@ export default function StepRecipients({ onPrev, onNext }: StepRecipientsProps) 
     } else {
       listLeads.forEach((l) => next.add(l.id));
     }
-    setIncludedLeadIds(next);
+    onIncludedLeadIdsChange(next);
   };
 
   // Final recipients = leads from selected lists ∩ individually included.
