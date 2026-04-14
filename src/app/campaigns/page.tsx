@@ -194,7 +194,7 @@ export default function CampaignsPage() {
                     <TableRow key={c.id} className="cursor-pointer">
                       <TableCell className="pl-5">
                         <Link
-                          href="/campaigns/create"
+                          href={`/campaigns/create?campaignId=${c.id}`}
                           className="flex items-center gap-2.5 no-underline text-foreground"
                         >
                           <div
@@ -230,9 +230,14 @@ export default function CampaignsPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem>
-                              <Pencil className="h-3.5 w-3.5" />
-                              Edit
+                            <DropdownMenuItem asChild>
+                              <Link
+                                href={`/campaigns/create?campaignId=${c.id}`}
+                                className="no-underline text-foreground"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                                Edit
+                              </Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem>
                               <BarChart3 className="h-3.5 w-3.5" />

@@ -178,7 +178,7 @@ export default function StepRecipients({
           {stats.map(({ label, value, icon: Icon, color, bg }) => (
             <div
               key={label}
-              className="p-4 px-5 flex items-center gap-3 border-r border-border last:border-r-0"
+              className="p-4 px-5 flex items-center gap-3"
             >
               <div
                 className={cn(
@@ -387,17 +387,6 @@ export default function StepRecipients({
       {/* Recipients preview — shown for Static / Dynamic tabs only */}
       {activeListTab !== "selected" && (
         <Card className="overflow-hidden mb-6">
-          <div className="px-[18px] py-3 border-b border-border flex items-center justify-between">
-            <div className="text-[13px] font-medium">
-              Recipients{" "}
-              <span className="text-muted font-normal">
-                ({selectedLeads.length} of {listLeads.length})
-              </span>
-            </div>
-            <span className="text-[12px] text-muted">
-              Tick or untick leads to include them in the campaign
-            </span>
-          </div>
           {listLeads.length === 0 ? (
             <div className="py-10 text-center text-[13px] text-muted">
               Select a Static or Dynamic list above to preview its leads.

@@ -11,6 +11,7 @@ import StepSettings from "@/components/campaigns/StepSettings";
 import StepDraftSend from "@/components/campaigns/StepDraftSend";
 import { TargetGroup, WizardStep } from "@/types";
 import { templates } from "@/data/templates";
+import { campaigns } from "@/data/campaigns";
 import { leads } from "@/data/leads";
 
 const steps = [
@@ -32,14 +33,25 @@ export default function CreateCampaignPage() {
 function CreateCampaignWizard() {
   const searchParams = useSearchParams();
   const templateId = searchParams.get("templateId");
+  const campaignId = searchParams.get("campaignId");
   const sentCountParam = searchParams.get("sentCount");
+
+  const loadedCampaign = campaignId
+    ? campaigns.find((c) => c.id === campaignId)
+    : null;
+
   const initialTargetGroup: TargetGroup =
-    (templateId && templates.find((t) => t.id === templateId)?.targetGroup) || "Leads";
-  const sentCount = sentCountParam ? Number(sentCountParam) || 0 : 0;
+    loadedCampaign?.targetGroup ||
+    (templateId && templates.find((t) => t.id === templateId)?.targetGroup) ||
+    "Leads";
+
+  const sentCount =
+    loadedCampaign?.sentCount ??
+    (sentCountParam ? Number(sentCountParam) || 0 : 0);
 
   const [currentStep, setCurrentStep] = useState<WizardStep>(1);
   const [targetGroup, setTargetGroup] = useState<TargetGroup>(initialTargetGroup);
-  const [autoSend, setAutoSend] = useState(true);
+  const [autoSend, setAutoSend] = useState(false);
 
   // Recipient selection (lifted so it can be cleared on target group change)
   const [selectedLists, setSelectedLists] = useState<Set<string>>(new Set(["ls-1"]));
