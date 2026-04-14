@@ -53,19 +53,6 @@ export const campaigns: Campaign[] = [
     emailsSent: 8,
     sentCount: 8,
   },
-  {
-    id: "C-005",
-    name: "Renewal Reminder 2026",
-    icon: "star",
-    iconBg: "#EEF2FF",
-    iconColor: "#5B5BD6",
-    targetGroup: "Customers",
-    description: "Annual renewal campaign",
-    status: "Complete",
-    recipients: 156,
-    emailsSent: 152,
-    sentCount: 152,
-  },
 ];
 
 export const campaignStats = {

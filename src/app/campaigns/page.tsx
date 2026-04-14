@@ -184,12 +184,8 @@ export default function CampaignsPage() {
               <TableBody>
                 {campaigns.map((c) => {
                   const Icon = iconMap[c.icon] || Mail;
-                  const statusVariant: "success" | "default" | "secondary" =
-                    c.status === "Active"
-                      ? "success"
-                      : c.status === "Complete"
-                      ? "default"
-                      : "secondary";
+                  const statusVariant: "success" | "secondary" =
+                    c.status === "Active" ? "success" : "secondary";
                   return (
                     <TableRow key={c.id} className="cursor-pointer">
                       <TableCell className="pl-5">
@@ -216,7 +212,7 @@ export default function CampaignsPage() {
                       </TableCell>
                       <TableCell>
                         <Badge variant={statusVariant} className="border border-current/20">
-                          <Pencil className="h-2.5 w-2.5" />
+                          {c.status === "Draft" && <Pencil className="h-2.5 w-2.5" />}
                           {c.status}
                         </Badge>
                       </TableCell>

@@ -27,7 +27,7 @@ export interface Campaign {
   iconColor: string;
   targetGroup: TargetGroup;
   description: string;
-  status: "Draft" | "Active" | "Stopped" | "Complete";
+  status: "Draft" | "Active" | "Stopped";
   recipients: number;
   emailsSent: number;
   sentCount: number;
