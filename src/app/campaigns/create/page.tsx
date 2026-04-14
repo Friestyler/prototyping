@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ArrowLeft, Check } from "lucide-react";
@@ -21,6 +21,14 @@ const steps = [
 ];
 
 export default function CreateCampaignPage() {
+  return (
+    <Suspense fallback={<div className="px-8 py-7 text-muted text-[13px]">Loading…</div>}>
+      <CreateCampaignWizard />
+    </Suspense>
+  );
+}
+
+function CreateCampaignWizard() {
   const searchParams = useSearchParams();
   const templateId = searchParams.get("templateId");
   const sentCountParam = searchParams.get("sentCount");
