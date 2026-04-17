@@ -2881,7 +2881,7 @@ export default function Lists2View({
               }}
               className={cn(
                 "rounded-lg px-6 py-2.5 font-medium transition-all border",
-                listFilter === "saved"
+                listFilter === "saved" && !aiPromptExpanded
                   ? "bg-[rgb(224,231,255)] text-primary border-transparent hover:bg-[rgb(214,221,245)]"
                   : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50",
               )}
@@ -2898,7 +2898,7 @@ export default function Lists2View({
               }}
               className={cn(
                 "rounded-lg px-6 py-2.5 font-medium transition-all border",
-                listFilter === "templates"
+                listFilter === "templates" && !aiPromptExpanded
                   ? "bg-[rgb(224,231,255)] text-primary border-transparent hover:bg-[rgb(214,221,245)]"
                   : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50",
               )}
@@ -2929,7 +2929,7 @@ export default function Lists2View({
           {/* Saved Lists / Templates View */}
 
           {/* My Lists View */}
-          {listFilter === "saved" && (
+          {listFilter === "saved" && !aiPromptExpanded && (
             <div className="max-w-7xl mx-auto">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-semibold text-gray-900">Your Audiences</h2>
@@ -3035,7 +3035,7 @@ export default function Lists2View({
           )}
 
           {/* Templates View */}
-          {listFilter === "templates" && (
+          {listFilter === "templates" && !aiPromptExpanded && (
             <div className="max-w-7xl mx-auto">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 pt-2">
                 {/* Pre-built Smart Lists */}
@@ -3637,7 +3637,7 @@ export default function Lists2View({
             </div>
           )}
 
-          {selectedListId && (
+          {selectedListId && !aiPromptExpanded && (
             <>
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 flex-1">
