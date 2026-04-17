@@ -5,9 +5,9 @@ export interface User {
 }
 
 const userMap: Record<string, User> = {
-  "Kevin Kools": { name: "Kevin Kools", initials: "KK", color: "#5B5BD6" },
-  "Raciel Rodriguez": { name: "Raciel Rodriguez", initials: "RR", color: "#059669" },
-  "Lena Vermeersch": { name: "Lena Vermeersch", initials: "LV", color: "#D97706" },
+  "User 1": { name: "User 1", initials: "U1", color: "#5B5BD6" },
+  "User 2": { name: "User 2", initials: "U2", color: "#059669" },
+  "User 3": { name: "User 3", initials: "U3", color: "#D97706" },
 };
 
 export function getOwnerMeta(name?: string): User | null {

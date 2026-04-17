@@ -1,8 +1,8 @@
 // ─── Broker & Portfolio Summary ───────────────────────────────────────────────
 
 export const BROKER = {
-  name: "Thomas Declercq",
-  agency: "Declercq & Partners",
+  name: "Demo Broker",
+  agency: "Demo Agency",
   portfolioHealthScore: 74,
   healthDelta: +3,
   peerPercentile: 31,
