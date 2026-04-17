@@ -61,7 +61,7 @@ import {
 import { cn } from "@/lib/utils";
 
 const smartListTabs = [
-  { label: "Qollabi Templates", count: 0 },
+  { label: "Brand Broker Templates", count: 0 },
   { label: "Offered Templates", count: 2 },
   { label: "Market Radar Templates", count: 0 },
   { label: "Saved Lists", count: 1 },

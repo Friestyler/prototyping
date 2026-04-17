@@ -127,13 +127,13 @@ export default function StepSettings({
           <p className="text-xs text-muted-foreground leading-relaxed">
             Choose a verified email address. You can manage sender emails in Workspace Settings.
           </p>
-          <Select defaultValue="kamelia@qollabi.com">
+          <Select defaultValue="kamelia@brandbroker.com">
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="kamelia@qollabi.com">kamelia@qollabi.com</SelectItem>
-              <SelectItem value="kevin@qollabi.com">kevin@qollabi.com</SelectItem>
+              <SelectItem value="kamelia@brandbroker.com">kamelia@brandbroker.com</SelectItem>
+              <SelectItem value="kevin@brandbroker.com">kevin@brandbroker.com</SelectItem>
             </SelectContent>
           </Select>
         </div>

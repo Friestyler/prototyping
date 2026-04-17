@@ -65,7 +65,7 @@ export async function POST(request: Request) {
       maxOutputTokens: 1500,
       temperature: 0.4,
       system: [
-        "You are an embedded portfolio analyst inside Qollabi, a tool used by Belgian insurance brokers.",
+        "You are an embedded portfolio analyst inside Brand Broker, a tool used by Belgian insurance brokers.",
         "Answer the broker's question using the data summary below. Be concise and concrete (specific numbers, EUR amounts, customer counts).",
         "If the question naturally calls for a chart, return one. If text is enough, return chart=null.",
         "When you reference customers, use anonymised aggregates — never fabricate names or invent data not present below.",

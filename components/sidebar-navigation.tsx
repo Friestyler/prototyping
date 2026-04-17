@@ -81,7 +81,7 @@ export default function SidebarNavigation({ activeMenu, onMenuChange }: SidebarN
                 <div className="w-6 h-6 rounded-full bg-gray-500 flex items-center justify-center flex-shrink-0">
                   <span className="text-white text-xs font-medium">E</span>
                 </div>
-                <span className="text-[#1F2937] text-[15px]">Qollabi</span>
+                <span className="text-[#1F2937] text-[15px]">Brand Broker</span>
               </div>
               <ChevronDown className="h-4 w-4 text-gray-600 flex-shrink-0" />
             </Button>
@@ -92,7 +92,7 @@ export default function SidebarNavigation({ activeMenu, onMenuChange }: SidebarN
                 <div className="w-6 h-6 rounded-full bg-gray-500 flex items-center justify-center">
                   <span className="text-white text-xs font-medium">E</span>
                 </div>
-                <span>Qollabi</span>
+                <span>Brand Broker</span>
               </div>
             </DropdownMenuItem>
           </DropdownMenuContent>

@@ -207,7 +207,7 @@ export const initialPartners: Partner[] = [
     ],
     owner: "Michael van Oosten",
     okrs: {
-      email: { label: "Email", value: "contact@qollabi.com", status: "active" },
+      email: { label: "Email", value: "contact@brandbroker.com", status: "active" },
       "address-line-1": { label: "Address Line 1", value: "Technologielaan 15", status: "active" },
       "address-line-2": { label: "Address Line 2", value: "3001 Leuven", status: "active" },
       revenue: {
@@ -300,7 +300,7 @@ export const initialPartners: Partner[] = [
     ],
     owner: "Mike Johnson",
     okrs: {
-      email: { label: "Email", value: "info@qollabi.com", status: "active" },
+      email: { label: "Email", value: "info@brandbroker.com", status: "active" },
       "address-line-1": { label: "Address Line 1", value: "Havenstraat 42", status: "active" },
       "address-line-2": { label: "Address Line 2", value: "2030 Antwerpen", status: "active" },
       revenue: {
@@ -420,7 +420,7 @@ export const initialPartners: Partner[] = [
     owner: "David Lee",
     okrs: {
       email: {
-        value: "info@qollabi.com",
+        value: "info@brandbroker.com",
       },
       "address-line-1": {
         value: "Koningsstraat 89",
@@ -542,7 +542,7 @@ export const initialPartners: Partner[] = [
     owner: "Anna Hewitt",
     okrs: {
       email: {
-        value: "contact@qollabi.com",
+        value: "contact@brandbroker.com",
       },
       "address-line-1": {
         value: "Gezondheidslaan 23",
@@ -696,7 +696,7 @@ export const initialPartners: Partner[] = [
     owner: "Tom Brown",
     okrs: {
       email: {
-        value: "info@qollabi.com",
+        value: "info@brandbroker.com",
       },
       "address-line-1": {
         value: "Bouwstraat 67",
@@ -818,7 +818,7 @@ export const initialPartners: Partner[] = [
     owner: "Karen Palmer",
     okrs: {
       email: {
-        value: "hello@qollabi.com",
+        value: "hello@brandbroker.com",
       },
       "address-line-1": {
         value: "Mediapark 12",
@@ -943,7 +943,7 @@ export const initialPartners: Partner[] = [
     owner: "Frank Müller",
     okrs: {
       email: {
-        value: "contact@qollabi.com",
+        value: "contact@brandbroker.com",
       },
       "address-line-1": {
         value: "Industrieweg 45",
@@ -1039,7 +1039,7 @@ export const initialPartners: Partner[] = [
     owner: "Rachel Brown",
     okrs: {
       email: {
-        value: "info@qollabi.com",
+        value: "info@brandbroker.com",
       },
       "address-line-1": {
         value: "Meir 78",
@@ -1164,7 +1164,7 @@ export const initialPartners: Partner[] = [
     owner: "Ian Tobin",
     okrs: {
       email: {
-        value: "support@qollabi.com",
+        value: "support@brandbroker.com",
       },
       "address-line-1": {
         value: "E-commerce Plaza 34",
@@ -1289,7 +1289,7 @@ export const initialPartners: Partner[] = [
     owner: "Kevin Smith",
     okrs: {
       email: {
-        value: "info@qollabi.com",
+        value: "info@brandbroker.com",
       },
       "address-line-1": {
         value: "Transportlaan 88",
@@ -1473,7 +1473,7 @@ export const initialPartners: Partner[] = [
     owner: "Michael van Oosten",
     okrs: {
       email: {
-        value: "info@qollabi.com",
+        value: "info@brandbroker.com",
       },
       "address-line-1": {
         value: "Mechelsesteenweg 271",
@@ -1651,7 +1651,7 @@ export const initialPartners: Partner[] = [
     owner: "Michael van Oosten",
     okrs: {
       email: {
-        value: "contact@qollabi.com",
+        value: "contact@brandbroker.com",
       },
       "address-line-1": {
         value: "Buro & Design Center, Esplanade Heysel",
@@ -1802,7 +1802,7 @@ export const initialPartners: Partner[] = [
     owner: "Michael van Oosten",
     okrs: {
       email: {
-        value: "info@qollabi.com",
+        value: "info@brandbroker.com",
       },
       "address-line-1": {
         value: "Rue Belliard 40",
@@ -1952,7 +1952,7 @@ export const initialPartners: Partner[] = [
     owner: "Michael van Oosten",
     okrs: {
       email: {
-        value: "corporate@qollabi.com",
+        value: "corporate@brandbroker.com",
       },
       "address-line-1": {
         value: "Rue du Marquis 1",
@@ -2101,7 +2101,7 @@ export const initialPartners: Partner[] = [
     owner: "Michael van Oosten",
     okrs: {
       email: {
-        value: "info@qollabi.com",
+        value: "info@brandbroker.com",
       },
       "address-line-1": {
         value: "Septestraat 27",
@@ -2252,7 +2252,7 @@ export const initialPartners: Partner[] = [
     owner: "Michael van Oosten",
     okrs: {
       email: {
-        value: "corporate@qollabi.com",
+        value: "corporate@brandbroker.com",
       },
       "address-line-1": {
         value: "Grand-Place 1",
@@ -2402,7 +2402,7 @@ export const initialPartners: Partner[] = [
     owner: "Michael van Oosten",
     okrs: {
       email: {
-        value: "contact@qollabi.com",
+        value: "contact@brandbroker.com",
       },
       "address-line-1": {
         value: "Boulevard d'Avroy 38",
@@ -2551,7 +2551,7 @@ export const initialPartners: Partner[] = [
     owner: "Michael van Oosten",
     okrs: {
       email: {
-        value: "info@qollabi.com",
+        value: "info@brandbroker.com",
       },
       "address-line-1": {
         value: "Belgiëlei 49-53",
@@ -2700,7 +2700,7 @@ export const initialPartners: Partner[] = [
     owner: "Laura Martin",
     okrs: {
       email: {
-        value: "info@qollabi.com",
+        value: "info@brandbroker.com",
       },
       "address-line-1": {
         value: "Rue de la Science 12",
@@ -2849,7 +2849,7 @@ export const initialPartners: Partner[] = [
     owner: "Alice Martin",
     okrs: {
       email: {
-        value: "contact@qollabi.com",
+        value: "contact@brandbroker.com",
       },
       "address-line-1": {
         value: "Stationsstraat 112",
@@ -2998,7 +2998,7 @@ export const initialPartners: Partner[] = [
     owner: "Alice Martin",
     okrs: {
       email: {
-        value: "contact@qollabi.com",
+        value: "contact@brandbroker.com",
       },
       "address-line-1": {
         value: "Rue de la Loi 155",
@@ -3729,7 +3729,7 @@ export const initialPartners: Partner[] = [
     okrs: {
       email: {
         label: "Email",
-        value: "sophie.dubois@qollabi.com",
+        value: "sophie.dubois@brandbroker.com",
         status: "active",
       },
       "address-line-1": {
@@ -3786,7 +3786,7 @@ export const initialPartners: Partner[] = [
     okrs: {
       email: {
         label: "Email",
-        value: "marc.dubois@qollabi.com",
+        value: "marc.dubois@brandbroker.com",
         status: "active",
       },
       "address-line-1": {
@@ -3843,7 +3843,7 @@ export const initialPartners: Partner[] = [
     okrs: {
       email: {
         label: "Email",
-        value: "emma.laurent@qollabi.com",
+        value: "emma.laurent@brandbroker.com",
         status: "active",
       },
       "address-line-1": {
@@ -3900,7 +3900,7 @@ export const initialPartners: Partner[] = [
     okrs: {
       email: {
         label: "Email",
-        value: "thomas.laurent@qollabi.com",
+        value: "thomas.laurent@brandbroker.com",
         status: "active",
       },
       "address-line-1": {
@@ -3957,7 +3957,7 @@ export const initialPartners: Partner[] = [
     okrs: {
       email: {
         label: "Email",
-        value: "julie.peeters@qollabi.com",
+        value: "julie.peeters@brandbroker.com",
         status: "active",
       },
       "address-line-1": {
@@ -4014,7 +4014,7 @@ export const initialPartners: Partner[] = [
     okrs: {
       email: {
         label: "Email",
-        value: "lucas.janssens@qollabi.com",
+        value: "lucas.janssens@brandbroker.com",
         status: "active",
       },
       "address-line-1": {
@@ -4071,7 +4071,7 @@ export const initialPartners: Partner[] = [
     okrs: {
       email: {
         label: "Email",
-        value: "marie.janssens@qollabi.com",
+        value: "marie.janssens@brandbroker.com",
         status: "active",
       },
       "address-line-1": {
@@ -4128,7 +4128,7 @@ export const initialPartners: Partner[] = [
     okrs: {
       email: {
         label: "Email",
-        value: "pierre.vermeulen@qollabi.com",
+        value: "pierre.vermeulen@brandbroker.com",
         status: "active",
       },
       "address-line-1": {
@@ -4185,7 +4185,7 @@ export const initialPartners: Partner[] = [
     okrs: {
       email: {
         label: "Email",
-        value: "isabelle.maes@qollabi.com",
+        value: "isabelle.maes@brandbroker.com",
         status: "active",
       },
       "address-line-1": {
@@ -4242,7 +4242,7 @@ export const initialPartners: Partner[] = [
     okrs: {
       email: {
         label: "Email",
-        value: "nicolas.claes@qollabi.com",
+        value: "nicolas.claes@brandbroker.com",
         status: "active",
       },
       "address-line-1": {

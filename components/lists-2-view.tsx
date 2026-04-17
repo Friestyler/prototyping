@@ -424,7 +424,7 @@ const smartListSuggestionsInitial: SmartListSuggestion[] = [
     marketPulseDate: "October 2025",
     color: "blue",
     rules: [],
-    source: "Qollabi AI", // Added source
+    source: "Brand Broker AI", // Added source
   },
   {
     id: "market-radar-cyber",
@@ -440,7 +440,7 @@ const smartListSuggestionsInitial: SmartListSuggestion[] = [
     marketPulseDate: "October 2025",
     color: "blue",
     rules: [],
-    source: "Qollabi AI", // Added source
+    source: "Brand Broker AI", // Added source
   },
   {
     id: "market-radar-inflation",
@@ -456,7 +456,7 @@ const smartListSuggestionsInitial: SmartListSuggestion[] = [
     marketPulseDate: "October 2025",
     color: "blue",
     rules: [],
-    source: "Qollabi AI", // Added source
+    source: "Brand Broker AI", // Added source
   },
   // </CHANGE>
   {
@@ -472,7 +472,7 @@ const smartListSuggestionsInitial: SmartListSuggestion[] = [
     isBranded: false,
     color: "blue",
     rules: [],
-    source: "Qollabi AI", // Added source
+    source: "Brand Broker AI", // Added source
   },
   {
     id: "two-product-upsell",
@@ -490,7 +490,7 @@ const smartListSuggestionsInitial: SmartListSuggestion[] = [
     isBranded: false,
     color: "blue",
     rules: [],
-    source: "Qollabi AI", // Added source
+    source: "Brand Broker AI", // Added source
   },
   {
     id: "cross-sell",
@@ -505,7 +505,7 @@ const smartListSuggestionsInitial: SmartListSuggestion[] = [
     isBranded: false,
     color: "blue",
     rules: [],
-    source: "Qollabi AI", // Added source
+    source: "Brand Broker AI", // Added source
   },
   {
     id: "cross-sell-multi-product",
@@ -521,7 +521,7 @@ const smartListSuggestionsInitial: SmartListSuggestion[] = [
     isBranded: false,
     color: "blue",
     rules: [],
-    source: "Qollabi AI", // Added source
+    source: "Brand Broker AI", // Added source
   },
   {
     id: "upsell-premium", // Added
@@ -536,7 +536,7 @@ const smartListSuggestionsInitial: SmartListSuggestion[] = [
     isBranded: false,
     color: "blue", // Added color
     rules: [], // Added rules
-    source: "Qollabi AI", // Added source
+    source: "Brand Broker AI", // Added source
   },
 ]
 
@@ -563,7 +563,7 @@ const aiSignalSuggestions: SmartListSuggestion[] = ALL_SIGNALS
       isMarketRadar: false,
       color: "teal",
       rules: [],
-      source: "Qollabi AI",
+      source: "Brand Broker AI",
       isAISignal: true,
       signalId: sig.id,
       signalCategoryType: sig.categoryType,
@@ -3476,7 +3476,7 @@ export default function Lists2View({
                                   {/* Source */}
                                   {suggestion.isMarketRadar && (
                                     <p className="text-xs text-blue-600 mb-3">
-                                      by {suggestion.source || "Qollabi AI"} – Market Pulse,{" "}
+                                      by {suggestion.source || "Brand Broker AI"} – Market Pulse,{" "}
                                       {suggestion.marketPulseDate}
                                     </p>
                                   )}

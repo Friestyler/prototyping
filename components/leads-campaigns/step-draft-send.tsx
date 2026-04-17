@@ -266,7 +266,7 @@ export default function StepDraftSend({
 
             {/* Email fields */}
             {[
-              { label: "From:", body: <>Kevin Kools (via Qollabi)</> },
+              { label: "From:", body: <>Kevin Kools (via Brand Broker)</> },
               {
                 label: "Subject:",
                 body: (

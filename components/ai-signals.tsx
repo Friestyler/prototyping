@@ -209,7 +209,7 @@ function makeContacts(customerName: string, customerIdx: number) {
     return {
       id: `${customerName}-contact-${i}`,
       name: `${first} ${last}`,
-      email: hasEmail ? `${first.toLowerCase()}.${last.toLowerCase().replace(" ", "")}@qollabi.com` : null,
+      email: hasEmail ? `${first.toLowerCase()}.${last.toLowerCase().replace(" ", "")}@brandbroker.com` : null,
       initials: `${first[0]}${last[0]}`,
     }
   })

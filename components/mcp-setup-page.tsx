@@ -34,7 +34,7 @@ export default function MCPSetupPage() {
 
   const desktopJson = `{
   "mcpServers": {
-    "qollabi": {
+    "brand-broker": {
       "url": "${mcpUrl}",
       "headers": {
         "Authorization": "Bearer ${apiKey}"
@@ -43,7 +43,7 @@ export default function MCPSetupPage() {
   }
 }`
 
-  const claudeCodeCmd = `claude mcp add --transport http qollabi \\
+  const claudeCodeCmd = `claude mcp add --transport http brand-broker \\
   ${mcpUrl} \\
   --header "Authorization: Bearer ${apiKey}"`
 
@@ -51,9 +51,9 @@ export default function MCPSetupPage() {
     <div className="min-h-full bg-[#F8F9FA] py-10">
       <div className="max-w-3xl mx-auto px-6 space-y-6">
         <header className="space-y-1">
-          <h1 className="text-2xl font-semibold text-[#111827]">Connect Qollabi to Claude</h1>
+          <h1 className="text-2xl font-semibold text-[#111827]">Connect Brand Broker to Claude</h1>
           <p className="text-[15px] text-[#6B7280]">
-            Use the Qollabi MCP server to search customers, build smart lists, and manage your portfolio
+            Use the Brand Broker MCP server to search customers, build smart lists, and manage your portfolio
             from any Claude surface — Desktop, the CLI, or claude.ai.
           </p>
         </header>
@@ -92,7 +92,7 @@ export default function MCPSetupPage() {
               <strong>Add custom connector</strong>.
             </li>
             <li>
-              Set <strong>Name</strong> = <code>Qollabi</code>, <strong>URL</strong> ={" "}
+              Set <strong>Name</strong> = <code>Brand Broker</code>, <strong>URL</strong> ={" "}
               <span className="font-mono break-all">{mcpUrl}</span>. Leave OAuth fields blank — they're auto-discovered.
             </li>
             <li>
@@ -124,7 +124,7 @@ export default function MCPSetupPage() {
           <p className="text-[14px] text-[#374151]">Run this once in any terminal:</p>
           <CodeBlock code={claudeCodeCmd} />
           <p className="text-[13px] text-[#6B7280]">
-            Then in any session, type <code>/mcp</code> to confirm <code>qollabi</code> is connected.
+            Then in any session, type <code>/mcp</code> to confirm <code>brand-broker</code> is connected.
           </p>
         </Section>
 

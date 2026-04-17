@@ -41,10 +41,10 @@ export default async function AuthorizePage({
     <div className="min-h-screen flex items-center justify-center bg-[#F8F9FA] p-6">
       <div className="w-full max-w-[420px] bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
         <div className="space-y-1 mb-6">
-          <h1 className="text-[22px] font-semibold text-[#111827]">Connect to Qollabi</h1>
+          <h1 className="text-[22px] font-semibold text-[#111827]">Connect to Brand Broker</h1>
           <p className="text-[14px] text-[#6B7280]">
             <strong className="text-[#111827]">{params.client_id?.startsWith("client_") ? "An app" : params.client_id}</strong>{" "}
-            is requesting access to your portfolio. Paste your Qollabi api key to authorize.
+            is requesting access to your portfolio. Paste your Brand Broker api key to authorize.
           </p>
         </div>
 
@@ -95,7 +95,7 @@ export default async function AuthorizePage({
           <p className="text-[12px] text-[#6B7280] text-center pt-2">
             Don't have a key?{" "}
             <Link href="/" className="text-[#4F46E5] hover:underline">
-              Open Qollabi
+              Open Brand Broker
             </Link>{" "}
             and grab it from the profile menu.
           </p>
