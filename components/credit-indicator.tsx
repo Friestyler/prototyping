@@ -6,10 +6,13 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useCredits } from "@/components/credit-context"
 import { CreditDetailsModal } from "@/components/credit-details-modal"
+import { FEATURES } from "@/lib/feature-flags"
 
 export function CreditIndicator() {
   const { creditBalance } = useCredits()
   const [showDetails, setShowDetails] = useState(false)
+
+  if (!FEATURES.credits) return null
 
   const getColorClass = () => {
     if (creditBalance < 0) return "text-red-600"

@@ -2,6 +2,7 @@
 
 import type React from "react"
 import { createContext, useContext, useState, useEffect } from "react"
+import { FEATURES } from "@/lib/feature-flags"
 
 interface CreditTransaction {
   id: string
@@ -78,7 +79,7 @@ export function CreditProvider({ children }: { children: React.ReactNode }) {
     listName: string,
     transactionType: "smart_list" | "campaign_template" | "email" = "smart_list",
   ): boolean => {
-    // Added transactionType parameter
+    if (!FEATURES.credits) return true
     const newBalance = creditBalance - amount
     const newUsed = creditsUsed + amount
 
@@ -90,7 +91,7 @@ export function CreditProvider({ children }: { children: React.ReactNode }) {
       amount,
       listName,
       timestamp: new Date(),
-      type: transactionType, // Use the passed transaction type
+      type: transactionType,
     }
     setTransactions((prev) => [transaction, ...prev])
 
@@ -106,6 +107,7 @@ export function CreditProvider({ children }: { children: React.ReactNode }) {
   }
 
   const isTemplateUnlocked = (templateId: string) => {
+    if (!FEATURES.credits) return true
     return unlockedTemplates.has(templateId)
   }
 

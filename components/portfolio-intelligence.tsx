@@ -1,104 +1,85 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
-import { Bell, ChevronRight, X, TrendingUp } from "lucide-react"
-import { BROKER } from "@/lib/portfolio-intelligence-data"
+import { useEffect, useState } from "react"
+import { Sparkles, BarChart3 } from "lucide-react"
 import PortfolioOverview from "@/components/portfolio-overview"
-import AISignals from "@/components/ai-signals"
+import PriorityRecommendations from "@/components/priority-recommendations"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
-type ActiveTab = "portfolio" | "signals"
-
-const NOTIFICATIONS = [
-  { id: 1, client: "Janssens H.", message: "Churn score 92% — renewal in 47 days", level: "critical" as const },
-  { id: 2, client: "Dubois C.", message: "Renewal in 9 days — no contact in 98 days", level: "high" as const },
-  { id: 3, client: "Vermeulen K.", message: "Home purchase detected — act within 21 days", level: "medium" as const },
-]
+type ActiveTab = "priority" | "insights"
 
 interface PortfolioIntelligenceProps {
   onCreateSmartList?: (name: string, clientCount: number) => void
   onOpenTemplate?: (templateName: string) => void
+  onCreateCampaignFor?: (useCaseId: string) => void
 }
 
-export default function PortfolioIntelligence({ onCreateSmartList, onOpenTemplate }: PortfolioIntelligenceProps) {
-  const [activeTab, setActiveTab] = useState<ActiveTab>("portfolio")
+export default function PortfolioIntelligence({ onOpenTemplate, onCreateCampaignFor }: PortfolioIntelligenceProps) {
+  const [activeTab, setActiveTab] = useState<ActiveTab>("priority")
   const [signalFilter, setSignalFilter] = useState<string | undefined>()
-  const [notifOpen, setNotifOpen] = useState(false)
   const [started, setStarted] = useState(false)
-  const notifRef = useRef<HTMLDivElement>(null)
 
-  // Start number animations after mount
   useEffect(() => {
     const t = setTimeout(() => setStarted(true), 200)
     return () => clearTimeout(t)
   }, [])
 
-  // Close notification dropdown on outside click
-  useEffect(() => {
-    function handler(e: MouseEvent) {
-      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
-        setNotifOpen(false)
-      }
-    }
-    document.addEventListener("mousedown", handler)
-    return () => document.removeEventListener("mousedown", handler)
-  }, [])
-
   const switchToSignals = (filter?: string) => {
     setSignalFilter(filter)
-    setActiveTab("signals")
+    setActiveTab("insights")
   }
 
-  const healthColor =
-    BROKER.portfolioHealthScore >= 80
-      ? "#16A34A"
-      : BROKER.portfolioHealthScore >= 65
-      ? "#0D9488"
-      : "#F59E0B"
-
   return (
-    <div
-      className="flex flex-col bg-[#F8FAFC]"
-      style={{ fontFamily: "var(--font-dm-sans, 'DM Sans', system-ui, sans-serif)" }}
-    >
-      {/* Top Bar */}
-      
+    <div className="flex flex-col bg-white min-h-full">
+      <div className="px-6 pt-12 pb-6 text-center">
+        <h1 className="text-5xl font-semibold text-gray-900 mb-3 text-balance">Activate your portfolio</h1>
+        <p className="text-lg text-gray-600 mb-8 text-pretty">
+          Create or choose a list to launch your next campaign
+        </p>
 
-      {/* Tab Nav */}
-      <div className="bg-white border-b border-[#E2E8F0] px-6 flex-shrink-0">
-        <div className="flex gap-1">
-          {[
-            { key: "portfolio" as ActiveTab, label: "Portfolio Overview" },
-            { key: "signals" as ActiveTab, label: "AI Signals" },
-          ].map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={cn(
-                "px-4 py-3 text-sm font-medium border-b-2 transition-colors -mb-px",
-                activeTab === tab.key
-                  ? "border-[#0D9488] text-[#0D9488]"
-                  : "border-transparent text-[#475569] hover:text-[#1A3A5C]",
-              )}
-            >
-              {tab.label}
-              {tab.key === "signals" && (
-                <span className="ml-2 px-1.5 py-0.5 bg-[#FEE2E2] text-[#DC2626] text-[10px] font-bold rounded-full">
-                  3
-                </span>
-              )}
-            </button>
-          ))}
+        <div className="flex items-center justify-center gap-2">
+          <Button
+            size="lg"
+            variant="ghost"
+            onClick={() => setActiveTab("priority")}
+            className={cn(
+              "rounded-lg px-6 py-2.5 font-medium transition-all border",
+              activeTab === "priority"
+                ? "bg-[rgb(224,231,255)] text-primary border-transparent hover:bg-[rgb(214,221,245)]"
+                : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50",
+            )}
+          >
+            <Sparkles className="w-4 h-4 mr-2 text-gray-500" />
+            Priority Recommendations
+          </Button>
+          <Button
+            size="lg"
+            variant="ghost"
+            onClick={() => setActiveTab("insights")}
+            className={cn(
+              "rounded-lg px-6 py-2.5 font-medium transition-all border",
+              activeTab === "insights"
+                ? "bg-[rgb(224,231,255)] text-primary border-transparent hover:bg-[rgb(214,221,245)]"
+                : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50",
+            )}
+          >
+            <BarChart3 className="w-4 h-4 mr-2 text-gray-500" />
+            Portfolio Insights
+          </Button>
         </div>
       </div>
 
-      {/* Tab Content */}
-      <div className="px-6 pt-5 pb-6 bg-background">
-        {activeTab === "portfolio" && (
-          <PortfolioOverview onSwitchToSignals={switchToSignals} onOpenTemplate={onOpenTemplate} started={started} />
+      <div className="px-6 pb-10">
+        {activeTab === "priority" && (
+          <PriorityRecommendations onCreateCampaignFor={onCreateCampaignFor} />
         )}
-        {activeTab === "signals" && (
-          <AISignals key={signalFilter} initialFilter={signalFilter} onCreateSmartList={onCreateSmartList} />
+        {activeTab === "insights" && (
+          <PortfolioOverview
+            onSwitchToSignals={switchToSignals}
+            onOpenTemplate={onOpenTemplate}
+            started={started}
+          />
         )}
       </div>
     </div>

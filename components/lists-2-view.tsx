@@ -69,6 +69,8 @@ import {
 import { Loader2 } from "lucide-react"
 // </CHANGE>
 import { initialPartners as initialCustomers, type Partner as Customer } from "@/lib/okr-data"
+import { customerRecordToMasterCustomer } from "@/lib/customer-database"
+import { CustomerTable } from "@/components/customer-table"
 console.log("[v0] initialCustomers loaded, first customer:", initialCustomers[0])
 console.log("[v0] First customer productInstances:", initialCustomers[0]?.productInstances)
 import type { FilterGroup } from "./advanced-query-builder"
@@ -758,6 +760,47 @@ export default function Lists2View({
 
   const [savedLists, setSavedLists] = useState<SavedList[]>(mockSavedLists)
   const [smartListSuggestions, setSmartListSuggestions] = useState<SmartListSuggestion[]>(smartListSuggestionsWithSignals)
+
+  // Merge user-saved lists (from Priority Recommendations) into savedLists
+  useEffect(() => {
+    const merge = async () => {
+      const { loadUserSavedLists } = await import("@/lib/user-saved-lists")
+      const { findSmartListUseCase } = await import("@/lib/smart-list-use-cases")
+      const userLists = loadUserSavedLists()
+      if (userLists.length === 0) return
+      setSavedLists((prev) => {
+        const existingIds = new Set(prev.map((l) => l.id))
+        const toAdd = userLists
+          .filter((u) => !existingIds.has(u.id))
+          .map((u): SavedList => {
+            // Backfill customerIds for entries saved before the field existed
+            // by deriving them from the source use case.
+            let customerIds = u.customerIds
+            if (!customerIds || customerIds.length === 0) {
+              const uc = findSmartListUseCase(u.sourceUseCaseId)
+              customerIds = uc ? uc.customers.map((c) => String(c.recordId)) : []
+            }
+            return {
+              id: u.id,
+              name: u.name,
+              type: u.type,
+              customerCount: u.customerCount,
+              customerIds,
+              createdAt: u.createdAt,
+              isFromSmartList: true,
+              smartListColor: u.iconColor,
+              smartListDescription: u.description,
+              originalSmartListId: u.sourceUseCaseId,
+            }
+          })
+        return toAdd.length ? [...toAdd, ...prev] : prev
+      })
+    }
+    merge()
+    const handler = () => merge()
+    window.addEventListener("qollabi:user-saved-lists-changed", handler)
+    return () => window.removeEventListener("qollabi:user-saved-lists-changed", handler)
+  }, [])
 
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards") // Redeclared viewMode, this is the correct one.
 
@@ -1685,8 +1728,9 @@ export default function Lists2View({
         return customers
       }
 
-      if (selectedList.type === "static" && selectedList.customerIds) {
-        return customers.filter((customer) => selectedList.customerIds?.includes(customer.id))
+      if (selectedList.customerIds && (selectedList.type === "static" || selectedList.isFromSmartList)) {
+        const wanted = new Set(selectedList.customerIds)
+        return customers.filter((customer) => wanted.has(String(customer.id)))
       }
 
       // Filter out excluded customers when viewing a smart list
@@ -1964,8 +2008,9 @@ export default function Lists2View({
 
       let listCustomers: Customer[] = []
 
-      if (list.type === "static" && list.customerIds) {
-        listCustomers = initialCustomers.filter((customer) => list.customerIds?.includes(customer.id))
+      if (list.customerIds && (list.type === "static" || list.isFromSmartList)) {
+        const wanted = new Set(list.customerIds)
+        listCustomers = initialCustomers.filter((customer) => wanted.has(String(customer.id)))
       } else if (list.type === "dynamic" && list.filters) {
         const listFilters = list.filters
         const listSearchTerm = list.searchTerm || ""
@@ -3710,609 +3755,9 @@ export default function Lists2View({
 
               <Card>
                 <CardContent className="p-0">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm min-w-max">
-                      <thead className="border-b bg-muted/30 sticky top-0 z-10">
-                        <tr>
-                          <th className="text-left p-3 w-4 font-normal"> </th>
-                          {effectiveColumnVisibility.customer && (
-                            <th className="text-left p-3 w-24 font-normal">ID Vnemer</th>
-                          )}
-                          {effectiveColumnVisibility.customer && (
-                            <th
-                              className="text-left p-3 min-w-[250px] cursor-pointer hover:bg-muted/50 select-none font-normal"
-                              onClick={() => isCoverageRelatedList && handleSort("customer")}
-                            >
-                              <div className="flex items-center gap-1">
-                                Customer
-                                {isCoverageRelatedList && sortColumn === "customer" && (
-                                  <span className="text-xs">{sortDirection === "asc" ? "↑" : "↓"}</span>
-                                )}
-                              </div>
-                            </th>
-                          )}
-                          {effectiveColumnVisibility.owner && <th className="text-left p-3 w-40 font-normal">Owner</th>}
-                          {isCoverageRelatedList && (
-                            <th
-                              className="text-left p-3 min-w-[200px] cursor-pointer hover:bg-muted/50 select-none font-normal"
-                              onClick={() => handleSort("email")}
-                            >
-                              <div className="flex items-center gap-1">
-                                Email
-                                {sortColumn === "email" && (
-                                  <span className="text-xs">{sortDirection === "asc" ? "↑" : "↓"}</span>
-                                )}
-                              </div>
-                            </th>
-                          )}
-                          {isCoverageRelatedList && (
-                            <th
-                              className="text-left p-3 min-w-[200px] cursor-pointer hover:bg-muted/50 select-none font-normal"
-                              onClick={() => handleSort("address-line-1")}
-                            >
-                              <div className="flex items-center gap-1">
-                                Address Line 1
-                                {sortColumn === "address-line-1" && (
-                                  <span className="text-xs">{sortDirection === "asc" ? "↑" : "↓"}</span>
-                                )}
-                              </div>
-                            </th>
-                          )}
-                          {isCoverageRelatedList && (
-                            <th
-                              className="text-left p-3 min-w-[200px] cursor-pointer hover:bg-muted/50 select-none font-normal"
-                              onClick={() => handleSort("address-line-2")}
-                            >
-                              <div className="flex items-center gap-1">
-                                Address Line 2
-                                {sortColumn === "address-line-2" && (
-                                  <span className="text-xs">{sortDirection === "asc" ? "↑" : "↓"}</span>
-                                )}
-                              </div>
-                            </th>
-                          )}
-                          {isCoverageRelatedList && (
-                            <th
-                              className="text-left p-3 w-32 cursor-pointer hover:bg-muted/50 select-none font-normal"
-                              onClick={() => handleSort("policies-total")}
-                            >
-                              <div className="flex items-center gap-1">
-                                Policies Total
-                                {sortColumn === "policies-total" && (
-                                  <span className="text-xs">{sortDirection === "asc" ? "↑" : "↓"}</span>
-                                )}
-                              </div>
-                            </th>
-                          )}
-                          {isCoverageRelatedList && (
-                            <th
-                              className="text-left p-3 w-32 cursor-pointer hover:bg-muted/50 select-none font-normal"
-                              onClick={() => handleSort("policies-baloise")}
-                            >
-                              <div className="flex items-center gap-1">
-                                Policies Baloise
-                                {sortColumn === "policies-baloise" && (
-                                  <span className="text-xs">{sortDirection === "asc" ? "↑" : "↓"}</span>
-                                )}
-                              </div>
-                            </th>
-                          )}
-                          {isCoverageRelatedList && (
-                            <th
-                              className="text-left p-3 w-32 cursor-pointer hover:bg-muted/50 select-none font-normal"
-                              onClick={() => handleSort("policies-other")}
-                            >
-                              <div className="flex items-center gap-1">
-                                Policies Other
-                                {sortColumn === "policies-other" && (
-                                  <span className="text-xs">{sortDirection === "asc" ? "↑" : "↓"}</span>
-                                )}
-                              </div>
-                            </th>
-                          )}
-                          {isCrossSellMultiProductList && (
-                            <th className="text-left p-3 min-w-[200px] font-normal">Current Products</th>
-                          )}
-                          {isTwoProductUpsellList && (
-                            <th className="text-left p-3 min-w-[180px] font-normal">Property Insurance</th>
-                          )}
-                          {isTwoProductUpsellList && (
-                            <th className="text-left p-3 w-32 font-normal">Property Insurance &gt; Value</th>
-                          )}
-                          {isTwoProductUpsellList && (
-                            <th className="text-left p-3 w-32 font-normal">Property Insurance &gt; Category</th>
-                          )}
-                          {isTwoProductUpsellList && (
-                            <th className="text-left p-3 min-w-[180px] font-normal">Liability Insurance</th>
-                          )}
-                          {isTwoProductUpsellList && (
-                            <th className="text-left p-3 w-32 font-normal">Liability Insurance &gt; Value</th>
-                          )}
-                          {isTwoProductUpsellList && (
-                            <th className="text-left p-3 w-32 font-normal">Liability Insurance &gt; Category</th>
-                          )}
-                          {isTwoProductUpsellList && <th className="text-left p-3 w-32 font-normal">Total Value</th>}
-                          {isPolicyExpiryList && (
-                            <th className="text-left p-3 min-w-[180px] font-normal">Existing Product</th>
-                          )}
-                          {isPolicyExpiryList && <th className="text-left p-3 w-40 font-normal">Contract End Date</th>}
-                          {effectiveColumnVisibility.team && <th className="text-left p-3 w-32 font-normal">Team</th>}
-                          {effectiveColumnVisibility.partners && (
-                            <th className="text-left p-3 w-24 font-normal">Partners</th>
-                          )}
-                          {effectiveColumnVisibility.owner && <th className="text-left p-3 w-32 font-normal">Owner</th>}
-                          {effectiveColumnVisibility.industry && (
-                            <th className="text-left p-3 w-32 font-normal">Industry</th>
-                          )}
-                          {effectiveColumnVisibility.region && (
-                            <th className="text-left p-3 w-32 font-normal">Region</th>
-                          )}
-                          {effectiveColumnVisibility.customerType && (
-                            <th className="text-left p-3 w-32 font-normal">Customer Type</th>
-                          )}
-                          {effectiveColumnVisibility.customerSince && (
-                            <th className="text-left p-3 w-32 font-normal">Customer Since</th>
-                          )}
-                          {effectiveColumnVisibility.contractDate && (
-                            <th className="text-left p-3 w-40 font-normal">Policy Star Date</th>
-                          )}
-                          {/* </CHANGE> */}
-
-                          {/* CHANGE: Render product column for each visible product */}
-                          {visibleProducts.map((product) => {
-                            return (
-                              effectiveColumnVisibility[product.id] && (
-                                <th key={product.id} className="text-left p-3 w-[260px] font-normal">
-                                  {product.label}
-                                </th>
-                              )
-                            )
-                          })}
-
-                          {insuranceProducts.map((product) =>
-                            productAttributes.map((attr) => {
-                              const columnId = `${product.id}-${attr.id}`
-                              return (
-                                effectiveColumnVisibility[columnId] && (
-                                  <th key={columnId} className="text-left p-3 w-40 font-normal">
-                                    {product.label} &gt; {attr.label}
-                                  </th>
-                                )
-                              )
-                            }),
-                          )}
-
-                          {/* CHANGE: Render custom formula columns */}
-                          {customColumns.map((column) => (
-                            <th key={column.id} className="text-left p-3 w-40 font-normal">
-                              {column.name}
-                            </th>
-                          ))}
-
-                          {/* CHANGE: Empty cell for "Add column" header */}
-                          <th className="text-left p-3 w-48 font-normal">
-                            <DropdownMenu open={showAddColumnMenu} onOpenChange={setShowAddColumnMenu}>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 px-2 text-sm font-normal hover:bg-muted rounded-lg"
-                                >
-                                  <PlusIcon className="h-4 w-4 mr-1" />
-                                  Add column
-                                  <ChevronDownIcon className="h-4 w-4 ml-1" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="start">
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    setShowAddColumnMenu(false)
-                                    setShowFormulaDialog(true)
-                                  }}
-                                  className="cursor-pointer"
-                                >
-                                  <span className="font-medium">Formula</span>
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </th>
-
-                          <th className="w-8 font-normal" />
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredData.map((customer) => {
-                          return (
-                            <tr key={customer.id} className="border-b hover:bg-muted/20 h-16">
-                              <td className="p-3">
-                                <Checkbox
-                                  checked={selectedCustomers.has(customer.id)}
-                                  // Removed disabled prop for checkbox
-                                  onCheckedChange={() => {
-                                    const next = new Set(selectedCustomers)
-                                    if (next.has(customer.id)) next.delete(customer.id)
-                                    else next.add(customer.id)
-                                    setSelectedCustomers(next)
-                                  }}
-                                />
-                              </td>
-                              {effectiveColumnVisibility.customer && (
-                                <td className="p-3">
-                                  <div className="text-sm text-muted-foreground">{customer.idVnemer}</div>
-                                </td>
-                              )}
-                              {effectiveColumnVisibility.customer && (
-                                <td className="p-3">
-                                  <div className="flex items-center gap-2">
-                                    <div className="font-normal text-sm">{customer.name}</div>
-                                    {/* </CHANGE> */}
-                                  </div>
-                                </td>
-                              )}
-                              {effectiveColumnVisibility.owner && (
-                                <td className="p-3">
-                                  <div className="text-sm">{customer.owner || "Unassigned"}</div>
-                                </td>
-                              )}
-                              {isCoverageRelatedList && (
-                                <>
-                                  <td className="p-3">
-                                    <div className="text-sm">{customer.okrs?.email?.value || "N/A"}</div>
-                                  </td>
-                                  <td className="p-3">
-                                    <div className="text-sm">{customer.okrs?.["address-line-1"]?.value || "N/A"}</div>
-                                  </td>
-                                  <td className="p-3">
-                                    <div className="text-sm">{customer.okrs?.["address-line-2"]?.value || "N/A"}</div>
-                                  </td>
-                                  <td className="p-3">
-                                    <div className="text-sm font-normal">{customer.productInstances?.length || 0}</div>
-                                  </td>
-                                </>
-                              )}
-                              {isCrossSellMultiProductList && (
-                                <td className="p-3">
-                                  <div className="flex flex-wrap gap-1">
-                                    {customer.currentProducts && customer.currentProducts.length > 0 ? (
-                                      customer.currentProducts.map((product, idx) => (
-                                        <Badge key={idx} variant="secondary" className="text-xs">
-                                          {product}
-                                        </Badge>
-                                      ))
-                                    ) : (
-                                      <span className="text-sm text-muted-foreground">None</span>
-                                    )}
-                                  </div>
-                                </td>
-                              )}
-                              {isTwoProductUpsellList && (
-                                <>
-                                  <td className="p-3">
-                                    <div className="text-sm">
-                                      {(() => {
-                                        const propertyProduct = customer.productInstances?.find(
-                                          (instance) =>
-                                            instance.productName === "Property Insurance" ||
-                                            instance.attributes?.productCategory === "Property Insurance",
-                                        )
-                                        return propertyProduct?.productName || "N/A"
-                                      })()}
-                                    </div>
-                                  </td>
-                                  <td className="p-3">
-                                    <div className="text-sm font-medium">
-                                      {(() => {
-                                        // Parse premium values from strings like "€2,400" to numbers
-                                        const parseValue = (str: string | undefined) => {
-                                          if (!str) return 0
-                                          // Remove €, spaces, and commas, then parse as float
-                                          const cleaned = str.replace(/[€\s,]/g, "")
-                                          return Number.parseFloat(cleaned) || 0
-                                        }
-
-                                        const propertyProduct = customer.productInstances?.find(
-                                          (instance) =>
-                                            instance.productName === "Property Insurance" ||
-                                            instance.attributes?.productCategory === "Property Insurance",
-                                        )
-                                        const value = propertyProduct?.attributes?.premiumValue
-                                        if (value) {
-                                          const parsedValue = parseValue(value)
-                                          return parsedValue > 0 ? `€${parsedValue.toLocaleString()}` : "N/A"
-                                        }
-                                        return "N/A"
-                                      })()}
-                                    </div>
-                                  </td>
-                                  <td className="p-3">
-                                    <Badge variant="secondary" className="text-xs">
-                                      {(() => {
-                                        const propertyProduct = customer.productInstances?.find(
-                                          (instance) =>
-                                            instance.productName === "Property Insurance" ||
-                                            instance.attributes?.productCategory === "Property Insurance",
-                                        )
-                                        return propertyProduct?.attributes?.productCategory || "N/A"
-                                      })()}
-                                    </Badge>
-                                  </td>
-                                  <td className="p-3">
-                                    <div className="text-sm">
-                                      {(() => {
-                                        const liabilityProduct = customer.productInstances?.find(
-                                          (instance) =>
-                                            instance.productName === "Liability Insurance" ||
-                                            instance.attributes?.productCategory === "Liability Insurance",
-                                        )
-                                        return liabilityProduct?.productName || "N/A"
-                                      })()}
-                                    </div>
-                                  </td>
-                                  <td className="p-3">
-                                    <div className="text-sm font-medium">
-                                      {(() => {
-                                        // Parse premium values from strings like "€2,400" to numbers
-                                        const parseValue = (str: string | undefined) => {
-                                          if (!str) return 0
-                                          // Remove €, spaces, and commas, then parse as float
-                                          const cleaned = str.replace(/[€\s,]/g, "")
-                                          return Number.parseFloat(cleaned) || 0
-                                        }
-
-                                        const liabilityProduct = customer.productInstances?.find(
-                                          (instance) =>
-                                            instance.productName === "Liability Insurance" ||
-                                            instance.attributes?.productCategory === "Liability Insurance",
-                                        )
-                                        const value = liabilityProduct?.attributes?.premiumValue
-                                        if (value) {
-                                          const parsedValue = parseValue(value)
-                                          return parsedValue > 0 ? `€${parsedValue.toLocaleString()}` : "N/A"
-                                        }
-                                        return "N/A"
-                                      })()}
-                                    </div>
-                                  </td>
-                                  <td className="p-3">
-                                    <Badge variant="secondary" className="text-xs">
-                                      {(() => {
-                                        const liabilityProduct = customer.productInstances?.find(
-                                          (instance) =>
-                                            instance.productName === "Liability Insurance" ||
-                                            instance.attributes?.productCategory === "Liability Insurance",
-                                        )
-                                        return liabilityProduct?.attributes?.productCategory || "N/A"
-                                      })()}
-                                    </Badge>
-                                  </td>
-                                  <td className="p-3">
-                                    <div className="text-sm font-normal text-blue-600">
-                                      {(() => {
-                                        // Parse premium values from strings like "€2,400" to numbers
-                                        const parseValue = (str: string | undefined) => {
-                                          if (!str) return 0
-                                          // Remove €, spaces, and commas, then parse as float
-                                          const cleaned = str.replace(/[€\s,]/g, "")
-                                          return Number.parseFloat(cleaned) || 0
-                                        }
-
-                                        const propertyProduct = customer.productInstances?.find(
-                                          (instance) =>
-                                            instance.productName === "Property Insurance" ||
-                                            instance.attributes?.productCategory === "Property Insurance",
-                                        )
-                                        const liabilityProduct = customer.productInstances?.find(
-                                          (instance) =>
-                                            instance.productName === "Liability Insurance" ||
-                                            instance.attributes?.productCategory === "Liability Insurance",
-                                        )
-
-                                        const value1 = parseValue(propertyProduct?.attributes?.premiumValue)
-                                        const value2 = parseValue(liabilityProduct?.attributes?.premiumValue)
-                                        const total = value1 + value2
-
-                                        return total > 0 ? `€${total.toLocaleString()}` : "N/A"
-                                      })()}
-                                    </div>
-                                  </td>
-                                </>
-                              )}
-                              {isPolicyExpiryList && (
-                                <>
-                                  <td className="p-3">
-                                    <div className="text-sm">{customer.existingProduct || "N/A"}</div>
-                                  </td>
-                                  <td className="p-3">
-                                    <div className="text-sm">{customer.contractEndDate || "N/A"}</div>
-                                  </td>
-                                </>
-                              )}
-                              {effectiveColumnVisibility.team && (
-                                <td className="p-3">
-                                  <div className="flex gap-1">
-                                    {customer.team.map((m, i) => (
-                                      <Avatar key={i} className="h-5 w-5">
-                                        <AvatarFallback className={`${m.color} text-white text-xs`}>
-                                          {m.initials}
-                                        </AvatarFallback>
-                                      </Avatar>
-                                    ))}
-                                  </div>
-                                </td>
-                              )}
-
-                              {effectiveColumnVisibility.partners && (
-                                <td className="p-3">
-                                  <span className="text-sm text-muted-foreground">{customer.partnerCount ?? 0}</span>
-                                </td>
-                              )}
-                              {effectiveColumnVisibility.owner && (
-                                <td className="p-3">
-                                  <div className="text-sm">{customer.owner || "Unassigned"}</div>
-                                </td>
-                              )}
-                              {effectiveColumnVisibility.industry && (
-                                <td className="p-3">
-                                  <div className="text-sm">{customer.industry || "Insurance"}</div>
-                                </td>
-                              )}
-                              {effectiveColumnVisibility.region && (
-                                <td className="p-3">
-                                  <div className="text-sm">{customer.region || "Belgium"}</div>
-                                </td>
-                              )}
-                              {effectiveColumnVisibility.customerType && (
-                                <td className="p-3">
-                                  <div className="text-sm">{customer.customerType || "Premium"}</div>
-                                </td>
-                              )}
-                              {/* Removed policyValue data cell */}
-                              {effectiveColumnVisibility.customerSince && (
-                                <td className="p-3 text-sm">{customer.customerSince || "2020-03-15"}</td>
-                              )}
-                              {effectiveColumnVisibility.contractDate && (
-                                <td className="p-3 text-sm">{customer.contractDate || "2024-01-15"}</td>
-                              )}
-                              {/* Add campaigns data cell */}
-                              {effectiveColumnVisibility.campaigns && (
-                                <td className="p-3">
-                                  <button
-                                    className="text-sm text-indigo-600 hover:text-indigo-800 hover:underline font-normal"
-                                    onClick={() => {
-                                      const campaigns = getCustomerCampaigns(customer.id)
-                                      setSelectedCustomerCampaigns({ customer, campaigns })
-                                    }}
-                                  >
-                                    {getCustomerCampaigns(customer.id).length}
-                                  </button>
-                                </td>
-                              )}
-
-                              {/* Render product instance names for each product column */}
-                              {visibleProducts.map((product) => {
-                                return (
-                                  effectiveColumnVisibility[product.id] && (
-                                    <td key={product.id} className="p-3 w-[260px]">
-                                      {(() => {
-                                        // Get product instances for this customer and product type
-                                        const productInstances = customer.productInstances?.filter(
-                                          (p) =>
-                                            p.productName &&
-                                            product.label &&
-                                            p.productName.toLowerCase().startsWith(product.label.toLowerCase()),
-                                        )
-
-                                        if (!productInstances || productInstances.length === 0) {
-                                          return <div className="text-sm text-muted-foreground">Not applicable</div>
-                                        }
-
-                                        const instanceLabels = productInstances.map(() => product.label).join(", ")
-                                        return <div className="text-sm">{instanceLabels}</div>
-                                      })()}
-                                    </td>
-                                  )
-                                )
-                              })}
-
-                              {insuranceProducts.map((product) =>
-                                productAttributes.map((attr) => {
-                                  const columnId = `${product.id}-${attr.id}`
-                                  return (
-                                    effectiveColumnVisibility[columnId] && (
-                                      <td key={columnId} className="p-3">
-                                        {(() => {
-                                          console.log("[v0] Rendering attribute cell for customer:", customer.name)
-                                          console.log("[v0] Product label:", product.label)
-                                          console.log("[v0] Attribute label:", attr.label)
-                                          console.log("[v0] Customer productInstances:", customer.productInstances)
-
-                                          const matchingInstances = customer.productInstances?.filter(
-                                            (instance) =>
-                                              instance.productName &&
-                                              product.label &&
-                                              instance.productName
-                                                .toLowerCase()
-                                                .startsWith(product.label.toLowerCase()),
-                                          )
-
-                                          console.log("[v0] Matching instances found:", matchingInstances)
-
-                                          if (!matchingInstances || matchingInstances.length === 0) {
-                                            return <div className="text-sm text-muted-foreground">Not applicable</div>
-                                          }
-
-                                          const attributeLabelToKey: Record<string, string> = {
-                                            name: "name",
-                                            "product id": "productId",
-                                            description: "description",
-                                            provider: "provider",
-                                            "contract start date": "contractStartDate",
-                                            "contract end date": "contractEndDate",
-                                            "total value": "totalValue",
-                                            "premium value": "premiumValue",
-                                            "premium %": "premiumPercent",
-                                            "discount %": "discountPercent",
-                                            "product category": "productCategory",
-                                            "product lifecycle stage": "lifecycleStage",
-                                            "lifecycle stage": "lifecycleStage",
-                                            "policy id": "policyId",
-                                            "dossier id": "dossierId",
-                                            "policyholder id": "policyholderId",
-                                            "policy number": "policyNumber",
-                                            "contract id": "contractId",
-                                            insurer: "insurer",
-                                            "product domain": "productDomain",
-                                            "product type": "productType",
-                                            "billing frequency": "billingFrequency",
-                                            status: "status",
-                                            situation: "situation",
-                                            "last premium amount": "lastPremiumAmount",
-                                          }
-
-                                          const normalizedLabel = attr.label.toLowerCase()
-                                          const attributeKey = attributeLabelToKey[normalizedLabel] || normalizedLabel
-
-                                          const attributeValue = aggregateAttributeValues(
-                                            matchingInstances,
-                                            attributeKey,
-                                            attr.type,
-                                          )
-
-                                          if (attributeValue === null) {
-                                            return <div className="text-sm"></div>
-                                          }
-
-                                          return <div className="text-sm">{attributeValue}</div>
-                                        })()}
-                                      </td>
-                                    )
-                                  )
-                                }),
-                              )}
-
-                              {/* Render custom formula column values */}
-                              {customColumns.map((column) => (
-                                <td key={column.id} className="p-3">
-                                  <div className="text-sm font-medium text-blue-600">
-                                    {evaluateFormula(column.formula, customer)}
-                                  </div>
-                                </td>
-                              ))}
-
-                              {/* Render empty cell for "Add column" header */}
-                              <td className="p-3"></td>
-
-                              <td className="p-3">
-                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                                  <MoreHorizontalIcon className="h-3 w-3" />
-                                </Button>
-                              </td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
+                  <CustomerTable
+                    customers={filteredData.map(customerRecordToMasterCustomer)}
+                  />
                 </CardContent>
               </Card>
 

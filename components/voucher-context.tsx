@@ -2,6 +2,7 @@
 
 import type React from "react"
 import { createContext, useContext, useState, useEffect } from "react"
+import { FEATURES } from "@/lib/feature-flags"
 
 interface VoucherContextType {
   unlockedTemplates: Set<string>
@@ -40,6 +41,7 @@ export function VoucherProvider({ children }: { children: React.ReactNode }) {
   }
 
   const isTemplateLocked = (templateId: string) => {
+    if (!FEATURES.vouchers) return false
     return LOCKED_TEMPLATE_IDS.includes(templateId) && !unlockedTemplates.has(templateId)
   }
 

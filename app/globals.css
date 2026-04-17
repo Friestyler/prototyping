@@ -149,6 +149,13 @@
   --font-dm-sans: "DM Sans", system-ui, -apple-system, sans-serif;
   --font-dm-serif: "DM Serif Display", Georgia, serif;
   /* </CHANGE> */
+  /* Leads & Campaigns palette */
+  --color-brand: #5B5BD6;
+  --color-brand-hover: #4F4FC4;
+  --color-brand-light: #EEF2FF;
+  --color-brand-50: #F5F5FF;
+  --color-b2: #D1D5DB;
+  --color-light: #9CA3AF;
 }
 
 @layer base {

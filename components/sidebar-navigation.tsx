@@ -160,6 +160,17 @@ export default function SidebarNavigation({ activeMenu, onMenuChange }: SidebarN
                   Customers
                 </button>
                 <button
+                  className={cn(
+                    "relative w-full h-[34px] text-left px-3 text-[15px] font-normal rounded-md transition-colors",
+                    activeMenu === "leads"
+                      ? "bg-[#E0E7FF] text-[#4F46E5] font-medium"
+                      : "text-[#1F2937] hover:bg-gray-200/50",
+                  )}
+                  onClick={() => onMenuChange("leads")}
+                >
+                  Leads
+                </button>
+                <button
                   className="relative w-full h-[34px] text-left px-3 text-[15px] font-normal text-[#1F2937] hover:bg-gray-200/50 rounded-md transition-colors"
                   onClick={() => onMenuChange("products")}
                 >
@@ -174,6 +185,21 @@ export default function SidebarNavigation({ activeMenu, onMenuChange }: SidebarN
               </div>
             </CollapsibleContent>
           </Collapsible>
+
+          {/* Campaigns — top-level item */}
+          <Button
+            variant="ghost"
+            className={cn(
+              "w-full h-[38px] justify-start font-normal text-[15px] px-2.5 rounded-lg",
+              activeMenu === "campaigns"
+                ? "bg-[#E0E7FF] text-[#4F46E5] font-medium"
+                : "text-[#1F2937] hover:bg-gray-200/50",
+            )}
+            onClick={() => onMenuChange("campaigns")}
+          >
+            <SendIcon />
+            <span className="ml-2.5">Campaigns</span>
+          </Button>
         </nav>
       </div>
     </div>
