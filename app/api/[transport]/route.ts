@@ -17,7 +17,22 @@ import {
   listSmartLists,
   updateSmartList,
 } from "@/lib/db/smart-lists"
+import {
+  createTemplate,
+  deleteTemplate,
+  getTemplate,
+  listTemplates,
+  updateTemplate,
+} from "@/lib/db/campaign-templates"
+import {
+  createCampaign,
+  deleteCampaign,
+  getCampaign,
+  listCampaigns,
+  updateCampaign,
+} from "@/lib/db/campaigns"
 import { findUserByApiKey } from "@/lib/db/users"
+import { leads as STATIC_LEADS } from "@/lib/lc-data/leads"
 
 export const runtime = "nodejs"
 export const maxDuration = 60
@@ -306,9 +321,396 @@ const mcpHandler = createMcpHandler(
         return asJson({ ok: true, id })
       },
     )
+
+    // ─── Lead pool (read-only seed for "Leads" target campaigns) ───────────────
+
+    server.registerTool(
+      "list_leads",
+      {
+        description:
+          "List the available lead records (read-only seed pool). Use these ids as recipientIds when creating a campaign with targetGroup='Leads'.",
+        inputSchema: {},
+      },
+      async () =>
+        asJson({
+          total: STATIC_LEADS.length,
+          leads: STATIC_LEADS.map((l) => ({
+            id: l.id,
+            firstName: l.firstName ?? null,
+            lastName: l.lastName ?? null,
+            email: l.email ?? null,
+            company: l.company ?? null,
+            source: l.source ?? null,
+            owner: l.owner ?? null,
+          })),
+        }),
+    )
+
+    // ─── Campaign templates ───────────────────────────────────────────────────
+
+    const iconEnum = z.enum(["check", "star", "text", "mail"])
+    const targetGroupEnum = z.enum(["Customers", "Leads"])
+
+    const templateContentShape = {
+      name: z.string().min(1).max(120).describe("Template name shown in the campaign-template list."),
+      targetGroup: targetGroupEnum.describe("Whether this template targets existing Customers or external Leads."),
+      description: z.string().max(2000).optional(),
+      subject: z.string().max(500).optional().describe("Email subject line."),
+      body: z.string().max(20000).optional().describe("Email body. Plain text or simple HTML."),
+      icon: iconEnum.optional(),
+      iconBg: z.string().optional().describe("Hex colour, e.g. '#ECFDF5'."),
+      iconColor: z.string().optional().describe("Hex colour, e.g. '#059669'."),
+    }
+
+    server.registerTool(
+      "list_campaign_templates",
+      {
+        description: "List the user's saved campaign templates (reusable name + email subject + body).",
+        inputSchema: {},
+      },
+      async (_args, extra) => {
+        const userId = userIdFrom(extra)
+        if (!userId) return asError("Not authenticated.")
+        const templates = await listTemplates(userId)
+        return asJson({
+          templates: templates.map((t) => ({
+            id: t.id,
+            name: t.name,
+            targetGroup: t.targetGroup,
+            description: t.description,
+            subject: t.subject,
+            createdAt: t.createdAt,
+            updatedAt: t.updatedAt,
+          })),
+        })
+      },
+    )
+
+    server.registerTool(
+      "get_campaign_template",
+      {
+        description: "Fetch one of the user's saved campaign templates, including subject + body.",
+        inputSchema: { id: z.string() },
+      },
+      async ({ id }, extra) => {
+        const userId = userIdFrom(extra)
+        if (!userId) return asError("Not authenticated.")
+        const template = await getTemplate(userId, id)
+        if (!template) return asError(`No campaign template with id '${id}' for this user.`)
+        return asJson(template)
+      },
+    )
+
+    server.registerTool(
+      "create_campaign_template",
+      {
+        description:
+          "Create a reusable campaign template (name + email subject + body). Generated content (e.g. drafted by Claude) goes here so it can be reused across campaigns.",
+        inputSchema: templateContentShape,
+      },
+      async (args, extra) => {
+        const userId = userIdFrom(extra)
+        if (!userId) return asError("Not authenticated.")
+        const template = await createTemplate(userId, args)
+        return asJson({ id: template.id, name: template.name, targetGroup: template.targetGroup, createdAt: template.createdAt })
+      },
+    )
+
+    server.registerTool(
+      "update_campaign_template",
+      {
+        description: "Patch fields on one of the user's saved campaign templates.",
+        inputSchema: {
+          id: z.string(),
+          name: z.string().min(1).max(120).optional(),
+          targetGroup: targetGroupEnum.optional(),
+          description: z.string().max(2000).optional(),
+          subject: z.string().max(500).optional(),
+          body: z.string().max(20000).optional(),
+          icon: iconEnum.optional(),
+          iconBg: z.string().optional(),
+          iconColor: z.string().optional(),
+        },
+      },
+      async (args, extra) => {
+        const userId = userIdFrom(extra)
+        if (!userId) return asError("Not authenticated.")
+        const { id, ...patch } = args
+        const template = await updateTemplate(userId, id, patch)
+        if (!template) return asError(`No campaign template with id '${id}' for this user.`)
+        return asJson({
+          id: template.id,
+          name: template.name,
+          targetGroup: template.targetGroup,
+          updatedAt: template.updatedAt,
+        })
+      },
+    )
+
+    server.registerTool(
+      "delete_campaign_template",
+      {
+        description: "Delete one of the user's saved campaign templates.",
+        inputSchema: { id: z.string() },
+      },
+      async ({ id }, extra) => {
+        const userId = userIdFrom(extra)
+        if (!userId) return asError("Not authenticated.")
+        const ok = await deleteTemplate(userId, id)
+        if (!ok) return asError(`No campaign template with id '${id}' for this user.`)
+        return asJson({ ok: true, id })
+      },
+    )
+
+    // ─── Campaigns ────────────────────────────────────────────────────────────
+
+    server.registerTool(
+      "list_campaigns",
+      {
+        description:
+          "List the user's saved campaigns. Status is always 'Draft' from the MCP — sending happens through the web UI.",
+        inputSchema: {},
+      },
+      async (_args, extra) => {
+        const userId = userIdFrom(extra)
+        if (!userId) return asError("Not authenticated.")
+        const campaigns = await listCampaigns(userId)
+        return asJson({
+          campaigns: campaigns.map((c) => ({
+            id: c.id,
+            name: c.name,
+            targetGroup: c.targetGroup,
+            status: c.status,
+            description: c.description,
+            recipientCount: c.recipientIds.length,
+            templateId: c.templateId,
+            smartListId: c.smartListId,
+            subject: c.subject,
+            createdAt: c.createdAt,
+            updatedAt: c.updatedAt,
+          })),
+        })
+      },
+    )
+
+    server.registerTool(
+      "get_campaign",
+      {
+        description:
+          "Fetch a single campaign with its full email subject + body and the resolved recipient roster.",
+        inputSchema: { id: z.string() },
+      },
+      async ({ id }, extra) => {
+        const userId = userIdFrom(extra)
+        if (!userId) return asError("Not authenticated.")
+        const c = await getCampaign(userId, id)
+        if (!c) return asError(`No campaign with id '${id}' for this user.`)
+
+        let recipients: unknown[] = []
+        if (c.targetGroup === "Customers") {
+          const byRecord = new Map(ALL_MASTER_CUSTOMERS.map((cust) => [String(cust.recordId), cust]))
+          recipients = c.recipientIds
+            .map((rid) => byRecord.get(rid))
+            .filter((cust): cust is NonNullable<typeof cust> => Boolean(cust))
+            .map(customerToWire)
+        } else {
+          const byLead = new Map(STATIC_LEADS.map((l) => [l.id, l]))
+          recipients = c.recipientIds.map((rid) => byLead.get(rid)).filter(Boolean)
+        }
+
+        return asJson({
+          id: c.id,
+          name: c.name,
+          targetGroup: c.targetGroup,
+          status: c.status,
+          description: c.description,
+          subject: c.subject,
+          body: c.body,
+          templateId: c.templateId,
+          smartListId: c.smartListId,
+          recipientCount: c.recipientIds.length,
+          recipients,
+          createdAt: c.createdAt,
+          updatedAt: c.updatedAt,
+        })
+      },
+    )
+
+    server.registerTool(
+      "create_campaign",
+      {
+        description:
+          "Create a new campaign as a Draft. Recipients can be specified three ways (later overrides earlier): explicit `recipientIds`, derived from a `smartListId` (Customers only — copies the list's current customers), derived from a customer `filter` (Customers only). Email content can be inlined as `subject`/`body` OR pulled from a `templateId`. Status stays 'Draft' — sending must happen through the web UI.",
+        inputSchema: {
+          name: z.string().min(1).max(120),
+          targetGroup: targetGroupEnum,
+          description: z.string().max(2000).optional(),
+          templateId: z.string().nullable().optional().describe("Pull subject + body from this template."),
+          smartListId: z.string().nullable().optional().describe("Customers target only — recipient set is the smart list's customers as of now."),
+          filter: z.object(customerFilterShape).optional().describe("Customers target only — derive recipients by filter."),
+          recipientIds: z.array(z.string()).optional().describe("Customer recordIds (Customers target) or lead ids (Leads target)."),
+          subject: z.string().max(500).optional(),
+          body: z.string().max(20000).optional(),
+          icon: iconEnum.optional(),
+          iconBg: z.string().optional(),
+          iconColor: z.string().optional(),
+        },
+      },
+      async (args, extra) => {
+        const userId = userIdFrom(extra)
+        if (!userId) return asError("Not authenticated.")
+
+        let recipientIds = args.recipientIds ?? []
+        let smartListId = args.smartListId ?? null
+
+        if (args.targetGroup === "Customers") {
+          if (recipientIds.length === 0 && smartListId) {
+            const list = await getSmartList(userId, smartListId)
+            if (!list) return asError(`Smart list '${smartListId}' not found for this user.`)
+            recipientIds = list.customerIds
+          }
+          if (recipientIds.length === 0 && args.filter) {
+            recipientIds = filterCustomers(args.filter).map((c) => String(c.recordId))
+          }
+        } else {
+          // Leads target — only recipientIds is meaningful. Reject smartListId/filter.
+          if (smartListId || args.filter) {
+            return asError("smartListId and filter are only valid for targetGroup='Customers'. For Leads, pass recipientIds.")
+          }
+          // Validate against the static lead pool.
+          const leadIds = new Set(STATIC_LEADS.map((l) => l.id))
+          const unknown = recipientIds.filter((id) => !leadIds.has(id))
+          if (unknown.length > 0) {
+            return asError(`Unknown lead ids: ${unknown.join(", ")}. Use list_leads to see valid ids.`)
+          }
+        }
+
+        let subject = args.subject
+        let body = args.body
+        if (args.templateId) {
+          const tpl = await getTemplate(userId, args.templateId)
+          if (!tpl) return asError(`Template '${args.templateId}' not found for this user.`)
+          subject = subject ?? tpl.subject
+          body = body ?? tpl.body
+        }
+
+        const campaign = await createCampaign(userId, {
+          name: args.name,
+          targetGroup: args.targetGroup,
+          description: args.description,
+          templateId: args.templateId ?? null,
+          smartListId,
+          recipientIds,
+          subject: subject ?? "",
+          body: body ?? "",
+          icon: args.icon,
+          iconBg: args.iconBg,
+          iconColor: args.iconColor,
+        })
+
+        return asJson({
+          id: campaign.id,
+          name: campaign.name,
+          targetGroup: campaign.targetGroup,
+          status: campaign.status,
+          recipientCount: campaign.recipientIds.length,
+          createdAt: campaign.createdAt,
+        })
+      },
+    )
+
+    server.registerTool(
+      "update_campaign",
+      {
+        description:
+          "Patch fields on one of the user's campaigns. Recipients can be replaced via `recipientIds`, `smartListId` (Customers, copies current members), or a customer `filter`. Status stays in 'Draft'/'Active'/'Stopped' — actual sending is always done through the web UI.",
+        inputSchema: {
+          id: z.string(),
+          name: z.string().min(1).max(120).optional(),
+          targetGroup: targetGroupEnum.optional(),
+          description: z.string().max(2000).optional(),
+          status: z.enum(["Draft", "Active", "Stopped"]).optional(),
+          templateId: z.string().nullable().optional(),
+          smartListId: z.string().nullable().optional(),
+          filter: z.object(customerFilterShape).optional(),
+          recipientIds: z.array(z.string()).optional(),
+          subject: z.string().max(500).optional(),
+          body: z.string().max(20000).optional(),
+          icon: iconEnum.optional(),
+          iconBg: z.string().optional(),
+          iconColor: z.string().optional(),
+        },
+      },
+      async (args, extra) => {
+        const userId = userIdFrom(extra)
+        if (!userId) return asError("Not authenticated.")
+
+        const existing = await getCampaign(userId, args.id)
+        if (!existing) return asError(`No campaign with id '${args.id}' for this user.`)
+
+        const targetGroup = args.targetGroup ?? existing.targetGroup
+        let recipientIds = args.recipientIds
+        if (recipientIds === undefined) {
+          if (args.smartListId !== undefined && args.smartListId !== null && targetGroup === "Customers") {
+            const list = await getSmartList(userId, args.smartListId)
+            if (!list) return asError(`Smart list '${args.smartListId}' not found for this user.`)
+            recipientIds = list.customerIds
+          } else if (args.filter && targetGroup === "Customers") {
+            recipientIds = filterCustomers(args.filter).map((c) => String(c.recordId))
+          }
+        }
+
+        if (targetGroup === "Leads" && recipientIds) {
+          const leadIds = new Set(STATIC_LEADS.map((l) => l.id))
+          const unknown = recipientIds.filter((id) => !leadIds.has(id))
+          if (unknown.length > 0) {
+            return asError(`Unknown lead ids: ${unknown.join(", ")}.`)
+          }
+        }
+
+        const campaign = await updateCampaign(userId, args.id, {
+          name: args.name,
+          targetGroup: args.targetGroup,
+          description: args.description,
+          status: args.status,
+          templateId: args.templateId,
+          smartListId: args.smartListId,
+          recipientIds,
+          subject: args.subject,
+          body: args.body,
+          icon: args.icon,
+          iconBg: args.iconBg,
+          iconColor: args.iconColor,
+        })
+        if (!campaign) return asError(`No campaign with id '${args.id}' for this user.`)
+        return asJson({
+          id: campaign.id,
+          name: campaign.name,
+          targetGroup: campaign.targetGroup,
+          status: campaign.status,
+          recipientCount: campaign.recipientIds.length,
+          updatedAt: campaign.updatedAt,
+        })
+      },
+    )
+
+    server.registerTool(
+      "delete_campaign",
+      {
+        description: "Delete one of the user's campaigns.",
+        inputSchema: { id: z.string() },
+      },
+      async ({ id }, extra) => {
+        const userId = userIdFrom(extra)
+        if (!userId) return asError("Not authenticated.")
+        const ok = await deleteCampaign(userId, id)
+        if (!ok) return asError(`No campaign with id '${id}' for this user.`)
+        return asJson({ ok: true, id })
+      },
+    )
   },
   {
-    serverInfo: { name: "qollabi-portfolio-intelligence", version: "0.2.0" },
+    serverInfo: { name: "qollabi-portfolio-intelligence", version: "0.3.0" },
   },
   {
     basePath: "/api",

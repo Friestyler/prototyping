@@ -47,3 +47,46 @@ create table if not exists oauth_codes (
 
 create index if not exists oauth_codes_expires_at_idx
   on oauth_codes(expires_at);
+
+-- Campaign templates: reusable name + email body, scoped per user.
+create table if not exists user_campaign_templates (
+  id            text primary key,
+  user_id       text not null references users(id) on delete cascade,
+  name          text not null,
+  icon          text not null default 'mail',
+  icon_bg       text not null default '#ECFDF5',
+  icon_color    text not null default '#059669',
+  target_group  text not null check (target_group in ('Customers', 'Leads')),
+  description   text not null default '',
+  subject       text not null default '',
+  body          text not null default '',
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now()
+);
+
+create index if not exists user_campaign_templates_user_id_idx
+  on user_campaign_templates(user_id);
+
+-- Campaigns: a name + email content + a recipient set. Status is Draft until
+-- the operator sends them through the web UI — the MCP never sends.
+create table if not exists user_campaigns (
+  id              text primary key,
+  user_id         text not null references users(id) on delete cascade,
+  name            text not null,
+  icon            text not null default 'mail',
+  icon_bg         text not null default '#ECFDF5',
+  icon_color      text not null default '#059669',
+  target_group    text not null check (target_group in ('Customers', 'Leads')),
+  description     text not null default '',
+  status          text not null default 'Draft' check (status in ('Draft', 'Active', 'Stopped')),
+  template_id     text references user_campaign_templates(id) on delete set null,
+  smart_list_id   text references user_smart_lists(id) on delete set null,
+  recipient_ids   jsonb not null default '[]'::jsonb,
+  subject         text not null default '',
+  body            text not null default '',
+  created_at      timestamptz not null default now(),
+  updated_at      timestamptz not null default now()
+);
+
+create index if not exists user_campaigns_user_id_idx
+  on user_campaigns(user_id);
