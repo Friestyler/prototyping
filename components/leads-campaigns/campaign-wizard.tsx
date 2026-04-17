@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, Check } from "lucide-react";
+import { ArrowLeft, Check, Save } from "lucide-react";
 import StepDetails from "@/components/leads-campaigns/step-details";
 import StepRecipients from "@/components/leads-campaigns/step-recipients";
 import StepFlowBuilder from "@/components/leads-campaigns/step-flow-builder";
@@ -11,6 +11,9 @@ import { TargetGroup, WizardStep } from "@/lib/lc-types";
 import { templates } from "@/lib/lc-data/templates";
 import { campaigns } from "@/lib/lc-data/campaigns";
 import { leads } from "@/lib/lc-data/leads";
+import { Button } from "@/components/ui/button";
+import { saveUserCampaign } from "@/lib/user-campaigns";
+import { useToast } from "@/hooks/use-toast";
 
 const steps = [
   { num: 1 as WizardStep, label: "Campaign Details", desc: "Configure campaign settings" },
@@ -39,9 +42,17 @@ export default function CampaignWizard({ templateId, campaignId, initialName, on
 
   const sentCount = loadedCampaign?.sentCount ?? 0;
 
+  const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState<WizardStep>(1);
   const [targetGroup, setTargetGroup] = useState<TargetGroup>(initialTargetGroup);
   const [autoSend, setAutoSend] = useState(false);
+
+  const [campaignName, setCampaignName] = useState<string>(
+    initialName ?? loadedCampaign?.name ?? "",
+  );
+  const [campaignDescription, setCampaignDescription] = useState<string>(
+    loadedCampaign?.description ?? "",
+  );
 
   const [selectedLists, setSelectedLists] = useState<Set<string>>(new Set(["ls-1"]));
   const [includedLeadIds, setIncludedLeadIds] = useState<Set<string>>(
@@ -49,6 +60,36 @@ export default function CampaignWizard({ templateId, campaignId, initialName, on
   );
 
   const [emailHasMergeTags, setEmailHasMergeTags] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const handleSaveDraft = async () => {
+    if (!campaignName.trim()) {
+      toast({ title: "Campaign name required", description: "Add a name before saving." });
+      setCurrentStep(1);
+      return;
+    }
+    setSaving(true);
+    const recipientIds =
+      targetGroup === "Leads"
+        ? Array.from(includedLeadIds)
+        : []; // Customers target — recipients come from MCP / smart list later.
+    const saved = await saveUserCampaign({
+      name: campaignName.trim(),
+      targetGroup,
+      description: campaignDescription.trim() || undefined,
+      recipientIds,
+    });
+    setSaving(false);
+    if (saved) {
+      toast({
+        title: "Draft saved",
+        description: `"${saved.name}" is in Campaigns as a Draft.`,
+      });
+      onBack();
+    } else {
+      toast({ title: "Couldn't save draft", description: "The server rejected the save." });
+    }
+  };
 
   const goTo = (step: WizardStep) => {
     setCurrentStep(step);
@@ -77,7 +118,11 @@ export default function CampaignWizard({ templateId, campaignId, initialName, on
         >
           <ArrowLeft className="w-3.5 h-3.5" />
         </button>
-        <h1 className="text-xl font-semibold">Create Campaign</h1>
+        <h1 className="text-xl font-semibold flex-1">Create Campaign</h1>
+        <Button variant="outline" size="sm" onClick={handleSaveDraft} disabled={saving}>
+          <Save className="w-3.5 h-3.5" />
+          {saving ? "Saving…" : "Save as Draft"}
+        </Button>
       </div>
 
       <div className="flex items-start mb-8">
@@ -137,6 +182,10 @@ export default function CampaignWizard({ templateId, campaignId, initialName, on
           onNext={() => goTo(2)}
           sentCount={sentCount}
           initialName={initialName}
+          name={campaignName}
+          onNameChange={setCampaignName}
+          description={campaignDescription}
+          onDescriptionChange={setCampaignDescription}
         />
       )}
       {currentStep === 2 && (

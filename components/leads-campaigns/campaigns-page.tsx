@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Send,
   FileText,
@@ -16,9 +16,19 @@ import {
   BarChart3,
   Trash2,
 } from "lucide-react";
-import { campaigns, campaignStats } from "@/lib/lc-data/campaigns";
-import { templates } from "@/lib/lc-data/templates";
+import { campaigns as seedCampaigns, campaignStats } from "@/lib/lc-data/campaigns";
+import { templates as seedTemplates } from "@/lib/lc-data/templates";
 import CampaignWizard from "@/components/leads-campaigns/campaign-wizard";
+import NewTemplateDialog from "@/components/leads-campaigns/new-template-dialog";
+import {
+  USER_CAMPAIGNS_CHANGE_EVENT,
+  deleteUserCampaign,
+  deleteUserCampaignTemplate,
+  loadUserCampaignTemplates,
+  loadUserCampaigns,
+  type UserCampaign,
+  type UserCampaignTemplate,
+} from "@/lib/user-campaigns";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -38,6 +48,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
 const statCards = [
@@ -68,9 +79,51 @@ interface CampaignsPageProps {
   onInitialConsumed?: () => void;
 }
 
+interface DisplayedCampaign {
+  id: string;
+  name: string;
+  icon: string;
+  iconBg: string;
+  iconColor: string;
+  targetGroup: "Customers" | "Leads";
+  description: string;
+  status: string;
+  recipients: number;
+  emailsSent: number;
+  isUserCreated: boolean;
+}
+
+interface DisplayedTemplate {
+  id: string;
+  name: string;
+  icon: string;
+  iconBg: string;
+  iconColor: string;
+  targetGroup: "Customers" | "Leads";
+  description: string;
+  isUserCreated: boolean;
+}
+
 export default function CampaignsPage({ initialCampaignName, onInitialConsumed }: CampaignsPageProps = {}) {
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<Tab>("campaigns");
   const [wizard, setWizard] = useState<WizardState | null>(null);
+  const [showNewTemplate, setShowNewTemplate] = useState(false);
+  const [userCampaigns, setUserCampaigns] = useState<UserCampaign[]>([]);
+  const [userTemplates, setUserTemplates] = useState<UserCampaignTemplate[]>([]);
+
+  const refresh = useCallback(async () => {
+    const [c, t] = await Promise.all([loadUserCampaigns(), loadUserCampaignTemplates()]);
+    setUserCampaigns(c);
+    setUserTemplates(t);
+  }, []);
+
+  useEffect(() => {
+    refresh();
+    const onChange = () => refresh();
+    window.addEventListener(USER_CAMPAIGNS_CHANGE_EVENT, onChange);
+    return () => window.removeEventListener(USER_CAMPAIGNS_CHANGE_EVENT, onChange);
+  }, [refresh]);
 
   useEffect(() => {
     if (initialCampaignName) {
@@ -79,13 +132,91 @@ export default function CampaignsPage({ initialCampaignName, onInitialConsumed }
     }
   }, [initialCampaignName, onInitialConsumed]);
 
+  const handleWizardClose = useCallback(() => {
+    setWizard(null);
+    refresh();
+  }, [refresh]);
+
+  // Merge API rows + static seed. User-created appear first.
+  const allCampaigns: DisplayedCampaign[] = useMemo(() => {
+    const fromUser: DisplayedCampaign[] = userCampaigns.map((c) => ({
+      id: c.id,
+      name: c.name,
+      icon: c.icon,
+      iconBg: c.iconBg,
+      iconColor: c.iconColor,
+      targetGroup: c.targetGroup,
+      description: c.description,
+      status: c.status,
+      recipients: c.recipientIds.length,
+      emailsSent: 0,
+      isUserCreated: true,
+    }));
+    const fromSeed: DisplayedCampaign[] = seedCampaigns.map((c) => ({
+      id: c.id,
+      name: c.name,
+      icon: c.icon,
+      iconBg: c.iconBg,
+      iconColor: c.iconColor,
+      targetGroup: c.targetGroup,
+      description: c.description,
+      status: c.status,
+      recipients: c.recipients,
+      emailsSent: c.emailsSent,
+      isUserCreated: false,
+    }));
+    return [...fromUser, ...fromSeed];
+  }, [userCampaigns]);
+
+  const allTemplates: DisplayedTemplate[] = useMemo(() => {
+    const fromUser: DisplayedTemplate[] = userTemplates.map((t) => ({
+      id: t.id,
+      name: t.name,
+      icon: t.icon,
+      iconBg: t.iconBg,
+      iconColor: t.iconColor,
+      targetGroup: t.targetGroup,
+      description: t.description,
+      isUserCreated: true,
+    }));
+    const fromSeed: DisplayedTemplate[] = seedTemplates.map((t) => ({
+      id: t.id,
+      name: t.name,
+      icon: t.icon,
+      iconBg: t.iconBg,
+      iconColor: t.iconColor,
+      targetGroup: t.targetGroup,
+      description: t.description,
+      isUserCreated: false,
+    }));
+    return [...fromUser, ...fromSeed];
+  }, [userTemplates]);
+
+  const handleDeleteCampaign = async (c: DisplayedCampaign) => {
+    if (!c.isUserCreated) {
+      toast({ title: "Built-in campaigns can't be deleted." });
+      return;
+    }
+    const ok = await deleteUserCampaign(c.id);
+    toast({ title: ok ? "Campaign deleted" : "Couldn't delete campaign" });
+  };
+
+  const handleDeleteTemplate = async (t: DisplayedTemplate) => {
+    if (!t.isUserCreated) {
+      toast({ title: "Built-in templates can't be deleted." });
+      return;
+    }
+    const ok = await deleteUserCampaignTemplate(t.id);
+    toast({ title: ok ? "Template deleted" : "Couldn't delete template" });
+  };
+
   if (wizard) {
     return (
       <CampaignWizard
         templateId={wizard.templateId}
         campaignId={wizard.campaignId}
         initialName={wizard.initialName}
-        onBack={() => setWizard(null)}
+        onBack={handleWizardClose}
       />
     );
   }
@@ -125,10 +256,17 @@ export default function CampaignsPage({ initialCampaignName, onInitialConsumed }
                 : "Reusable campaign templates with pre-configured target groups and email flows."}
             </p>
           </div>
-          <Button onClick={() => setWizard({})}>
-            <Plus className="h-[13px] w-[13px]" />
-            {activeTab === "campaigns" ? "New campaign" : "New template"}
-          </Button>
+          {activeTab === "campaigns" ? (
+            <Button onClick={() => setWizard({})}>
+              <Plus className="h-[13px] w-[13px]" />
+              New campaign
+            </Button>
+          ) : (
+            <Button onClick={() => setShowNewTemplate(true)}>
+              <Plus className="h-[13px] w-[13px]" />
+              New template
+            </Button>
+          )}
         </div>
 
         {activeTab === "campaigns" && (
@@ -154,22 +292,27 @@ export default function CampaignsPage({ initialCampaignName, onInitialConsumed }
 
         {activeTab === "templates" && (
           <div className="grid grid-cols-3 gap-3.5 mb-6">
-            {templates.map((t) => {
+            {allTemplates.map((t) => {
               const Icon = iconMap[t.icon] || Mail;
               return (
                 <Card key={t.id} className="hover:shadow-sm transition-shadow flex flex-col">
                   <CardContent className="p-4 pt-4 flex flex-col flex-1">
-                    <div className="mb-2.5">
+                    <div className="mb-2.5 flex items-start justify-between">
                       <div
                         className="w-9 h-9 rounded-md flex items-center justify-center flex-shrink-0"
                         style={{ backgroundColor: t.iconBg, color: t.iconColor }}
                       >
                         <Icon className="h-4 w-4" />
                       </div>
+                      {t.isUserCreated && (
+                        <Badge variant="secondary" className="text-[10px]">
+                          Yours
+                        </Badge>
+                      )}
                     </div>
                     <div className="text-[14px] font-medium mb-1">{t.name}</div>
                     <p className="text-xs text-muted-foreground leading-relaxed mb-3.5 flex-1">
-                      {t.description}
+                      {t.description || <span className="text-light">No description</span>}
                     </p>
                     <div className="flex gap-2">
                       <Button
@@ -181,10 +324,21 @@ export default function CampaignsPage({ initialCampaignName, onInitialConsumed }
                         <Send className="h-3 w-3" />
                         Use template
                       </Button>
-                      <Button variant="outline" size="sm">
-                        <Pencil className="h-3 w-3" />
-                        Edit
-                      </Button>
+                      {t.isUserCreated ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDeleteTemplate(t)}
+                          className="text-red-600 hover:text-red-700 hover:border-red-300"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      ) : (
+                        <Button variant="outline" size="sm">
+                          <Pencil className="h-3 w-3" />
+                          Edit
+                        </Button>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -208,25 +362,40 @@ export default function CampaignsPage({ initialCampaignName, onInitialConsumed }
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {campaigns.map((c) => {
+                {allCampaigns.map((c) => {
                   const Icon = iconMap[c.icon] || Mail;
                   const statusVariant: "success" | "secondary" =
                     c.status === "Active" ? "success" : "secondary";
                   return (
                     <TableRow key={c.id} className="cursor-pointer">
                       <TableCell className="pl-5">
-                        <button
-                          onClick={() => setWizard({ campaignId: c.id })}
-                          className="flex items-center gap-2.5 text-foreground text-left"
-                        >
-                          <div
-                            className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0"
-                            style={{ backgroundColor: c.iconBg, color: c.iconColor }}
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() =>
+                              c.isUserCreated
+                                ? toast({
+                                    title: "Edit via Claude or recreate",
+                                    description:
+                                      "Editing user-created campaigns isn't wired into the wizard yet — use MCP `update_campaign`.",
+                                  })
+                                : setWizard({ campaignId: c.id })
+                            }
+                            className="flex items-center gap-2.5 text-foreground text-left"
                           >
-                            <Icon className="h-3.5 w-3.5" />
-                          </div>
-                          {c.name}
-                        </button>
+                            <div
+                              className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0"
+                              style={{ backgroundColor: c.iconBg, color: c.iconColor }}
+                            >
+                              <Icon className="h-3.5 w-3.5" />
+                            </div>
+                            {c.name}
+                          </button>
+                          {c.isUserCreated && (
+                            <Badge variant="secondary" className="text-[10px]">
+                              Yours
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Badge variant={c.targetGroup === "Leads" ? "default" : "secondary"}>
@@ -252,19 +421,26 @@ export default function CampaignsPage({ initialCampaignName, onInitialConsumed }
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => setWizard({ campaignId: c.id })}>
-                              <Pencil className="h-3.5 w-3.5" />
-                              Edit
-                            </DropdownMenuItem>
+                            {!c.isUserCreated && (
+                              <DropdownMenuItem onClick={() => setWizard({ campaignId: c.id })}>
+                                <Pencil className="h-3.5 w-3.5" />
+                                Edit
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem>
                               <BarChart3 className="h-3.5 w-3.5" />
                               View analytics
                             </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-red-600 focus:text-red-600">
-                              <Trash2 className="h-3.5 w-3.5" />
-                              Delete
-                            </DropdownMenuItem>
+                            {c.isUserCreated && <DropdownMenuSeparator />}
+                            {c.isUserCreated && (
+                              <DropdownMenuItem
+                                className="text-red-600 focus:text-red-600"
+                                onClick={() => handleDeleteCampaign(c)}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                                Delete
+                              </DropdownMenuItem>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -276,6 +452,12 @@ export default function CampaignsPage({ initialCampaignName, onInitialConsumed }
           </Card>
         )}
       </div>
+
+      <NewTemplateDialog
+        open={showNewTemplate}
+        onOpenChange={setShowNewTemplate}
+        onCreated={refresh}
+      />
     </div>
   );
 }

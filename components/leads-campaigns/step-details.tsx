@@ -25,6 +25,10 @@ interface StepDetailsProps {
   onNext: () => void;
   sentCount?: number;
   initialName?: string;
+  name: string;
+  onNameChange: (v: string) => void;
+  description: string;
+  onDescriptionChange: (v: string) => void;
 }
 
 const icons = [
@@ -44,6 +48,10 @@ export default function StepDetails({
   onNext,
   sentCount = 0,
   initialName,
+  name,
+  onNameChange,
+  description,
+  onDescriptionChange,
 }: StepDetailsProps) {
   const [selectedIcon, setSelectedIcon] = useState(7);
   const [pendingChange, setPendingChange] = useState<TargetGroup | null>(null);
@@ -73,9 +81,9 @@ export default function StepDetails({
         </Label>
         <Input
           id="campaign-name"
-          key={initialName || "default"}
           placeholder="Campaign Name"
-          defaultValue={initialName || "AON Cybersecurity Follow-up"}
+          value={name}
+          onChange={(e) => onNameChange(e.target.value)}
         />
       </div>
 
@@ -151,7 +159,8 @@ export default function StepDetails({
         <Textarea
           id="campaign-description"
           placeholder="Brief description of this campaign's purpose..."
-          defaultValue="AON form leads — April 2026"
+          value={description}
+          onChange={(e) => onDescriptionChange(e.target.value)}
         />
       </div>
 
