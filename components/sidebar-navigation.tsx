@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { ChevronDown, Plug } from "lucide-react"
+import { ChevronDown, LogOut, Plug } from "lucide-react"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
@@ -224,8 +224,14 @@ export default function SidebarNavigation({ activeMenu, onMenuChange }: SidebarN
               <span>Connect to Claude (MCP)</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem disabled>
-              <span className="text-[13px] text-gray-500">Sign out</span>
+            <DropdownMenuItem
+              onClick={async () => {
+                await fetch("/api/auth/logout", { method: "POST" })
+                window.location.href = "/login"
+              }}
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              <span>Sign out</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
