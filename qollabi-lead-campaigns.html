@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Qollabi — Lead Campaigns</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --brand:#5B5BD6;--brand2:#4F4FC4;--bg:#fff;--card:#fff;
+  --border:#E8E8EE;--b2:#D1D5DB;--text:#111827;--muted:#6B7280;--light:#9CA3AF;
+  --green:#059669;--amber:#D97706;--red:#DC2626;
+}
+body{font-family:'Poppins',sans-serif;background:#fff;color:var(--text);font-size:14px;display:flex;height:100vh;overflow:hidden}
+
+/* SIDEBAR */
+.sb{width:232px;background:#fff;border-right:1px solid var(--border);display:flex;flex-direction:column;height:100vh;flex-shrink:0;overflow-y:auto}
+.sb-top{padding:10px 16px;border-bottom:1px solid var(--border)}
+.sb-u{font-size:13px;font-style:italic;color:var(--muted)}
+.sb-ws{display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid var(--border);cursor:pointer}
+.sb-ws-icon{width:24px;height:24px;border-radius:50%;background:#EEF2FF;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sb-ws-name{font-size:13px;font-weight:500;flex:1}
+.sb-nav{padding:6px 0;flex:1}
+.ni{display:flex;align-items:center;gap:10px;padding:8px 16px;font-size:13px;color:#374151;cursor:pointer;transition:background .1s;text-decoration:none}
+.ni:hover{background:#F9FAFB}
+.ni.on{background:#EEF2FF;color:var(--brand);font-weight:500}
+.ni svg{width:15px;height:15px;flex-shrink:0;color:var(--muted)}
+.ni.on svg{color:var(--brand)}
+.ns{padding:6px 16px 6px 40px;font-size:13px;color:#374151;cursor:pointer;transition:background .1s;display:block}
+.ns:hover{background:#F9FAFB}
+.ns.on{background:#EEF2FF;color:var(--brand);font-weight:500}
+.sdiv{height:1px;background:#F3F4F6;margin:4px 0}
+
+/* CONTENT AREA */
+.content{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{background:#fff;border-bottom:1px solid var(--border);height:46px;display:flex;align-items:center;padding:0 16px;gap:8px;flex-shrink:0}
+.tb-tog{width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);border-radius:4px}
+.bc{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--light);flex:1}
+.bc a{color:var(--brand);cursor:pointer;text-decoration:none}
+.bc .cur{color:var(--text);font-weight:500}
+.bc .sep{color:var(--b2)}
+.av{width:30px;height:30px;border-radius:50%;background:#E5E7EB;font-size:11px;font-weight:600;color:#374151;display:flex;align-items:center;justify-content:center;margin-left:auto}
+
+/* SCREENS */
+.scr{display:none;flex:1;overflow-y:auto;background:#fff}
+.scr.on{display:block}
+
+/* PAGE COMPONENTS */
+.pw{background:#fff;min-height:100%}
+.ph{padding:22px 28px 18px;display:flex;align-items:flex-start;justify-content:space-between;border-bottom:1px solid #F3F4F6}
+.ptitle{font-size:22px;font-weight:600}
+.psub{font-size:13px;color:var(--muted);margin-top:4px}
+.phbtns{display:flex;gap:10px;align-items:center}
+
+/* Buttons */
+.bp{display:inline-flex;align-items:center;gap:7px;padding:8px 18px;background:var(--brand);color:#fff;border:none;border-radius:8px;font-family:'Poppins',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:background .15s}
+.bp:hover{background:var(--brand2)}
+.bp svg{width:13px;height:13px}
+.bs{display:inline-flex;align-items:center;gap:7px;padding:7px 14px;background:#fff;color:var(--text);border:1px solid var(--b2);border-radius:8px;font-family:'Poppins',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:background .15s}
+.bs:hover{background:#F9FAFB}
+.bs svg{width:13px;height:13px}
+.bsm{padding:6px 12px;font-size:12.5px}
+
+/* Smart list tabs */
+.slt-row{padding:14px 28px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:#fff}
+.slt-tabs{display:flex;gap:8px}
+.slt{display:inline-flex;align-items:center;gap:7px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid var(--b2);background:#fff;color:#374151;transition:all .15s;white-space:nowrap}
+.slt:hover{border-color:var(--brand);color:var(--brand)}
+.slt.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+.slt .n{font-size:11px;font-weight:600;padding:1px 6px;border-radius:10px;background:rgba(255,255,255,.25);min-width:18px;text-align:center}
+.slt:not(.on) .n{background:#F3F4F6;color:var(--muted)}
+.vt{display:flex;border:1px solid var(--b2);border-radius:8px;overflow:hidden;margin-bottom:1px}
+.vtb{display:flex;align-items:center;gap:5px;padding:6px 12px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;background:#fff;border:none;transition:all .15s}
+.vtb:hover{background:#F9FAFB;color:#374151}
+.vtb.on{background:var(--brand);color:#fff}
+.vtb svg{width:13px;height:13px}
+.sl-empty{padding:36px 28px;display:flex;align-items:center;justify-content:center;border-bottom:1px solid var(--border);background:#fff}
+.sl-empty span{font-size:13px;color:var(--light)}
+
+/* Toolbar */
+.tb{padding:14px 28px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);background:#fff}
+.si{display:flex;align-items:center;gap:8px;border:1px solid var(--b2);border-radius:8px;padding:7px 12px;background:#fff;min-width:200px}
+.si input{border:none;outline:none;font-family:'Poppins',sans-serif;font-size:13px;color:var(--text);background:transparent;width:100%}
+.si input::placeholder{color:var(--light)}
+.si svg{color:var(--light);flex-shrink:0;width:13px;height:13px}
+.tbtn{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:8px;font-size:13px;font-weight:500;color:#374151;background:#fff;border:1px solid var(--b2);cursor:pointer;transition:all .15s;font-family:'Poppins',sans-serif}
+.tbtn:hover{background:#F9FAFB}
+.tbtn svg{width:13px;height:13px;color:var(--muted)}
+
+/* Bulk bar */
+.bulk{display:none;align-items:center;gap:12px;background:#1F2937;color:#fff;padding:10px 28px;font-size:13px}
+.bulk.on{display:flex}
+.bact{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:6px;background:rgba(255,255,255,.1);color:#fff;border:none;font-family:'Poppins',sans-serif;font-size:12.5px;cursor:pointer}
+.bact:hover{background:rgba(255,255,255,.18)}
+.bclr{margin-left:auto;opacity:.6;cursor:pointer;font-size:12px}
+.bclr:hover{opacity:1}
+
+/* Stats bar */
+.stbar{padding:11px 28px;display:flex;align-items:center;font-size:13px;border-bottom:1px solid var(--border);background:#fff}
+.sti{display:flex;align-items:center;gap:4px}
+.stv{font-weight:600;color:var(--text);margin-left:4px}
+.stsep{color:var(--b2);margin:0 16px}
+
+/* Data table */
+.dt-wrap{background:#fff}
+.dt{width:100%;border-collapse:collapse}
+.dt thead th{padding:10px 14px;font-size:12px;font-weight:500;color:var(--muted);text-align:left;border-bottom:1px solid #F3F4F6;white-space:nowrap;background:#fff;cursor:pointer;user-select:none}
+.dt thead th:first-child{padding-left:28px;width:40px;cursor:default}
+.dt thead th:last-child{padding-right:28px}
+.dt tbody tr{border-bottom:1px solid #F9FAFB;cursor:pointer;transition:background .1s}
+.dt tbody tr:hover{background:#FAFAFA}
+.dt tbody tr:last-child{border-bottom:none}
+.dt tbody td{padding:13px 14px;font-size:13px;color:#374151;vertical-align:middle}
+.dt tbody td:first-child{padding-left:28px}
+.dt tbody td:last-child{padding-right:28px}
+.si2{display:inline-flex;flex-direction:column;gap:1.5px;margin-left:4px;vertical-align:middle;opacity:.4}
+.si2 span{display:block;width:0;height:0;border-left:3px solid transparent;border-right:3px solid transparent}
+.si2 .u{border-bottom:3px solid var(--muted)}
+.si2 .d{border-top:3px solid var(--muted)}
+.cb{width:15px;height:15px;border-radius:3px;border:1.5px solid var(--b2);cursor:pointer;accent-color:var(--brand)}
+.lc{color:var(--brand);font-weight:500}
+.pill{display:inline-flex;align-items:center;font-size:11.5px;font-weight:500;padding:3px 9px;border-radius:20px}
+.pb{background:#EEF2FF;color:var(--brand)}
+.pg{background:#ECFDF5;color:#059669}
+.pa{background:#FFFBEB;color:#D97706}
+.pm{background:#F3F4F6;color:var(--muted)}
+.al{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--brand);text-decoration:none;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.al svg{flex-shrink:0;width:11px;height:11px}
+.al:hover{text-decoration:underline}
+.ow{display:flex;align-items:center;gap:7px}
+.ow-av{width:24px;height:24px;border-radius:50%;color:#fff;font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.muted-dash{color:var(--light)}
+
+/* Pagination */
+.pag{display:flex;align-items:center;justify-content:space-between;padding:12px 28px;border-top:1px solid var(--border);font-size:13px;color:var(--muted)}
+.pag-btns{display:flex;gap:4px}
+.pag-btn{width:32px;height:32px;border-radius:6px;border:1px solid var(--b2);background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;font-weight:500;color:#374151;transition:all .15s}
+.pag-btn:hover{background:#F9FAFB}
+.pag-btn.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+.pag-btn.dis{opacity:.3;cursor:default}
+
+/* CAMPAIGNS LIST */
+.csub{padding:10px 28px;background:#fff;border-bottom:1px solid var(--border);display:flex;gap:8px}
+.csp{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;background:#EEF2FF;color:var(--brand);transition:all .15s}
+.cso{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;color:var(--muted);transition:all .15s}
+.cso:hover{background:#F9FAFB}
+.cbody{padding:28px;background:#fff}
+.scards{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:24px}
+.sc{background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px;transition:box-shadow .15s}
+.sc:hover{box-shadow:0 2px 8px rgba(0,0,0,.04)}
+.sc-h{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px}
+.sc-l{font-size:13px;color:var(--muted)}
+.sc-i{width:30px;height:30px;border-radius:7px;background:#EEF2FF;display:flex;align-items:center;justify-content:center}
+.sc-i svg{width:14px;height:14px;color:var(--brand)}
+.sc-v{font-size:22px;font-weight:600}
+.ctw{background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.ct{width:100%;border-collapse:collapse}
+.ct th{padding:10px 16px;font-size:12px;font-weight:500;color:var(--muted);text-align:left;border-bottom:1px solid #F3F4F6;white-space:nowrap}
+.ct th:first-child{padding-left:20px}
+.ct td{padding:13px 16px;font-size:13px;border-bottom:1px solid #F9FAFB;vertical-align:middle;cursor:pointer}
+.ct td:first-child{padding-left:20px}
+.ct tr:hover td{background:#FAFAFA}
+.ct tr:last-child td{border-bottom:none}
+.ci{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.cn{display:flex;align-items:center;gap:10px}
+.dp{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:500;padding:3px 10px;border-radius:20px;background:#F3F4F6;color:var(--muted);border:1px solid var(--b2)}
+.dp.active{background:#ECFDF5;color:var(--green);border-color:#A7F3D0}
+.dp.complete{background:#EEF2FF;color:var(--brand);border-color:#C7D2FE}
+
+/* CREATE CAMPAIGN */
+.crwrap{padding:28px 32px;overflow-y:auto;height:100%}
+.crh{display:flex;align-items:center;gap:12px;margin-bottom:28px}
+.bkb{width:28px;height:28px;border:1px solid var(--b2);border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);background:#fff;font-size:14px;transition:all .15s}
+.bkb:hover{background:#F9FAFB;border-color:var(--brand);color:var(--brand)}
+.crt{font-size:20px;font-weight:600}
+.wiz{display:flex;align-items:flex-start;margin-bottom:32px}
+.ws{flex:1;display:flex;flex-direction:column;align-items:center;position:relative}
+.ws:not(:last-child)::after{content:'';position:absolute;top:20px;left:calc(50% + 22px);right:calc(-50% + 22px);height:1.5px;background:var(--b2);z-index:0}
+.ws.done:not(:last-child)::after{background:var(--brand)}
+.wc{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;z-index:1;position:relative;transition:all .2s}
+.wc.act{background:var(--brand);color:#fff}
+.wc.done{background:var(--brand);color:#fff;font-size:15px}
+.wc.idle{background:#F3F4F6;color:var(--light);border:1.5px solid var(--b2)}
+.wl{font-size:13px;font-weight:500;margin-top:9px;text-align:center}
+.wl.act{color:var(--brand)}.wl.done{color:var(--text)}.wl.idle{color:var(--light)}
+.wd{font-size:11.5px;color:var(--light);text-align:center;margin-top:3px;max-width:110px;line-height:1.4}
+.sb2{display:none}.sb2.on{display:block}
+
+/* Forms */
+.fw{max-width:680px;margin:0 auto}
+.fsb{font-size:13.5px;color:var(--muted);text-align:center;margin-bottom:24px}
+.fg{margin-bottom:20px}
+.fl{display:block;font-size:13px;font-weight:500;color:var(--text);margin-bottom:7px}
+.fl .req{color:var(--red)}
+.fi{width:100%;padding:9px 13px;border:1px solid var(--b2);border-radius:8px;font-family:'Poppins',sans-serif;font-size:13px;color:var(--text);outline:none;transition:border .15s;background:#fff;resize:vertical}
+.fi:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(91,91,214,.08)}
+.fi-ta{min-height:88px;line-height:1.6}
+.fh{font-size:12px;color:var(--light);margin-top:5px;line-height:1.5}
+.tgg{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.to{border:1.5px solid var(--b2);border-radius:10px;padding:14px 16px;cursor:pointer;transition:all .15s}
+.to:hover{border-color:#A5B4FC}
+.to.on{border-color:var(--brand);background:#F5F5FF}
+.toh{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.rad{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--b2);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.to.on .rad{border-color:var(--brand);background:var(--brand)}
+.to.on .rad::after{content:'';width:5px;height:5px;border-radius:50%;background:#fff}
+.ton{font-size:13px;font-weight:500}
+.tob{font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;background:#EEF2FF;color:var(--brand);margin-left:4px}
+.tod{font-size:12px;color:var(--muted);padding-left:24px;line-height:1.5}
+.ir{display:flex;gap:10px;flex-wrap:wrap}
+.io{width:42px;height:42px;border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;border:2px solid transparent;transition:all .15s}
+.io:hover{transform:scale(1.1)}
+.io.on{outline:2.5px solid #111;outline-offset:1px}
+.ua{border:1px solid var(--b2);border-radius:8px;padding:14px;display:flex;align-items:center;gap:14px}
+.ub{width:52px;height:52px;border:1px solid var(--b2);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--light);flex-shrink:0}
+.sfoot{display:flex;align-items:center;justify-content:space-between;margin-top:24px;padding-top:20px;border-top:1px solid var(--border)}
+
+/* Step 2 recipients */
+.rw{max-width:960px;margin:0 auto}
+.rs{display:grid;grid-template-columns:repeat(3,1fr);background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:14px}
+.rsi{padding:14px 18px;border-right:1px solid var(--border)}
+.rsi:last-child{border-right:none}
+.rsil{font-size:11.5px;color:var(--muted);margin-bottom:5px;display:flex;align-items:center;gap:5px}
+.rsil svg{width:13px;height:13px}
+.rsiv{font-size:18px;font-weight:600}
+.rsiv.g{color:var(--green)}.rsiv.a{color:var(--amber)}
+.ib{background:#EEF2FF;border:1px solid #C7D2FE;border-radius:8px;padding:11px 14px;font-size:12.5px;color:#1E40AF;margin-bottom:14px;display:flex;gap:10px;align-items:flex-start;line-height:1.6}
+.ib svg{flex-shrink:0;width:13px;height:13px;margin-top:2px}
+.ltabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:14px}
+.ltab{display:flex;align-items:center;gap:5px;padding:9px 14px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s}
+.ltab:hover{color:var(--text)}
+.ltab.on{color:var(--text);border-bottom-color:var(--brand)}
+.ltab svg{width:12px;height:12px}
+.lcs{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+.lc2{border:1.5px solid var(--b2);border-radius:8px;padding:13px 15px;cursor:pointer;transition:all .15s;position:relative}
+.lc2:hover{border-color:#A5B4FC}
+.lc2.on{border-color:var(--brand)}
+.lck{position:absolute;top:11px;right:11px;width:16px;height:16px;border:1.5px solid var(--b2);border-radius:3px;display:flex;align-items:center;justify-content:center}
+.lc2.on .lck{background:var(--brand);border-color:var(--brand)}
+.lc2.on .lck::after{content:'\2713';font-size:10px;color:#fff;font-weight:700}
+.lcn{font-size:13px;font-weight:500;color:var(--brand);margin-bottom:6px}
+.lct{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#F3F4F6;color:var(--muted)}
+.lcc{font-size:12px;color:var(--muted);margin-top:3px}
+.rtt{background:#fff;border:1px solid var(--border);border-radius:8px;overflow:hidden;overflow-x:auto}
+.rt{width:100%;border-collapse:collapse;min-width:700px}
+.rt th{padding:9px 13px;font-size:12px;font-weight:500;color:var(--muted);text-align:left;border-bottom:1px solid #F3F4F6}
+.rt td{padding:11px 13px;font-size:13px;border-bottom:1px solid #F9FAFB;vertical-align:middle}
+.rt tr:last-child td{border-bottom:none}
+
+/* Step 4 settings */
+.sw{max-width:680px;margin:0 auto}
+.togr{display:flex;align-items:flex-start;gap:13px;padding:13px 16px;border:1px solid var(--border);border-radius:8px;background:#F9FAFB;margin-bottom:12px}
+.tog{width:36px;height:20px;border-radius:10px;background:#E5E7EB;position:relative;flex-shrink:0;cursor:pointer;margin-top:2px;transition:background .2s}
+.tog.on{background:var(--brand)}
+.togk{width:16px;height:16px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.tog.on .togk{transform:translateX(16px)}
+.togl{font-size:13px;font-weight:500}
+.togd{font-size:12px;color:var(--muted);margin-top:2px;line-height:1.5}
+.dim .togl{color:var(--light)}.dim .togd{color:var(--light)}
+
+/* Step 5 draft & send */
+.dst{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.dsb{display:grid;grid-template-columns:360px 1fr;gap:14px;height:calc(100vh - 280px)}
+.dsl{background:#fff;border:1px solid var(--border);border-radius:10px;display:flex;flex-direction:column;overflow:hidden}
+.dslh{padding:12px 16px;border-bottom:1px solid var(--border)}
+.dss{display:flex;align-items:center;gap:7px;border:1px solid var(--b2);border-radius:7px;padding:7px 11px;font-size:13px}
+.dss input{border:none;outline:none;font-family:'Poppins',sans-serif;font-size:13px;color:var(--text);background:transparent;width:100%}
+.dfts{display:flex;gap:4px;margin-top:8px}
+.dft{padding:5px 12px;border-radius:7px;font-size:12.5px;font-weight:500;cursor:pointer;color:var(--muted);background:#F3F4F6;transition:all .15s}
+.dft.on{background:var(--brand);color:#fff}
+.dslb{overflow-y:auto;flex:1}
+.dli{display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid #F9FAFB;cursor:pointer;transition:background .1s}
+.dli:hover{background:#F9FAFB}
+.dli.on{background:#EEF2FF}
+.lav{width:32px;height:32px;border-radius:50%;color:#fff;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ln{font-size:13px;font-weight:500}
+.le{font-size:12px;color:var(--muted)}
+.excl{font-size:12px;padding:3px 8px;border:1px solid var(--b2);border-radius:5px;cursor:pointer;background:#fff;color:var(--muted);white-space:nowrap;margin-left:auto;transition:all .15s;font-family:'Poppins',sans-serif}
+.excl:hover{border-color:var(--red);color:var(--red)}
+.dsr{background:#fff;border:1px solid var(--border);border-radius:10px;overflow-y:auto}
+.dsrh{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between}
+.dcc{margin:14px 18px;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.dcr{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid #F9FAFB}
+.dcr:last-child{border:none}
+.ok{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:500;padding:2px 8px;border-radius:20px;background:#ECFDF5;color:#059669}
+.ep2{margin:0 18px 18px;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.eph{display:flex;align-items:center;justify-content:space-between;padding:11px 13px;background:#F9FAFB;border-bottom:1px solid var(--border)}
+.ept{font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px}
+.epn{width:20px;height:20px;border-radius:50%;background:var(--brand);color:#fff;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center}
+.rdy{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:500;padding:2px 8px;border-radius:20px;background:#ECFDF5;color:#059669}
+.sndb{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;background:var(--brand);color:#fff;border:none;border-radius:6px;font-family:'Poppins',sans-serif;font-size:12.5px;font-weight:500;cursor:pointer;transition:background .15s}
+.sndb:hover{background:var(--brand2)}
+.epf{display:flex;border-bottom:1px solid #F9FAFB}
+.epf:last-child{border:none}
+.epl{font-size:12.5px;color:var(--muted);padding:10px 13px;min-width:85px;border-right:1px solid #F9FAFB;background:#FAFAFA;flex-shrink:0}
+.epv{font-size:12.5px;color:var(--text);padding:10px 13px;flex:1;line-height:1.6}
+.mt{font-family:monospace;font-size:11.5px;padding:1px 5px;border-radius:4px;background:#EEF2FF;color:var(--brand)}
+.mt.g{background:#ECFDF5;color:#059669}
+.cst2{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;color:var(--brand);cursor:pointer;margin-bottom:4px}
+.cst2:hover{text-decoration:underline}
+
+/* Filter panel */
+.filter-panel{display:none;background:#fff;border:1px solid var(--border);border-radius:10px;margin:14px 28px;padding:16px;box-shadow:0 4px 12px rgba(0,0,0,.06)}
+.filter-panel.on{display:block}
+.filter-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.filter-row select,.filter-row input{padding:7px 10px;border:1px solid var(--b2);border-radius:6px;font-family:'Poppins',sans-serif;font-size:12.5px;color:var(--text);background:#fff;outline:none}
+.filter-row select:focus,.filter-row input:focus{border-color:var(--brand)}
+.filter-actions{display:flex;gap:8px;margin-top:10px}
+.filter-tag{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:#EEF2FF;color:var(--brand);border-radius:6px;font-size:12px;font-weight:500;margin-right:6px;margin-bottom:6px}
+.filter-tag .x{cursor:pointer;opacity:.6;font-size:14px}
+.filter-tag .x:hover{opacity:1}
+
+/* Modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:center;justify-content:center}
+.modal-overlay.on{display:flex}
+.modal{background:#fff;border-radius:12px;padding:24px;width:480px;max-width:90vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.15)}
+.modal h3{font-size:16px;font-weight:600;margin-bottom:16px}
+.modal .fg{margin-bottom:14px}
+.modal-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)}
+
+/* Empty state */
+.empty-state{padding:60px 28px;text-align:center;color:var(--muted)}
+.empty-state svg{width:48px;height:48px;margin-bottom:12px;opacity:.3}
+.empty-state h4{font-size:15px;font-weight:500;color:var(--text);margin-bottom:6px}
+.empty-state p{font-size:13px}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sb">
+  <div class="sb-top"><span class="sb-u">u</span></div>
+  <div class="sb-ws">
+    <div class="sb-ws-icon">
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="5" stroke="#5B5BD6" stroke-width="1.2"/><path d="M6.5 4v3l1.5 1" stroke="#5B5BD6" stroke-width="1.2" stroke-linecap="round"/></svg>
+    </div>
+    <span class="sb-ws-name">Qollabi</span>
+    <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M2 4l3.5 3.5L9 4" stroke="#9CA3AF" stroke-width="1.3" stroke-linecap="round"/></svg>
+  </div>
+  <nav class="sb-nav">
+    <div class="ni" onclick="go('customers')">
+      <svg viewBox="0 0 15 15" fill="none"><rect x="1" y="1" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="8.5" y="1" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="1" y="8.5" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="8.5" y="8.5" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.2"/></svg>
+      Broker Hub
+    </div>
+    <div class="ni">
+      <svg viewBox="0 0 15 15" fill="none"><rect x="1" y="2.5" width="13" height="10" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M5 2.5V1.5M7.5 2.5V1.5M10 2.5V1.5M1 5.5h13" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      Smart Lists
+      <svg style="margin-left:auto" width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M2 4l3.5 3.5L9 4" stroke="#9CA3AF" stroke-width="1.3" stroke-linecap="round"/></svg>
+    </div>
+    <div class="ns" id="nb-partners" onclick="go('customers')">Partners</div>
+    <div class="ns on" id="nb-customers" onclick="go('customers')">Customers</div>
+    <div class="ns" id="nb-leads" onclick="go('leads')">Leads</div>
+    <div class="ns" id="nb-opps">Opportunities</div>
+    <div class="ns" id="nb-products">Products</div>
+    <div class="ns" id="nb-contacts">Contacts</div>
+    <div class="ns" id="nb-km">Key Metric</div>
+    <div class="sdiv"></div>
+    <div class="ni" id="nb-campaigns" onclick="go('campaigns')">
+      <svg viewBox="0 0 15 15" fill="none"><path d="M1.5 3L13.5 7.5L1.5 12V8.5L9 7.5 1.5 6.5V3Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+      Campaigns
+    </div>
+  </nav>
+</aside>
+
+<!-- CONTENT AREA -->
+<div class="content">
+
+  <!-- SHARED TOPBAR -->
+  <div class="topbar">
+    <div class="tb-tog"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="2" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.2"/><path d="M6 2v12" stroke="currentColor" stroke-width="1.2"/></svg></div>
+    <div class="bc" id="bc"><span class="cur">Customers</span></div>
+    <div class="av">KK</div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!-- SCREEN: CUSTOMERS                          -->
+  <!-- ══════════════════════════════════════════ -->
+  <div class="scr on" id="s-customers">
+    <div class="pw">
+      <div class="ph">
+        <div><div class="ptitle">Customers</div><div class="psub">Manage customers who collaborate with you on your initiatives.</div></div>
+        <div class="phbtns">
+          <button class="bs"><svg viewBox="0 0 13 13" fill="none"><path d="M6.5 2v7M4 6.5L6.5 9.5l2.5-3M2 11h9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Export customers as CSV</button>
+          <button class="bp" onclick="openModal('customer')"><svg viewBox="0 0 13 13" fill="none"><path d="M6.5 1v11M1 6.5h11" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>New customer</button>
+        </div>
+      </div>
+
+      <!-- Smart list tabs -->
+      <div class="slt-row">
+        <div class="slt-tabs">
+          <div class="slt on" onclick="tabClick(this)">Qollabi Templates <span class="n">0</span></div>
+          <div class="slt" onclick="tabClick(this)">Offered Templates <span class="n">1</span></div>
+          <div class="slt" onclick="tabClick(this)">Market Radar Templates <span class="n">0</span></div>
+          <div class="slt" onclick="tabClick(this)">Saved Lists <span class="n">7</span></div>
+        </div>
+        <div class="vt">
+          <div class="vtb on" onclick="viewToggle(this,'cards')"><svg viewBox="0 0 13 13" fill="none"><rect x="1" y="1" width="4.5" height="4.5" rx="1" stroke="currentColor" stroke-width="1.1"/><rect x="7.5" y="1" width="4.5" height="4.5" rx="1" stroke="currentColor" stroke-width="1.1"/><rect x="1" y="7.5" width="4.5" height="4.5" rx="1" stroke="currentColor" stroke-width="1.1"/><rect x="7.5" y="7.5" width="4.5" height="4.5" rx="1" stroke="currentColor" stroke-width="1.1"/></svg>Cards</div>
+          <div class="vtb" onclick="viewToggle(this,'list')"><svg viewBox="0 0 13 13" fill="none"><path d="M1 3h11M1 6.5h11M1 10h11" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>List</div>
+        </div>
+      </div>
+      <div class="sl-empty"><span>No smart lists available</span></div>
+
+      <!-- Toolbar -->
+      <div class="tb">
+        <div class="si" style="min-width:240px"><input type="text" placeholder="Customer name" id="cust-search" oninput="filterCustomers()"><svg viewBox="0 0 13 13" fill="none"><circle cx="5.5" cy="5.5" r="4" stroke="currentColor" stroke-width="1.2"/><path d="M9 9l2.5 2.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></div>
+        <button class="tbtn"><svg viewBox="0 0 13 13" fill="none"><path d="M1.5 3.5h4M7.5 3.5h4M1.5 6.5h10M1.5 9.5h4M7.5 9.5h4" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>View</button>
+        <button class="tbtn" onclick="toggleFilter('cust-filter')"><svg viewBox="0 0 13 13" fill="none"><path d="M1 3h11M3 6.5h7M5 10h3" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>Filters</button>
+        <button class="tbtn"><svg viewBox="0 0 13 13" fill="none"><rect x="1" y="1" width="11" height="11" rx="2" stroke="currentColor" stroke-width="1.1"/><path d="M4.5 1v11M8.5 1v11" stroke="currentColor" stroke-width="1.1"/></svg>Columns</button>
+        <button class="tbtn">Products</button>
+      </div>
+
+      <!-- Bulk bar -->
+      <div class="bulk" id="cust-bulk">
+        <span id="cbc">0 customers selected</span>
+        <button class="bact"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1" y="1" width="10" height="10" rx="2" stroke="currentColor" stroke-width="1.1"/><path d="M6 3v6M3 6h6" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>Add to list</button>
+        <span class="bclr" onclick="clrCust()">Clear selection</span>
+      </div>
+
+      <!-- Stats bar -->
+      <div class="stbar">
+        <div class="sti">Total Customers<span class="stv">7,445</span></div><span class="stsep">|</span>
+        <div class="sti">Total Opportunities<span class="stv">4</span></div><span class="stsep">|</span>
+        <div class="sti">Total Value Opportunities<span class="stv">&euro;0.00</span></div><span class="stsep">|</span>
+        <div class="sti">Weighted Value Opportunities<span class="stv">&euro;0.00</span></div>
+      </div>
+
+      <!-- Data table -->
+      <div class="dt-wrap">
+        <table class="dt" id="cust-table">
+          <thead><tr>
+            <th><input type="checkbox" class="cb" onchange="selAllCust(this)"></th>
+            <th onclick="sortTable('cust-table',1)">Customer ID<span class="si2"><span class="u"></span><span class="d"></span></span></th>
+            <th onclick="sortTable('cust-table',2)">Customer Type<span class="si2"><span class="u"></span><span class="d"></span></span></th>
+            <th onclick="sortTable('cust-table',3)">Customer<span class="si2"><span class="u"></span><span class="d"></span></span></th>
+            <th onclick="sortTable('cust-table',4)">First Name<span class="si2"><span class="u"></span><span class="d"></span></span></th>
+            <th onclick="sortTable('cust-table',5)">Last Name<span class="si2"><span class="u"></span><span class="d"></span></span></th>
+            <th onclick="sortTable('cust-table',6)">Date of Birth<span class="si2"><span class="u"></span><span class="d"></span></span></th>
+          </tr></thead>
+          <tbody id="cust-tbody">
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div class="pag">
+        <span>Showing 1–10 of 7,445 customers</span>
+        <div class="pag-btns">
+          <div class="pag-btn dis">&lsaquo;</div>
+          <div class="pag-btn on">1</div>
+          <div class="pag-btn">2</div>
+          <div class="pag-btn">3</div>
+          <div class="pag-btn">...</div>
+          <div class="pag-btn">745</div>
+          <div class="pag-btn">&rsaquo;</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!-- SCREEN: LEADS                              -->
+  <!-- ══════════════════════════════════════════ -->
+  <div class="scr" id="s-leads">
+    <div class="pw">
+      <div class="ph">
+        <div><div class="ptitle">Leads</div></div>
+        <div class="phbtns">
+          <button class="bs"><svg viewBox="0 0 13 13" fill="none"><path d="M6.5 2v7M4 6.5L6.5 9.5l2.5-3M2 11h9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Export leads as CSV</button>
+          <button class="bp" onclick="openModal('lead')"><svg viewBox="0 0 13 13" fill="none"><path d="M6.5 1v11M1 6.5h11" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>New lead</button>
+        </div>
+      </div>
+
+      <!-- Smart list tabs -->
+      <div class="slt-row">
+        <div class="slt-tabs">
+          <div class="slt on" onclick="tabClick(this)">Qollabi Templates <span class="n">0</span></div>
+          <div class="slt" onclick="tabClick(this)">Offered Templates <span class="n">2</span></div>
+          <div class="slt" onclick="tabClick(this)">Market Radar Templates <span class="n">0</span></div>
+          <div class="slt" onclick="tabClick(this)">Saved Lists <span class="n">1</span></div>
+        </div>
+        <div class="vt">
+          <div class="vtb on" onclick="viewToggle(this,'cards')"><svg viewBox="0 0 13 13" fill="none"><rect x="1" y="1" width="4.5" height="4.5" rx="1" stroke="currentColor" stroke-width="1.1"/><rect x="7.5" y="1" width="4.5" height="4.5" rx="1" stroke="currentColor" stroke-width="1.1"/><rect x="1" y="7.5" width="4.5" height="4.5" rx="1" stroke="currentColor" stroke-width="1.1"/><rect x="7.5" y="7.5" width="4.5" height="4.5" rx="1" stroke="currentColor" stroke-width="1.1"/></svg>Cards</div>
+          <div class="vtb" onclick="viewToggle(this,'list')"><svg viewBox="0 0 13 13" fill="none"><path d="M1 3h11M1 6.5h11M1 10h11" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>List</div>
+        </div>
+      </div>
+      <div class="sl-empty"><span>No smart lists available</span></div>
+      <div style="padding:4px 28px;font-size:12px;color:var(--muted);border-bottom:1px solid var(--border);background:#FAFAFA">Selecting a list will automatically include any leads added to that list in the future.</div>
+
+      <!-- Toolbar -->
+      <div class="tb">
+        <div class="si" style="min-width:220px"><input type="text" placeholder="Lead name" id="lead-search" oninput="filterLeads()"><svg viewBox="0 0 13 13" fill="none"><circle cx="5.5" cy="5.5" r="4" stroke="currentColor" stroke-width="1.2"/><path d="M9 9l2.5 2.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></div>
+        <button class="tbtn" onclick="toggleFilter('lead-filter')"><svg viewBox="0 0 13 13" fill="none"><path d="M1 3h11M3 6.5h7M5 10h3" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>Filters</button>
+      </div>
+
+      <!-- Filter panel -->
+      <div class="filter-panel" id="lead-filter">
+        <div style="font-size:13px;font-weight:500;margin-bottom:12px">Filter Leads</div>
+        <div class="filter-row">
+          <select id="lf-attr">
+            <option value="">Select attribute...</option>
+            <option value="firstName">First Name</option>
+            <option value="lastName">Last Name</option>
+            <option value="email">Email</option>
+            <option value="company">Company</option>
+            <option value="externalId">External ID</option>
+            <option value="offerPdf">Offer PDF</option>
+            <option value="owner">Owner</option>
+          </select>
+          <select id="lf-op">
+            <option value="contains">contains</option>
+            <option value="does not contain">does not contain</option>
+            <option value="is">is</option>
+            <option value="is not">is not</option>
+            <option value="is empty">is empty</option>
+            <option value="is not empty">is not empty</option>
+          </select>
+          <input type="text" id="lf-val" placeholder="Value...">
+          <button class="bp bsm" onclick="addLeadFilter()">Add</button>
+        </div>
+        <div id="lead-active-filters" style="margin-top:8px"></div>
+      </div>
+
+      <!-- Bulk bar -->
+      <div class="bulk" id="lead-bulk">
+        <span id="lbc">0 leads selected</span>
+        <button class="bact"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1" y="1" width="10" height="10" rx="2" stroke="currentColor" stroke-width="1.1"/><path d="M6 3v6M3 6h6" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>Add to list</button>
+        <span class="bclr" onclick="clrLead()">Clear selection</span>
+      </div>
+
+      <!-- Data table -->
+      <div class="dt-wrap" style="overflow-x:auto">
+        <table class="dt" id="lead-table" style="min-width:950px">
+          <thead><tr>
+            <th><input type="checkbox" class="cb" id="lead-all-cb" onchange="selAllLeads(this)"></th>
+            <th onclick="sortTable('lead-table',1)">Lead<span class="si2"><span class="u"></span><span class="d"></span></span></th>
+            <th onclick="sortTable('lead-table',2)">First Name<span class="si2"><span class="u"></span><span class="d"></span></span></th>
+            <th onclick="sortTable('lead-table',3)">Last Name<span class="si2"><span class="u"></span><span class="d"></span></span></th>
+            <th onclick="sortTable('lead-table',4)">Email<span class="si2"><span class="u"></span><span class="d"></span></span></th>
+            <th onclick="sortTable('lead-table',5)">Company<span class="si2"><span class="u"></span><span class="d"></span></span></th>
+            <th onclick="sortTable('lead-table',6)">Offer PDF<span class="si2"><span class="u"></span><span class="d"></span></span></th>
+            <th onclick="sortTable('lead-table',7)">Owner<span class="si2"><span class="u"></span><span class="d"></span></span></th>
+          </tr></thead>
+          <tbody id="lead-tbody">
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div class="pag">
+        <span id="lead-pag-info">Showing 1–5 of 5 leads</span>
+        <div class="pag-btns">
+          <div class="pag-btn dis">&lsaquo;</div>
+          <div class="pag-btn on">1</div>
+          <div class="pag-btn">&rsaquo;</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!-- SCREEN: CAMPAIGNS                          -->
+  <!-- ══════════════════════════════════════════ -->
+  <div class="scr" id="s-campaigns">
+    <div class="pw" style="min-height:100%">
+      <div class="csub">
+        <div class="csp" id="camp-tab-campaigns" onclick="campTab('campaigns')"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1 2.5L12 6.5 1 10.5V7.5L7.5 6.5 1 5.5V2.5Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>Campaigns</div>
+        <div class="cso" id="camp-tab-templates" onclick="campTab('templates')"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1.5" y="1.5" width="10" height="10" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M4 5h5M4 7.5h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>Templates</div>
+      </div>
+      <div class="cbody">
+        <div class="ph" style="padding:0 0 20px;border:none">
+          <div><div class="ptitle" id="camp-title">Campaigns</div><div class="psub" id="camp-sub">Campaigns let you manage your campaigns for better management and quick access.</div></div>
+          <button class="bp" onclick="go('create')"><svg viewBox="0 0 13 13" fill="none"><path d="M6.5 1v11M1 6.5h11" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>New campaign</button>
+        </div>
+
+        <!-- Stats cards -->
+        <div class="scards" id="camp-stats">
+          <div class="sc"><div class="sc-h"><span class="sc-l">Emails Sent</span><div class="sc-i"><svg viewBox="0 0 14 14" fill="none"><rect x="1" y="3" width="12" height="8" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M1 4.5l6 3.5 6-3.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></div></div><div class="sc-v">66</div></div>
+          <div class="sc"><div class="sc-h"><span class="sc-l">Active Campaigns</span><div class="sc-i"><svg viewBox="0 0 14 14" fill="none"><path d="M1 2.5L13 7 1 11.5V8L8.5 7 1 6V2.5Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg></div></div><div class="sc-v">12</div></div>
+          <div class="sc"><div class="sc-h"><span class="sc-l">Avg Engagement Rate</span><div class="sc-i"><svg viewBox="0 0 14 14" fill="none"><path d="M1 10L5 6l3 3 5-6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div><div class="sc-v">59.1%</div></div>
+          <div class="sc"><div class="sc-h"><span class="sc-l">Open Rate</span><div class="sc-i"><svg viewBox="0 0 14 14" fill="none"><ellipse cx="7" cy="7" rx="6" ry="4.5" stroke="currentColor" stroke-width="1.2"/><circle cx="7" cy="7" r="2" stroke="currentColor" stroke-width="1.2"/></svg></div></div><div class="sc-v">59.1%</div></div>
+          <div class="sc"><div class="sc-h"><span class="sc-l">Click Rate</span><div class="sc-i"><svg viewBox="0 0 14 14" fill="none"><path d="M3 3l8 3.5-4 1-1.5 4L3 3Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg></div></div><div class="sc-v">1.5%</div></div>
+        </div>
+
+        <!-- Campaigns table -->
+        <div class="ctw" id="camp-table-wrap">
+          <table class="ct" id="camp-table">
+            <thead><tr>
+              <th>Name<span class="si2"><span class="u"></span><span class="d"></span></span></th>
+              <th>Target Group</th>
+              <th>Description</th>
+              <th>Status</th>
+              <th>Recipients (#)</th>
+              <th>Emails Sent (#)</th>
+            </tr></thead>
+            <tbody id="camp-tbody">
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!-- SCREEN: CREATE CAMPAIGN                    -->
+  <!-- ══════════════════════════════════════════ -->
+  <div class="scr" id="s-create">
+    <div class="crwrap">
+      <div class="crh">
+        <div class="bkb" onclick="go('campaigns')">&larr;</div>
+        <div class="crt">Create Campaign</div>
+      </div>
+
+      <!-- Wizard steps -->
+      <div class="wiz">
+        <div class="ws" id="wzs1"><div class="wc act" id="wzc1">1</div><div class="wl act" id="wzl1">Campaign Details</div><div class="wd">Configure campaign settings</div></div>
+        <div class="ws" id="wzs2"><div class="wc idle" id="wzc2">2</div><div class="wl idle" id="wzl2">Select Recipients</div><div class="wd">Choose who receives this campaign</div></div>
+        <div class="ws" id="wzs3"><div class="wc idle" id="wzc3">3</div><div class="wl idle" id="wzl3">Flow Builder</div><div class="wd">Design your campaign email</div></div>
+        <div class="ws" id="wzs4"><div class="wc idle" id="wzc4">4</div><div class="wl idle" id="wzl4">Settings</div><div class="wd">Configure campaign settings</div></div>
+        <div class="ws" id="wzs5"><div class="wc idle" id="wzc5">5</div><div class="wl idle" id="wzl5">Draft &amp; Send</div><div class="wd">Review and send your campaign</div></div>
+      </div>
+
+      <!-- STEP 1: CAMPAIGN DETAILS -->
+      <div class="sb2 on" id="crb1">
+        <div class="fw">
+          <div class="fsb">Configure your campaign name and details</div>
+          <div class="fg"><label class="fl">Campaign Name <span class="req">*</span></label><input class="fi" type="text" placeholder="Campaign Name" id="cname" value="AON Cybersecurity Follow-up"></div>
+          <div class="fg">
+            <label class="fl">Target Group <span class="req">*</span></label>
+            <div class="fh" style="margin-bottom:10px">Determines who can receive this campaign. Cannot be changed after the first email is sent.</div>
+            <div class="tgg">
+              <div class="to" id="tgc" onclick="setTG('c')"><div class="toh"><div class="rad"></div><span class="ton">Customers</span><span class="tob" style="background:#F3F4F6;color:var(--muted)">Default</span></div><div class="tod">Send to your customer portfolio using customer smart lists and contact records.</div></div>
+              <div class="to on" id="tgl" onclick="setTG('l')"><div class="toh"><div class="rad"></div><span class="ton">Leads</span><span class="tob">New</span></div><div class="tod">Send to leads from form submissions. Uses lead smart lists with company, email and offer PDF link.</div></div>
+            </div>
+          </div>
+          <div class="fg"><label class="fl">Description</label><textarea class="fi fi-ta" placeholder="Brief description of this campaign's purpose...">AON form leads — April 2026</textarea></div>
+          <div class="fg"><label class="fl">Objective</label><textarea class="fi fi-ta" placeholder="What outcome should this campaign achieve?"></textarea></div>
+          <div class="fg">
+            <label class="fl">Choose Icon</label>
+            <div class="ir">
+              <div class="io" style="background:#EC4899" onclick="selIcon(this)">&#10084;&#65039;</div>
+              <div class="io" style="background:#8B5CF6" onclick="selIcon(this)">&#128196;</div>
+              <div class="io" style="background:#F59E0B" onclick="selIcon(this)">&#10022;</div>
+              <div class="io" style="background:#6366F1" onclick="selIcon(this)">&#128279;</div>
+              <div class="io" style="background:#10B981" onclick="selIcon(this)">&#128197;</div>
+              <div class="io" style="background:#3B82F6" onclick="selIcon(this)">&#128737;</div>
+              <div class="io" style="background:#F59E0B" onclick="selIcon(this)">&#11088;</div>
+              <div class="io on" style="background:#6B7280" onclick="selIcon(this)">&#9993;&#65039;</div>
+            </div>
+          </div>
+          <div class="fg">
+            <label class="fl">Or Upload Image</label>
+            <div class="ua"><div class="ub"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 3v10M6 7l4-4 4 4M3 15h14" stroke="#9CA3AF" stroke-width="1.5" stroke-linecap="round"/></svg></div><div><button class="bs bsm"><svg width="12" height="12" viewBox="0 0 13 13" fill="none"><path d="M6.5 2v7M4 5l2.5-3L9 5M2 11h9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>Upload Image</button><div class="fh" style="margin-top:4px">Supported formats: JPG, PNG, SVG, WebP. Max file size: 5MB.</div></div></div>
+          </div>
+          <div style="display:flex;justify-content:flex-end;margin-top:4px"><button class="bp" onclick="gos(2)">Continue to Select Recipients &rarr;</button></div>
+        </div>
+      </div>
+
+      <!-- STEP 2: SELECT RECIPIENTS -->
+      <div class="sb2" id="crb2">
+        <div class="rw">
+          <!-- Stats cards (3 for leads — no "Total Recipients") -->
+          <div class="rs">
+            <div class="rsi"><div class="rsil"><svg viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="4.5" r="2.5" stroke="#5B5BD6" stroke-width="1.2"/><path d="M1.5 12c0-2.761 2.239-5 5-5s5 2.239 5 5" stroke="#5B5BD6" stroke-width="1.2" stroke-linecap="round"/></svg>Leads Selected</div><div class="rsiv">3</div></div>
+            <div class="rsi"><div class="rsil"><svg viewBox="0 0 13 13" fill="none"><path d="M2 6.5l3 3 6-6" stroke="#059669" stroke-width="1.3" stroke-linecap="round"/></svg>Leads with Email</div><div class="rsiv g">3</div></div>
+            <div class="rsi"><div class="rsil"><svg viewBox="0 0 13 13" fill="none"><path d="M6.5 4v3.5M6.5 9v.5" stroke="#D97706" stroke-width="1.3" stroke-linecap="round"/><circle cx="6.5" cy="6.5" r="5" stroke="#D97706" stroke-width="1.2"/></svg>Missing info</div><div class="rsiv a">0</div></div>
+          </div>
+
+          <!-- Info banner -->
+          <div class="ib"><svg viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.2"/><path d="M6.5 6v4M6.5 4.5v.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg><div><strong>Target group: Leads.</strong> Only lead smart lists are shown below. Customer lists are not available for this campaign.</div></div>
+
+          <!-- List selector -->
+          <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:14px">
+            <div class="ltabs">
+              <div class="ltab on" onclick="recipTab(this)"><svg viewBox="0 0 12 12" fill="none"><path d="M1 3h10M1 6h10M1 9h7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>Static Lists (2)</div>
+              <div class="ltab" onclick="recipTab(this)"><svg viewBox="0 0 12 12" fill="none"><path d="M6 1l1.5 4h4l-3.25 2.5 1.25 4L6 9l-3.5 2.5 1.25-4L.5 5h4Z" stroke="currentColor" stroke-width="1"/></svg>Dynamic Lists (1)</div>
+              <div class="ltab" onclick="recipTab(this)"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6l2.5 2.5L10 3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>Selected (1)</div>
+            </div>
+            <div style="font-size:12.5px;color:var(--muted);margin-bottom:12px"><strong style="color:var(--text)">Note:</strong> Selecting a list will automatically include any leads added to that list in the future.</div>
+            <div class="lcs">
+              <div class="lc2 on" onclick="this.classList.toggle('on')"><div class="lck"></div><div class="lcn">AON Cybersecurity Leads</div><span class="lct"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1 2.5h8M1 5h8M1 7.5h5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>Dynamic</span><div class="lcc">3 leads</div></div>
+              <div class="lc2" onclick="this.classList.toggle('on')"><div class="lck"></div><div class="lcn">Vivium Form Leads</div><span class="lct"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1 2.5h8M1 5h8M1 7.5h5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>Dynamic</span><div class="lcc">0 leads</div></div>
+              <div class="lc2" onclick="this.classList.toggle('on')"><div class="lck"></div><div class="lcn">All Leads</div><span class="lct"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1 2.5h8M1 5h8M1 7.5h5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>Static</span><div class="lcc">5 leads</div></div>
+            </div>
+          </div>
+
+          <!-- Recipients table (flat — no expand/collapse for leads) -->
+          <div class="rtt">
+            <table class="rt">
+              <thead><tr><th>First Name</th><th>Last Name</th><th>Email</th><th>Company</th><th>Owner</th></tr></thead>
+              <tbody>
+                <tr><td style="font-weight:500">Sophie</td><td style="font-weight:500">Janssens</td><td style="color:var(--muted)">s.janssens&#64;artex.be</td><td>Artex Group</td><td><div class="ow"><div class="ow-av" style="background:#5B5BD6">KK</div>Kevin Kools</div></td></tr>
+                <tr><td style="font-weight:500">Marc</td><td style="font-weight:500">De Backer</td><td style="color:var(--muted)">marc.debacker&#64;fingroup.be</td><td>FinGroup NV</td><td><div class="ow"><div class="ow-av" style="background:#059669">RR</div>Raciel Rodriguez</div></td></tr>
+                <tr><td style="font-weight:500">Lena</td><td style="font-weight:500">Vermeersch</td><td style="color:var(--muted)">l.vermeersch&#64;brokervision.be</td><td>BrokerVision BVBA</td><td><div class="ow"><div class="ow-av" style="background:#5B5BD6">KK</div>Kevin Kools</div></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="sfoot"><button class="bs" onclick="gos(1)">&larr; Previous</button><button class="bp" onclick="gos(3)">Continue to Flow Builder &rarr;</button></div>
+        </div>
+      </div>
+
+      <!-- STEP 3: FLOW BUILDER -->
+      <div class="sb2" id="crb3">
+        <div class="fw">
+          <div style="background:#F9FAFB;border:2px dashed var(--b2);border-radius:12px;padding:60px 40px;text-align:center;color:var(--muted)">
+            <svg width="40" height="40" viewBox="0 0 40 40" fill="none" style="display:block;margin:0 auto 12px;opacity:.3"><rect x="4" y="4" width="32" height="32" rx="6" stroke="currentColor" stroke-width="1.5"/><path d="M13 20h14M20 13v14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <div style="font-size:14px;font-weight:500;color:var(--text);margin-bottom:6px">Flow Builder</div>
+            <div style="font-size:13px;margin-bottom:16px">Design your campaign email here. Add email steps, time delays, and conditions.</div>
+            <div style="font-size:12px;color:var(--brand);background:#EEF2FF;border-radius:8px;display:inline-block;padding:8px 14px;text-align:left;line-height:1.8">
+              <strong>Available merge tags (Lead campaign):</strong><br>
+              <code class="mt">{{sender.name}}</code> &nbsp; <code class="mt">{{sender.signature}}</code><br>
+              <code class="mt">{{lead.firstName}}</code> &nbsp; <code class="mt">{{lead.lastName}}</code> &nbsp; <code class="mt">{{lead.email}}</code><br>
+              <code class="mt">{{lead.company}}</code> &nbsp; <code class="mt">{{lead.owner}}</code> &nbsp; <code class="mt g">{{lead.offerPdfLink}}</code>
+            </div>
+          </div>
+          <div class="sfoot"><button class="bs" onclick="gos(2)">&larr; Previous</button><button class="bp" onclick="gos(4)">Continue to Settings &rarr;</button></div>
+        </div>
+      </div>
+
+      <!-- STEP 4: SETTINGS -->
+      <div class="sb2" id="crb4">
+        <div class="sw">
+          <div style="font-size:14px;font-weight:500;margin-bottom:18px">Configure campaign settings</div>
+
+          <div class="fg">
+            <label class="fl" style="margin-bottom:10px">Sender Information</label>
+            <div class="fg"><label class="fl" style="font-weight:400;font-size:12px">Sender Email</label><input class="fi" type="email" placeholder="kevin@broker.be" value="kevin@qollabi.com"></div>
+            <div class="fg"><label class="fl" style="font-weight:400;font-size:12px">Display Name</label><input class="fi" type="text" placeholder="Kevin Kools" value="Kevin Kools"></div>
+          </div>
+
+          <div class="fg">
+            <label class="fl" style="margin-bottom:10px">Reply-To Email</label>
+            <input class="fi" type="email" placeholder="reply@broker.be" value="kevin@qollabi.com">
+          </div>
+
+          <div class="fg">
+            <label class="fl" style="margin-bottom:10px">Automation</label>
+            <div class="togr" onclick="toggleTog(this)"><div class="tog on"><div class="togk"></div></div><div><div class="togl">Send automatically when a lead enters the list</div><div class="togd">Every new lead entering the selected smart list is immediately enrolled. Each submission triggers a new send.</div></div></div>
+            <div class="togr dim" onclick="toggleTog(this)"><div class="tog"><div class="togk"></div></div><div><div class="togl">Hold for manual review</div><div class="togd">Leads are queued in Draft &amp; Send for you to review and send manually.</div></div></div>
+          </div>
+
+          <div class="fg">
+            <label class="fl" style="margin-bottom:10px">CC Recipients <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+            <select class="fi">
+              <option>No CC</option>
+              <option>Same CC for all</option>
+              <option selected>Use Lead Owner</option>
+            </select>
+            <div class="fh">CC the lead's owner on every email sent.</div>
+          </div>
+
+          <div class="fg">
+            <label class="fl" style="margin-bottom:10px">BCC Recipients <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+            <select class="fi">
+              <option selected>No BCC</option>
+              <option>Same BCC for all</option>
+              <option>Use Lead Owner</option>
+            </select>
+          </div>
+
+          <div class="fg">
+            <label class="fl" style="margin-bottom:10px">Recipient Filters</label>
+            <div class="togr dim"><div class="tog"><div class="togk"></div></div><div><div class="togl">Exclude previously sent</div><div class="togd">Skip leads who have already received an email from this campaign.</div></div></div>
+          </div>
+
+          <div class="sfoot"><button class="bs" onclick="gos(3)">&larr; Previous</button><button class="bp" onclick="gos(5)">Continue to Draft &amp; Send &rarr;</button></div>
+        </div>
+      </div>
+
+      <!-- STEP 5: DRAFT & SEND -->
+      <div class="sb2" id="crb5">
+        <div class="dst"><button class="bs bsm" onclick="gos(4)">&larr; Previous</button><button class="bp"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1 2L12 6.5 1 11V7.5L7.5 6.5 1 5.5V2Z" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></svg>Activate campaign</button></div>
+        <div class="dsb">
+          <!-- Left panel: lead list -->
+          <div class="dsl">
+            <div class="dslh">
+              <div class="dss"><input type="text" placeholder="Search leads..."><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="5.5" cy="5.5" r="4" stroke="#9CA3AF" stroke-width="1.2"/><path d="M9 9l2.5 2.5" stroke="#9CA3AF" stroke-width="1.2" stroke-linecap="round"/></svg></div>
+              <div class="dfts">
+                <div class="dft on" onclick="draftFilter(this)">All</div>
+                <div class="dft" onclick="draftFilter(this)">Sent</div>
+                <div class="dft" onclick="draftFilter(this)">Pending</div>
+              </div>
+            </div>
+            <div class="dslb">
+              <div class="dli on" onclick="selDraftLead(this,0)"><div class="lav" style="background:#5B5BD6">SJ</div><div style="flex:1"><div class="ln">Sophie Janssens</div><div class="le">s.janssens&#64;artex.be &middot; Artex Group</div></div><button class="excl">Exclude</button></div>
+              <div class="dli" onclick="selDraftLead(this,1)"><div class="lav" style="background:#059669">MD</div><div style="flex:1"><div class="ln">Marc De Backer</div><div class="le">marc.debacker&#64;fingroup.be &middot; FinGroup NV</div></div><button class="excl">Exclude</button></div>
+              <div class="dli" onclick="selDraftLead(this,2)"><div class="lav" style="background:#D97706">LV</div><div style="flex:1"><div class="ln">Lena Vermeersch</div><div class="le">l.vermeersch&#64;brokervision.be &middot; BrokerVision BVBA</div></div><button class="excl">Exclude</button></div>
+            </div>
+          </div>
+
+          <!-- Right panel: email preview -->
+          <div class="dsr" id="draft-preview">
+            <div class="dsrh">
+              <div><div style="font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px"><div class="lav" style="background:#5B5BD6;width:28px;height:28px;font-size:10px">SJ</div>Sophie Janssens</div><div style="font-size:12px;color:var(--muted);margin-top:3px">s.janssens&#64;artex.be &middot; Artex Group &middot; Owner: Kevin Kools</div></div>
+              <button class="excl">Exclude</button>
+            </div>
+            <div class="dcc">
+              <div class="dcr"><div class="lav" style="background:#5B5BD6">SJ</div><div style="flex:1"><div style="font-size:13px;font-weight:500">Sophie Janssens</div><div style="font-size:12px;color:var(--muted)">s.janssens&#64;artex.be &middot; Artex Group</div></div><span class="ok"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5 3.5-4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>Information complete</span><button class="excl" style="margin-left:8px">Exclude</button></div>
+            </div>
+            <div class="ep2">
+              <div class="eph"><div class="ept"><div class="epn">1</div>Email Preview <span style="font-size:12px;color:var(--muted);font-weight:400">To: Sophie Janssens</span></div><div style="display:flex;gap:8px;align-items:center"><span class="rdy"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5 3.5-4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>Ready to send</span><button class="sndb"><svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1 2L10 5.5 1 9V6.5L6.5 5.5 1 4.5V2Z" stroke="#fff" stroke-width="1.1" stroke-linejoin="round"/></svg>Send</button></div></div>
+              <div class="epf"><div class="epl">From:</div><div class="epv">Kevin Kools (via Qollabi)</div></div>
+              <div class="epf"><div class="epl">Subject:</div><div class="epv"><span class="cst2">&#9998; Customize</span><div>Your AON Cybersecurity offer is ready</div></div></div>
+              <div class="epf"><div class="epl">Content:</div><div class="epv"><span class="cst2">&#9998; Customize</span><div style="margin-top:4px;line-height:1.9">Dear <span class="mt">{{lead.firstName}}</span> <span class="mt">{{lead.lastName}}</span> &mdash; <span class="mt">{{lead.company}}</span>,<br><br>Your personalised offer is ready:<br><span class="mt g">{{lead.offerPdfLink}}</span><br><br>Kind regards,<br><span class="mt">{{sender.name}}</span><br><span class="mt">{{sender.signature}}</span></div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- end .content -->
+
+<!-- NEW LEAD MODAL -->
+<div class="modal-overlay" id="modal-lead" onclick="if(event.target===this)closeModal('lead')">
+  <div class="modal">
+    <h3>New Lead</h3>
+    <div class="fg"><label class="fl">External ID</label><input class="fi" type="text" placeholder="Optional external identifier"></div>
+    <div class="fg"><label class="fl">First Name</label><input class="fi" type="text" placeholder="First name"></div>
+    <div class="fg"><label class="fl">Last Name</label><input class="fi" type="text" placeholder="Last name"></div>
+    <div class="fg"><label class="fl">Email</label><input class="fi" type="email" placeholder="email@example.com"></div>
+    <div class="fg"><label class="fl">Company</label><input class="fi" type="text" placeholder="Company name"></div>
+    <div class="fg"><label class="fl">Offer PDF Link</label><input class="fi" type="url" placeholder="https://..."></div>
+    <div class="fg"><label class="fl">Owner</label><select class="fi"><option value="">Select owner...</option><option value="kk">Kevin Kools</option><option value="rr">Raciel Rodriguez</option></select></div>
+    <div class="modal-foot"><button class="bs" onclick="closeModal('lead')">Cancel</button><button class="bp" onclick="closeModal('lead')">Create Lead</button></div>
+  </div>
+</div>
+
+<!-- NEW CUSTOMER MODAL -->
+<div class="modal-overlay" id="modal-customer" onclick="if(event.target===this)closeModal('customer')">
+  <div class="modal">
+    <h3>New Customer</h3>
+    <div class="fg"><label class="fl">Customer Name <span class="req">*</span></label><input class="fi" type="text" placeholder="Customer name"></div>
+    <div class="fg"><label class="fl">Customer Type</label><select class="fi"><option value="">Select type...</option><option>Individual</option><option>Company</option></select></div>
+    <div class="fg"><label class="fl">First Name</label><input class="fi" type="text" placeholder="First name"></div>
+    <div class="fg"><label class="fl">Last Name</label><input class="fi" type="text" placeholder="Last name"></div>
+    <div class="fg"><label class="fl">Date of Birth</label><input class="fi" type="date"></div>
+    <div class="modal-foot"><button class="bs" onclick="closeModal('customer')">Cancel</button><button class="bp" onclick="closeModal('customer')">Create Customer</button></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════
+
+var customers = [
+  {id:'-',type:'-',name:'Windowsss',first:'-',last:'-',dob:'-'},
+  {id:'-',type:'-',name:'Lenaerts Liesbets',first:'-',last:'-',dob:'-'},
+  {id:'-',type:'-',name:'NOBEN VALENTIN',first:'Valentin',last:'Noben',dob:'1985-03-14'},
+  {id:'-',type:'-',name:'De Groote Elien',first:'Elien',last:'De Groote',dob:'-'},
+  {id:'-',type:'-',name:'Vermeersch Katrien',first:'Katrien',last:'Vermeersch',dob:'1990-07-22'},
+  {id:'CU-1001',type:'Company',name:'TechBridge NV',first:'-',last:'-',dob:'-'},
+  {id:'CU-1002',type:'Individual',name:'Van Damme Pieter',first:'Pieter',last:'Van Damme',dob:'1978-11-05'},
+  {id:'-',type:'-',name:'Claes Isabelle',first:'Isabelle',last:'Claes',dob:'-'},
+  {id:'CU-1003',type:'Company',name:'SafeGuard BVBA',first:'-',last:'-',dob:'-'},
+  {id:'-',type:'-',name:'Peeters Thomas',first:'Thomas',last:'Peeters',dob:'1995-01-30'}
+];
+
+var leads = [
+  {first:'Sophie',last:'Janssens',email:'s.janssens@artex.be',company:'Artex Group',pdf:'offer_janssens.pdf',pdfUrl:'#',owner:'Kevin Kools',ownerColor:'#5B5BD6',ownerInit:'KK'},
+  {first:'Marc',last:'De Backer',email:'marc.debacker@fingroup.be',company:'FinGroup NV',pdf:'offer_debacker.pdf',pdfUrl:'#',owner:'Raciel Rodriguez',ownerColor:'#059669',ownerInit:'RR'},
+  {first:'Lena',last:'Vermeersch',email:'l.vermeersch@brokervision.be',company:'BrokerVision BVBA',pdf:'offer_vermeersch.pdf',pdfUrl:'#',owner:'Kevin Kools',ownerColor:'#5B5BD6',ownerInit:'KK'},
+  {first:'Thomas',last:'Willems',email:'t.willems@novaco.be',company:'Novaco NV',pdf:'',pdfUrl:'',owner:'Kevin Kools',ownerColor:'#5B5BD6',ownerInit:'KK'},
+  {first:'Elena',last:'Mertens',email:'',company:'ClearPath BVBA',pdf:'offer_mertens.pdf',pdfUrl:'#',owner:'',ownerColor:'',ownerInit:''}
+];
+
+var campaigns = [
+  {name:'Test 1',icon:'check',iconBg:'#ECFDF5',iconColor:'#059669',tg:'Customers',desc:'Description of test 1',status:'Draft',recipients:23,sent:22},
+  {name:'Campaign 2 smart list',icon:'text',iconBg:'#F3F4F6',iconColor:'#374151',tg:'Customers',desc:'',status:'Draft',recipients:0,sent:0},
+  {name:'AON Cybersecurity Follow-up',icon:'star',iconBg:'#EEF2FF',iconColor:'#5B5BD6',tg:'Leads',desc:'AON form leads — April 2026',status:'Draft',recipients:3,sent:0},
+  {name:'Vivium Onboarding Q2',icon:'check',iconBg:'#ECFDF5',iconColor:'#059669',tg:'Leads',desc:'Vivium form leads — welcome flow',status:'Active',recipients:12,sent:8},
+  {name:'Renewal Reminder 2026',icon:'star',iconBg:'#EEF2FF',iconColor:'#5B5BD6',tg:'Customers',desc:'Annual renewal campaign',status:'Complete',recipients:156,sent:152}
+];
+
+var draftLeads = [
+  {name:'Sophie Janssens',init:'SJ',color:'#5B5BD6',email:'s.janssens@artex.be',company:'Artex Group',owner:'Kevin Kools'},
+  {name:'Marc De Backer',init:'MD',color:'#059669',email:'marc.debacker@fingroup.be',company:'FinGroup NV',owner:'Raciel Rodriguez'},
+  {name:'Lena Vermeersch',init:'LV',color:'#D97706',email:'l.vermeersch@brokervision.be',company:'BrokerVision BVBA',owner:'Kevin Kools'}
+];
+
+// ═══════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════
+
+var currentStep = 1;
+var bcMap = {
+  customers: '<span class="cur">Customers</span>',
+  leads: '<span class="cur">Leads</span>',
+  campaigns: '<a onclick="go(\'campaigns\')">Campaigns</a><span class="sep">/</span><span class="cur">Campaigns</span>',
+  create: '<a onclick="go(\'campaigns\')">Campaigns</a><span class="sep">/</span><span class="cur">New Campaign</span>'
+};
+
+function go(screen) {
+  document.querySelectorAll('.scr').forEach(function(s){ s.classList.remove('on'); });
+  var el = document.getElementById('s-' + screen);
+  if (el) el.classList.add('on');
+  document.querySelectorAll('.ni, .ns').forEach(function(n){ n.classList.remove('on'); });
+  var nbMap = { customers:'nb-customers', leads:'nb-leads', campaigns:'nb-campaigns', create:'nb-campaigns' };
+  var nb = document.getElementById(nbMap[screen]);
+  if (nb) nb.classList.add('on');
+  var bc = document.getElementById('bc');
+  if (bc && bcMap[screen]) bc.innerHTML = bcMap[screen];
+  if (screen === 'create') { currentStep = 1; renderWiz(); }
+}
+
+// ═══════════════════════════════════════════════
+// WIZARD
+// ═══════════════════════════════════════════════
+
+function gos(n) {
+  currentStep = n;
+  renderWiz();
+  document.querySelector('.crwrap').scrollTop = 0;
+}
+
+function renderWiz() {
+  for (var i = 1; i <= 5; i++) {
+    var b = document.getElementById('crb' + i);
+    var wc = document.getElementById('wzc' + i);
+    var wl = document.getElementById('wzl' + i);
+    var ws = document.getElementById('wzs' + i);
+    if (!b || !wc || !wl || !ws) continue;
+    b.classList.remove('on');
+    if (i < currentStep) {
+      wc.className = 'wc done'; wc.innerHTML = '&#10003;';
+      wl.className = 'wl done'; ws.className = 'ws done';
+    } else if (i === currentStep) {
+      wc.className = 'wc act'; wc.innerHTML = i;
+      wl.className = 'wl act'; ws.className = 'ws act';
+    } else {
+      wc.className = 'wc idle'; wc.innerHTML = i;
+      wl.className = 'wl idle'; ws.className = 'ws';
+    }
+  }
+  var active = document.getElementById('crb' + currentStep);
+  if (active) active.classList.add('on');
+}
+
+function setTG(v) {
+  document.getElementById('tgc').classList.toggle('on', v === 'c');
+  document.getElementById('tgl').classList.toggle('on', v === 'l');
+}
+
+function selIcon(el) {
+  el.parentElement.querySelectorAll('.io').forEach(function(i){ i.classList.remove('on'); });
+  el.classList.add('on');
+}
+
+// ═══════════════════════════════════════════════
+// RENDER TABLES
+// ═══════════════════════════════════════════════
+
+function renderCustomers() {
+  var tbody = document.getElementById('cust-tbody');
+  var html = '';
+  customers.forEach(function(c) {
+    var m = 'style="color:var(--muted)"';
+    html += '<tr>';
+    html += '<td><input type="checkbox" class="cb ccb" onchange="updCust()"></td>';
+    html += '<td '+(c.id==='-'?m:'')+'>'+(c.id==='-'?'&ndash;':c.id)+'</td>';
+    html += '<td '+(c.type==='-'?m:'')+'>'+(c.type==='-'?'&ndash;':c.type)+'</td>';
+    html += '<td class="lc">'+c.name+'</td>';
+    html += '<td '+(c.first==='-'?m:'')+'>'+(c.first==='-'?'&ndash;':c.first)+'</td>';
+    html += '<td '+(c.last==='-'?m:'')+'>'+(c.last==='-'?'&ndash;':c.last)+'</td>';
+    html += '<td '+(c.dob==='-'?m:'')+'>'+(c.dob==='-'?'&ndash;':c.dob)+'</td>';
+    html += '</tr>';
+  });
+  tbody.innerHTML = html;
+}
+
+function renderLeads(filtered) {
+  var data = filtered || leads;
+  var tbody = document.getElementById('lead-tbody');
+  var html = '';
+  data.forEach(function(l) {
+    var fullName = ((l.first||'') + ' ' + (l.last||'')).trim();
+    html += '<tr>';
+    html += '<td><input type="checkbox" class="cb lcb" onchange="updLead()"></td>';
+    html += '<td'+(fullName?' style="color:var(--brand);font-weight:500"':' class="muted-dash"')+'>'+(fullName||'&ndash;')+'</td>';
+    html += '<td>'+(l.first||'<span class="muted-dash">&ndash;</span>')+'</td>';
+    html += '<td>'+(l.last||'<span class="muted-dash">&ndash;</span>')+'</td>';
+    html += '<td style="color:var(--muted)">'+(l.email||'<span class="muted-dash">&ndash;</span>')+'</td>';
+    html += '<td>'+(l.company||'<span class="muted-dash">&ndash;</span>')+'</td>';
+    if (l.pdf) {
+      html += '<td><a class="al" href="'+l.pdfUrl+'"><svg viewBox="0 0 11 11" fill="none"><path d="M5.5 1v7M3 5.5L5.5 8l2.5-2.5M1 10h9" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>'+l.pdf+'</a></td>';
+    } else {
+      html += '<td><span class="muted-dash">&ndash;</span></td>';
+    }
+    if (l.owner) {
+      html += '<td><div class="ow"><div class="ow-av" style="background:'+l.ownerColor+'">'+l.ownerInit+'</div><span>'+l.owner+'</span></div></td>';
+    } else {
+      html += '<td><span class="muted-dash">&ndash;</span></td>';
+    }
+    html += '</tr>';
+  });
+  tbody.innerHTML = html;
+  document.getElementById('lead-pag-info').textContent = 'Showing 1–'+data.length+' of '+data.length+' leads';
+}
+
+function renderCampaigns() {
+  var tbody = document.getElementById('camp-tbody');
+  var iconMap = {
+    check:'<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1.5" y="1.5" width="11" height="11" rx="2" stroke="currentColor" stroke-width="1.2"/><path d="M4 7l2 2 4-4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>',
+    star:'<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.5L8.5 5.5 13 6.2 9.75 9.4 10.5 14 7 12 3.5 14l.75-4.6L1 6.2l4.5-.7Z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg>',
+    text:'<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1.5" y="1.5" width="11" height="11" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M4 5h6M4 7.5h4" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>'
+  };
+  var html = '';
+  campaigns.forEach(function(c) {
+    var tgClass = c.tg === 'Leads' ? 'pb' : 'pm';
+    var statusClass = 'dp';
+    if (c.status === 'Active') statusClass += ' active';
+    if (c.status === 'Complete') statusClass += ' complete';
+    html += '<tr onclick="go(\'create\')">';
+    html += '<td><div class="cn"><div class="ci" style="background:'+c.iconBg+';color:'+c.iconColor+'">'+(iconMap[c.icon]||'')+'</div>'+c.name+'</div></td>';
+    html += '<td><span class="pill '+tgClass+'">'+c.tg+'</span></td>';
+    html += '<td style="color:var(--muted)">'+(c.desc||'&ndash;')+'</td>';
+    html += '<td><span class="'+statusClass+'"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M7 1.5L8.5 3l-5.5 5.5H1.5V7L7 1.5Z" stroke="currentColor" stroke-width="1"/></svg> '+c.status+'</span></td>';
+    html += '<td>'+c.recipients+'</td>';
+    html += '<td>'+c.sent+'</td>';
+    html += '</tr>';
+  });
+  tbody.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════
+// BULK SELECTION
+// ═══════════════════════════════════════════════
+
+function updLead() {
+  var sel = document.querySelectorAll('.lcb:checked').length;
+  var bar = document.getElementById('lead-bulk');
+  bar.classList.toggle('on', sel > 0);
+  document.getElementById('lbc').textContent = sel + ' lead' + (sel !== 1 ? 's' : '') + ' selected';
+}
+function selAllLeads(cb) {
+  document.querySelectorAll('.lcb').forEach(function(c){ c.checked = cb.checked; });
+  updLead();
+}
+function clrLead() {
+  document.querySelectorAll('.lcb').forEach(function(c){ c.checked = false; });
+  document.getElementById('lead-all-cb').checked = false;
+  updLead();
+}
+
+function updCust() {
+  var sel = document.querySelectorAll('.ccb:checked').length;
+  var bar = document.getElementById('cust-bulk');
+  bar.classList.toggle('on', sel > 0);
+  document.getElementById('cbc').textContent = sel + ' customer' + (sel !== 1 ? 's' : '') + ' selected';
+}
+function selAllCust(cb) {
+  document.querySelectorAll('.ccb').forEach(function(c){ c.checked = cb.checked; });
+  updCust();
+}
+function clrCust() {
+  document.querySelectorAll('.ccb').forEach(function(c){ c.checked = false; });
+  updCust();
+}
+
+// ═══════════════════════════════════════════════
+// SEARCH / FILTER
+// ═══════════════════════════════════════════════
+
+function filterLeads() {
+  var q = document.getElementById('lead-search').value.toLowerCase();
+  if (!q) { renderLeads(); return; }
+  var filtered = leads.filter(function(l) {
+    var full = ((l.first||'')+' '+(l.last||'')).toLowerCase();
+    return full.indexOf(q) >= 0 || (l.first||'').toLowerCase().indexOf(q) >= 0 || (l.last||'').toLowerCase().indexOf(q) >= 0;
+  });
+  renderLeads(filtered);
+}
+
+function filterCustomers() {
+  var q = document.getElementById('cust-search').value.toLowerCase();
+  var rows = document.querySelectorAll('#cust-tbody tr');
+  rows.forEach(function(r) {
+    var name = r.cells[3].textContent.toLowerCase();
+    r.style.display = (!q || name.indexOf(q) >= 0) ? '' : 'none';
+  });
+}
+
+var leadFilters = [];
+function addLeadFilter() {
+  var attr = document.getElementById('lf-attr').value;
+  var op = document.getElementById('lf-op').value;
+  var val = document.getElementById('lf-val').value;
+  if (!attr) return;
+  leadFilters.push({attr:attr, op:op, val:val});
+  renderLeadFilters();
+  applyLeadFilters();
+}
+function removeLeadFilter(idx) {
+  leadFilters.splice(idx, 1);
+  renderLeadFilters();
+  applyLeadFilters();
+}
+function renderLeadFilters() {
+  var el = document.getElementById('lead-active-filters');
+  var html = '';
+  leadFilters.forEach(function(f, i) {
+    html += '<span class="filter-tag">'+f.attr+' '+f.op+(f.val?' "'+f.val+'"':'')+' <span class="x" onclick="removeLeadFilter('+i+')">&times;</span></span>';
+  });
+  el.innerHTML = html;
+}
+function applyLeadFilters() {
+  if (leadFilters.length === 0) { renderLeads(); return; }
+  var filtered = leads.filter(function(l) {
+    return leadFilters.every(function(f) {
+      var v = '';
+      if (f.attr === 'firstName') v = l.first || '';
+      else if (f.attr === 'lastName') v = l.last || '';
+      else if (f.attr === 'email') v = l.email || '';
+      else if (f.attr === 'company') v = l.company || '';
+      else if (f.attr === 'offerPdf') v = l.pdf || '';
+      else if (f.attr === 'owner') v = l.owner || '';
+      var vl = v.toLowerCase(), fv = (f.val||'').toLowerCase();
+      if (f.op === 'contains') return vl.indexOf(fv) >= 0;
+      if (f.op === 'does not contain') return vl.indexOf(fv) < 0;
+      if (f.op === 'is') return vl === fv;
+      if (f.op === 'is not') return vl !== fv;
+      if (f.op === 'is empty') return !v;
+      if (f.op === 'is not empty') return !!v;
+      return true;
+    });
+  });
+  renderLeads(filtered);
+}
+
+function toggleFilter(id) {
+  document.getElementById(id).classList.toggle('on');
+}
+
+// ═══════════════════════════════════════════════
+// SORTING
+// ═══════════════════════════════════════════════
+
+var sortState = {};
+function sortTable(tableId, colIdx) {
+  var key = tableId + '-' + colIdx;
+  sortState[key] = sortState[key] === 'asc' ? 'desc' : 'asc';
+  var table = document.getElementById(tableId);
+  var tbody = table.querySelector('tbody');
+  var rows = Array.from(tbody.rows);
+  var dir = sortState[key] === 'asc' ? 1 : -1;
+  rows.sort(function(a, b) {
+    var at = (a.cells[colIdx]||{}).textContent || '';
+    var bt = (b.cells[colIdx]||{}).textContent || '';
+    return at.localeCompare(bt) * dir;
+  });
+  rows.forEach(function(r) { tbody.appendChild(r); });
+}
+
+// ═══════════════════════════════════════════════
+// UI HELPERS
+// ═══════════════════════════════════════════════
+
+function tabClick(el) {
+  el.parentElement.querySelectorAll('.slt').forEach(function(t){ t.classList.remove('on'); });
+  el.classList.add('on');
+}
+
+function viewToggle(el) {
+  el.parentElement.querySelectorAll('.vtb').forEach(function(t){ t.classList.remove('on'); });
+  el.classList.add('on');
+}
+
+function recipTab(el) {
+  el.parentElement.querySelectorAll('.ltab').forEach(function(t){ t.classList.remove('on'); });
+  el.classList.add('on');
+}
+
+function draftFilter(el) {
+  el.parentElement.querySelectorAll('.dft').forEach(function(t){ t.classList.remove('on'); });
+  el.classList.add('on');
+}
+
+function toggleTog(el) {
+  var tog = el.querySelector('.tog');
+  var isOn = tog.classList.contains('on');
+  // Exclusive within automation group
+  var parent = el.parentElement;
+  parent.querySelectorAll('.togr').forEach(function(r){
+    r.querySelector('.tog').classList.remove('on');
+    r.classList.add('dim');
+  });
+  if (!isOn) {
+    tog.classList.add('on');
+    el.classList.remove('dim');
+  }
+}
+
+function campTab(tab) {
+  var isC = tab === 'campaigns';
+  document.getElementById('camp-tab-campaigns').className = isC ? 'csp' : 'cso';
+  document.getElementById('camp-tab-templates').className = isC ? 'cso' : 'csp';
+  document.getElementById('camp-title').textContent = isC ? 'Campaigns' : 'Templates';
+  document.getElementById('camp-sub').textContent = isC ? 'Campaigns let you manage your campaigns for better management and quick access.' : 'Reusable campaign templates with pre-configured target groups and email flows.';
+  document.getElementById('camp-stats').style.display = isC ? '' : 'none';
+}
+
+function selDraftLead(el, idx) {
+  el.parentElement.querySelectorAll('.dli').forEach(function(d){ d.classList.remove('on'); });
+  el.classList.add('on');
+  var l = draftLeads[idx];
+  var preview = document.getElementById('draft-preview');
+  preview.querySelector('.dsrh').innerHTML = '<div><div style="font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px"><div class="lav" style="background:'+l.color+';width:28px;height:28px;font-size:10px">'+l.init+'</div>'+l.name+'</div><div style="font-size:12px;color:var(--muted);margin-top:3px">'+l.email+' &middot; '+l.company+' &middot; Owner: '+l.owner+'</div></div><button class="excl">Exclude</button>';
+  preview.querySelector('.dcc .dcr').innerHTML = '<div class="lav" style="background:'+l.color+'">'+l.init+'</div><div style="flex:1"><div style="font-size:13px;font-weight:500">'+l.name+'</div><div style="font-size:12px;color:var(--muted)">'+l.email+' &middot; '+l.company+'</div></div><span class="ok"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5 3.5-4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>Information complete</span><button class="excl" style="margin-left:8px">Exclude</button>';
+  preview.querySelector('.eph .ept span').textContent = 'To: '+l.name;
+}
+
+// Modals
+function openModal(type) {
+  document.getElementById('modal-'+type).classList.add('on');
+}
+function closeModal(type) {
+  document.getElementById('modal-'+type).classList.remove('on');
+}
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+
+renderCustomers();
+renderLeads();
+renderCampaigns();
+</script>
+</body>
+</html>
