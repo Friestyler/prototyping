@@ -766,7 +766,7 @@ export default function Lists2View({
     const merge = async () => {
       const { loadUserSavedLists } = await import("@/lib/user-saved-lists")
       const { findSmartListUseCase } = await import("@/lib/smart-list-use-cases")
-      const userLists = loadUserSavedLists()
+      const userLists = await loadUserSavedLists()
       if (userLists.length === 0) return
       setSavedLists((prev) => {
         const existingIds = new Set(prev.map((l) => l.id))

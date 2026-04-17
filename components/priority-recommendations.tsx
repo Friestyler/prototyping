@@ -55,26 +55,30 @@ export default function PriorityRecommendations({ onCreateCampaignFor }: Priorit
     setSavingFor(uc)
   }
 
-  const handleConfirmSave = (name: string, type: UserSavedListType) => {
+  const handleConfirmSave = async (name: string, type: UserSavedListType) => {
     if (!savingFor) return
     const recordIds = savingFor.customers.map((c) => String(c.recordId))
-    saveUserSavedList({
-      id: `usr-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    const saved = await saveUserSavedList({
       name,
       type,
-      customerCount: savingFor.customers.length || savingFor.clientCount,
       customerIds: recordIds,
       sourceUseCaseId: savingFor.id,
       sourceTitle: savingFor.title,
       iconBg: savingFor.iconBg,
       iconColor: savingFor.iconColor,
       description: savingFor.description,
-      createdAt: new Date().toISOString(),
     })
-    toast({
-      title: "Smart list saved",
-      description: `"${name}" added to My Lists as ${type === "dynamic" ? "a dynamic list" : "a static list"}.`,
-    })
+    if (saved) {
+      toast({
+        title: "Smart list saved",
+        description: `"${name}" added to My Lists as ${type === "dynamic" ? "a dynamic list" : "a static list"}.`,
+      })
+    } else {
+      toast({
+        title: "Couldn't save list",
+        description: "The server rejected the save. Check the API logs.",
+      })
+    }
     setSavingFor(null)
   }
 
