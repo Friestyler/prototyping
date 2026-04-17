@@ -406,7 +406,7 @@ function SmartListCard({
               No customers match this list yet.
             </div>
           ) : (
-            <CustomerTable customers={useCase.customers} />
+            <CustomerTable customers={useCase.customers} previewMode />
           )}
         </div>
       )}

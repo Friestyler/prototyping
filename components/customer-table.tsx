@@ -9,6 +9,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   ChevronsUpDown,
+  Lock,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -50,8 +51,77 @@ const COLUMNS: { key: SortKey; label: string }[] = [
 ]
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
+const PREVIEW_VISIBLE_ROWS = 12
 
-export function CustomerTable({ customers }: { customers: MasterCustomer[] }) {
+interface CustomerTableProps {
+  customers: MasterCustomer[]
+  /**
+   * When true, renders a read-only preview: first 12 rows visible, the rest
+   * faded under a gradient, with a "Save this list to refine results" hint.
+   * No sorting, no pagination — used by the Priority Recommendations cards.
+   */
+  previewMode?: boolean
+}
+
+export function CustomerTable({ customers, previewMode = false }: CustomerTableProps) {
+  if (previewMode) return <PreviewTable customers={customers} />
+  return <FullTable customers={customers} />
+}
+
+function PreviewTable({ customers }: { customers: MasterCustomer[] }) {
+  const visible = customers.slice(0, PREVIEW_VISIBLE_ROWS)
+  const hidden = Math.max(0, customers.length - visible.length)
+
+  return (
+    <div>
+      <div className="relative">
+        <Table>
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              {COLUMNS.map((col, i) => (
+                <TableHead key={col.key} className={cn("select-none", i === 0 && "pl-5")}>
+                  {col.label}
+                </TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {visible.map((c) => (
+              <TableRow key={c.id}>
+                <TableCell className="pl-5 font-medium text-gray-900 tabular-nums">{c.dossierNumber}</TableCell>
+                <TableCell className="text-gray-600">{c.customerType}</TableCell>
+                <TableCell className="text-gray-900">{c.firstName}</TableCell>
+                <TableCell className="text-gray-900">
+                  {c.lastName || <span className="text-gray-400">—</span>}
+                </TableCell>
+                <TableCell className="text-gray-600 tabular-nums">{c.dateOfBirth}</TableCell>
+                <TableCell className="text-gray-600">{c.address}</TableCell>
+                <TableCell className="text-gray-600">{c.products.join(", ")}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+        {hidden > 0 && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-white via-white/85 to-transparent" />
+        )}
+      </div>
+
+      {hidden > 0 && (
+        <div className="flex items-center justify-center gap-2 px-5 py-3 border-t border-gray-100 text-sm text-gray-600">
+          <Lock className="w-3.5 h-3.5 text-gray-400" />
+          <span>
+            Showing {visible.length} of {customers.length} customers ·{" "}
+            <span className="text-gray-700 font-medium">
+              Save this list to view and refine all results with filters
+            </span>
+          </span>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function FullTable({ customers }: { customers: MasterCustomer[] }) {
   const [sortKey, setSortKey] = useState<SortKey>("dossierNumber")
   const [sortDir, setSortDir] = useState<SortDir>("asc")
   const [pageSize, setPageSize] = useState(50)
