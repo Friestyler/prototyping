@@ -334,3 +334,16 @@ const authedHandler = withMcpAuth(
 )
 
 export { authedHandler as GET, authedHandler as POST, authedHandler as DELETE }
+
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      "access-control-allow-origin": "*",
+      "access-control-allow-methods": "GET, POST, DELETE, OPTIONS",
+      "access-control-allow-headers": "Authorization, Content-Type, MCP-Protocol-Version, MCP-Session-Id",
+      "access-control-expose-headers": "WWW-Authenticate, MCP-Session-Id",
+      "access-control-max-age": "86400",
+    },
+  })
+}

@@ -85,7 +85,30 @@ export default function MCPSetupPage() {
           </p>
         </Card>
 
-        <Section title="Claude Desktop" subtitle="Mac / Windows app">
+        <Section title="Claude Desktop / claude.ai" subtitle="Easiest — Add Custom Connector">
+          <ol className="list-decimal pl-5 space-y-1.5 text-[14px] text-[#374151]">
+            <li>
+              In Claude, open <strong>Settings</strong> → <strong>Connectors</strong> →{" "}
+              <strong>Add custom connector</strong>.
+            </li>
+            <li>
+              Set <strong>Name</strong> = <code>Qollabi</code>, <strong>URL</strong> ={" "}
+              <span className="font-mono break-all">{mcpUrl}</span>. Leave OAuth fields blank — they're auto-discovered.
+            </li>
+            <li>
+              Click <strong>Add</strong>. Claude opens a browser tab to{" "}
+              <code>/oauth/authorize</code> on this server — paste your <strong>api key</strong> (above) and
+              click <strong>Authorize</strong>.
+            </li>
+            <li>You'll be sent back to Claude with the connector enabled.</li>
+          </ol>
+          <p className="text-[13px] text-[#6B7280]">
+            Custom connectors on claude.ai require a Pro / Team / Enterprise plan. Claude Desktop
+            (Mac / Windows) supports them on any plan.
+          </p>
+        </Section>
+
+        <Section title="Claude Desktop — manual JSON" subtitle="Alternative if Add Connector isn't available">
           <ol className="list-decimal pl-5 space-y-1.5 text-[14px] text-[#374151]">
             <li>
               Open Claude Desktop → top menu → <strong>Settings</strong> → <strong>Developer</strong> →{" "}
@@ -103,24 +126,6 @@ export default function MCPSetupPage() {
           <p className="text-[13px] text-[#6B7280]">
             Then in any session, type <code>/mcp</code> to confirm <code>qollabi</code> is connected.
           </p>
-        </Section>
-
-        <Section title="claude.ai" subtitle="Web app — Pro / Team / Enterprise">
-          <ol className="list-decimal pl-5 space-y-1.5 text-[14px] text-[#374151]">
-            <li>
-              Open <a href="https://claude.ai" className="text-[#4F46E5] underline inline-flex items-center gap-1" target="_blank" rel="noreferrer">claude.ai <ExternalLink className="w-3 h-3" /></a> →
-              profile → <strong>Settings</strong> → <strong>Connectors</strong>.
-            </li>
-            <li>
-              Click <strong>Add custom connector</strong>.
-            </li>
-            <li>
-              Name it <code>Qollabi</code>, set the Server URL to{" "}
-              <span className="font-mono break-all">{mcpUrl}</span>, and add an Authorization header with{" "}
-              <code>Bearer &lt;your-api-key&gt;</code>.
-            </li>
-            <li>Save and enable the connector in any new chat.</li>
-          </ol>
         </Section>
 
         <Section title="What you can ask Claude">
