@@ -23,9 +23,7 @@ const chartSchema = z.object({
   yLabel: z.string().optional(),
   data: z
     .array(z.object({ label: z.string(), value: z.number() }))
-    .min(2)
-    .max(20)
-    .describe("Chart data points. Each point is a label + a numeric value."),
+    .describe("Chart data points (2–20 items). Each point is a label + a numeric value."),
   unit: z.enum(["count", "eur", "percent"]).default("count"),
 })
 
@@ -33,7 +31,6 @@ const responseSchema = z.object({
   answer: z.string().describe("Plain-text answer to the broker's question. 1–4 short paragraphs."),
   followUpSuggestions: z
     .array(z.string())
-    .max(3)
     .optional()
     .describe("Up to 3 short follow-up questions the broker might ask next."),
   chart: chartSchema.nullable().describe(
