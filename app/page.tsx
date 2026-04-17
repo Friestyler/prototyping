@@ -8,6 +8,7 @@ import SmartListsSettings from "@/components/smart-lists-settings"
 import PortfolioIntelligence from "@/components/portfolio-intelligence"
 import LeadsPage from "@/components/leads-campaigns/leads-page"
 import CampaignsPage from "@/components/leads-campaigns/campaigns-page"
+import MCPSetupPage from "@/components/mcp-setup-page"
 // `Partner` is a legacy type name in okr-data.ts — it's the customer record shape.
 import { type Partner as CustomerRecord } from "@/lib/okr-data"
 import { MASTER_CUSTOMERS_AS_RECORDS } from "@/lib/customer-database"
@@ -96,6 +97,7 @@ export default function OKRDashboard() {
               />
             )}
             {activeMenu === "leads" && <LeadsPage />}
+            {activeMenu === "mcp-setup" && <MCPSetupPage />}
             {activeMenu === "campaigns" && (
               <CampaignsPage
                 initialCampaignName={campaignsInitialName}

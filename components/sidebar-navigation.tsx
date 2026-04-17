@@ -3,9 +3,9 @@
 import { useState } from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { ChevronDown } from "lucide-react"
+import { ChevronDown, Plug } from "lucide-react"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 const StarIcon = () => (
   <svg
@@ -201,6 +201,34 @@ export default function SidebarNavigation({ activeMenu, onMenuChange }: SidebarN
             <span className="ml-2.5">Campaigns</span>
           </Button>
         </nav>
+      </div>
+
+      {/* Profile menu — bottom of sidebar */}
+      <div className="px-3 pb-4 pt-2 border-t border-gray-200">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              className="w-full h-[42px] justify-start px-2.5 rounded-lg hover:bg-gray-200/50 font-normal"
+            >
+              <div className="w-7 h-7 rounded-full bg-[#4F46E5] flex items-center justify-center flex-shrink-0">
+                <span className="text-white text-[12px] font-medium">K</span>
+              </div>
+              <span className="ml-2.5 text-[15px] text-[#1F2937] flex-1 text-left">Kamelia</span>
+              <ChevronDown className="h-4 w-4 text-gray-600 flex-shrink-0" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" side="top" className="w-[216px]">
+            <DropdownMenuItem onClick={() => onMenuChange("mcp-setup")}>
+              <Plug className="h-4 w-4 mr-2" />
+              <span>Connect to Claude (MCP)</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem disabled>
+              <span className="text-[13px] text-gray-500">Sign out</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   )
