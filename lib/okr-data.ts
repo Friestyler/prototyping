@@ -134,7 +134,7 @@ export const initialPartners: Partner[] = [
   {
     id: 1,
     idVnemer: 1001,
-    name: "Customer 1",
+    name: "TechVision Solutions",
     status: "active",
     code: "TVS",
     teamSize: "medium",
@@ -205,9 +205,9 @@ export const initialPartners: Partner[] = [
       { initials: "MVO", color: "bg-blue-500" },
       { initials: "JBu", color: "bg-green-500" },
     ],
-    owner: "Internal",
+    owner: "Michael van Oosten",
     okrs: {
-      email: { label: "Email", value: "", status: "active" },
+      email: { label: "Email", value: "contact@techvision.be", status: "active" },
       "address-line-1": { label: "Address Line 1", value: "Technologielaan 15", status: "active" },
       "address-line-2": { label: "Address Line 2", value: "3001 Leuven", status: "active" },
       revenue: {
@@ -227,7 +227,7 @@ export const initialPartners: Partner[] = [
   {
     id: 2,
     idVnemer: 1002,
-    name: "Customer 2",
+    name: "Global Logistics BV",
     status: "active",
     code: "GLB",
     teamSize: "large",
@@ -298,9 +298,9 @@ export const initialPartners: Partner[] = [
       { initials: "MJ", color: "bg-purple-500" },
       { initials: "LK", color: "bg-orange-500" },
     ],
-    owner: "Internal",
+    owner: "Mike Johnson",
     okrs: {
-      email: { label: "Email", value: "", status: "active" },
+      email: { label: "Email", value: "info@globallogistics.be", status: "active" },
       "address-line-1": { label: "Address Line 1", value: "Havenstraat 42", status: "active" },
       "address-line-2": { label: "Address Line 2", value: "2030 Antwerpen", status: "active" },
       revenue: {
@@ -317,7 +317,7 @@ export const initialPartners: Partner[] = [
   {
     id: 3,
     idVnemer: 1003,
-    name: "Customer 3",
+    name: "Retail Masters Group",
     status: "active",
     code: "RMG",
     teamSize: "enterprise",
@@ -417,7 +417,7 @@ export const initialPartners: Partner[] = [
       { initials: "DLa", color: "bg-purple-500" },
       { initials: "RKo", color: "bg-pink-500" },
     ],
-    owner: "Internal",
+    owner: "David Lee",
     okrs: {
       email: {
         value: "info@retailmasters.be",
@@ -442,7 +442,7 @@ export const initialPartners: Partner[] = [
   {
     id: 4,
     idVnemer: 1004,
-    name: "Customer 4",
+    name: "HealthCare Partners",
     status: "active",
     code: "HCP",
     teamSize: "medium",
@@ -539,7 +539,7 @@ export const initialPartners: Partner[] = [
     desiredProducts: "Auto",
     partnerCount: 4,
     team: [{ initials: "AHe", color: "bg-indigo-500" }],
-    owner: "Internal",
+    owner: "Anna Hewitt",
     okrs: {
       email: {
         value: "contact@healthcarepartners.be",
@@ -564,7 +564,7 @@ export const initialPartners: Partner[] = [
   {
     id: 5,
     idVnemer: 1005,
-    name: "Customer 5",
+    name: "Construction Dynamics",
     status: "active",
     code: "CDY",
     teamSize: "large",
@@ -693,7 +693,7 @@ export const initialPartners: Partner[] = [
       { initials: "TBr", color: "bg-yellow-500" },
       { initials: "NWi", color: "bg-red-500" },
     ],
-    owner: "Internal",
+    owner: "Tom Brown",
     okrs: {
       email: {
         value: "info@constructiondynamics.be",
@@ -718,7 +718,7 @@ export const initialPartners: Partner[] = [
   {
     id: 6,
     idVnemer: 1006,
-    name: "Customer 6",
+    name: "Digital Marketing Hub",
     status: "active",
     code: "DMH",
     teamSize: "small",
@@ -815,7 +815,7 @@ export const initialPartners: Partner[] = [
     desiredProducts: "Rechtsbijstand",
     partnerCount: 2,
     team: [{ initials: "KPa", color: "bg-cyan-500" }],
-    owner: "Internal",
+    owner: "Karen Palmer",
     okrs: {
       email: {
         value: "hello@digitalmarketinghub.be",
@@ -840,7 +840,7 @@ export const initialPartners: Partner[] = [
   {
     id: 7,
     idVnemer: 1007,
-    name: "Customer 7",
+    name: "Manufacturing Excellence",
     status: "active",
     code: "MEX",
     teamSize: "enterprise",
@@ -940,7 +940,7 @@ export const initialPartners: Partner[] = [
       { initials: "FMu", color: "bg-lime-500" },
       { initials: "GVa", color: "bg-amber-500" },
     ],
-    owner: "Internal",
+    owner: "Frank Müller",
     okrs: {
       email: {
         value: "contact@manufacturing-excellence.com",
@@ -965,7 +965,7 @@ export const initialPartners: Partner[] = [
   {
     id: 8,
     idVnemer: 1008,
-    name: "Customer 8",
+    name: "Financial Advisors Pro",
     status: "active",
     code: "FAP",
     teamSize: "medium",
@@ -1036,7 +1036,7 @@ export const initialPartners: Partner[] = [
       { initials: "RB", color: "bg-teal-500" },
       { initials: "NK", color: "bg-pink-500" },
     ],
-    owner: "Internal",
+    owner: "Rachel Brown",
     okrs: {
       email: {
         value: "info@financialadvisors.be",
@@ -1061,7 +1061,7 @@ export const initialPartners: Partner[] = [
   {
     id: 9,
     idVnemer: 1009,
-    name: "Customer 9",
+    name: "E-Commerce Ventures",
     status: "active",
     code: "ECV",
     teamSize: "medium",
@@ -1161,7 +1161,7 @@ export const initialPartners: Partner[] = [
       { initials: "ITo", color: "bg-violet-500" },
       { initials: "JCh", color: "bg-fuchsia-500" },
     ],
-    owner: "Internal",
+    owner: "Ian Tobin",
     okrs: {
       email: {
         value: "support@ecommerceventures.be",
@@ -1186,7 +1186,7 @@ export const initialPartners: Partner[] = [
   {
     id: 10,
     idVnemer: 1010,
-    name: "Customer 10",
+    name: "Transport Solutions Ltd",
     status: "active",
     code: "TSL",
     teamSize: "large",
@@ -1286,7 +1286,7 @@ export const initialPartners: Partner[] = [
       { initials: "KSm", color: "bg-sky-500" },
       { initials: "LJo", color: "bg-emerald-500" },
     ],
-    owner: "Internal",
+    owner: "Kevin Smith",
     okrs: {
       email: {
         value: "info@transportsolutions.be",
@@ -1311,7 +1311,7 @@ export const initialPartners: Partner[] = [
   {
     id: 11,
     idVnemer: 1011,
-    name: "Customer 11",
+    name: "2BeSecured",
     status: "active",
     code: "2BS",
     teamSize: "medium",
@@ -1470,7 +1470,7 @@ export const initialPartners: Partner[] = [
       { initials: "JBu", color: "bg-green-500" },
       { initials: "DLa", color: "bg-purple-500" },
     ],
-    owner: "Internal",
+    owner: "Michael van Oosten",
     okrs: {
       email: {
         value: "info@2besecured.be",
@@ -1548,7 +1548,7 @@ export const initialPartners: Partner[] = [
   {
     id: 12,
     idVnemer: 1012,
-    name: "Customer 12",
+    name: "Acerta",
     status: "active",
     code: "ACE",
     teamSize: "large",
@@ -1648,7 +1648,7 @@ export const initialPartners: Partner[] = [
       { initials: "SJo", color: "bg-orange-500" },
       { initials: "LMa", color: "bg-teal-500" },
     ],
-    owner: "Internal",
+    owner: "Michael van Oosten",
     okrs: {
       email: {
         value: "contact@acerta.be",
@@ -1726,7 +1726,7 @@ export const initialPartners: Partner[] = [
   {
     id: 13,
     idVnemer: 1013,
-    name: "Customer 13",
+    name: "Aedifica",
     status: "active",
     code: "AED",
     teamSize: "large",
@@ -1799,7 +1799,7 @@ export const initialPartners: Partner[] = [
       { initials: "DLa", color: "bg-purple-500" },
       { initials: "SJo", color: "bg-orange-500" },
     ],
-    owner: "Internal",
+    owner: "Michael van Oosten",
     okrs: {
       email: {
         value: "info@aedifica.eu",
@@ -1877,7 +1877,7 @@ export const initialPartners: Partner[] = [
   {
     id: 14,
     idVnemer: 1014,
-    name: "Customer 14",
+    name: "Ageas",
     status: "active",
     code: "AGS",
     teamSize: "large",
@@ -1949,7 +1949,7 @@ export const initialPartners: Partner[] = [
       { initials: "SJo", color: "bg-orange-500" },
       { initials: "MVO", color: "bg-blue-500" },
     ],
-    owner: "Internal",
+    owner: "Michael van Oosten",
     okrs: {
       email: {
         value: "corporate@ageas.com",
@@ -2027,7 +2027,7 @@ export const initialPartners: Partner[] = [
   {
     id: 15,
     idVnemer: 1015,
-    name: "Customer 15",
+    name: "Agfa-Gevaert",
     status: "active",
     code: "AGF",
     teamSize: "large",
@@ -2098,7 +2098,7 @@ export const initialPartners: Partner[] = [
       { initials: "LMa", color: "bg-teal-500" },
       { initials: "RVa", color: "bg-pink-500" },
     ],
-    owner: "Internal",
+    owner: "Michael van Oosten",
     okrs: {
       email: {
         value: "info@agfa.com",
@@ -2176,7 +2176,7 @@ export const initialPartners: Partner[] = [
   {
     id: 16,
     idVnemer: 1016,
-    name: "Customer 16",
+    name: "Anheuser-Busch InBev",
     status: "active",
     code: "ABI",
     teamSize: "large",
@@ -2249,7 +2249,7 @@ export const initialPartners: Partner[] = [
       { initials: "RVa", color: "bg-pink-500" },
       { initials: "MVO", color: "bg-blue-500" },
     ],
-    owner: "Internal",
+    owner: "Michael van Oosten",
     okrs: {
       email: {
         value: "corporate@ab-inbev.com",
@@ -2327,7 +2327,7 @@ export const initialPartners: Partner[] = [
   {
     id: 17,
     idVnemer: 1017,
-    name: "Customer 17",
+    name: "Aperam",
     status: "active",
     code: "APR",
     teamSize: "large",
@@ -2399,7 +2399,7 @@ export const initialPartners: Partner[] = [
       { initials: "JBu", color: "bg-green-500" },
       { initials: "LMa", color: "bg-teal-500" },
     ],
-    owner: "Internal",
+    owner: "Michael van Oosten",
     okrs: {
       email: {
         value: "contact@aperam.com",
@@ -2477,7 +2477,7 @@ export const initialPartners: Partner[] = [
   {
     id: 18,
     idVnemer: 1018,
-    name: "Customer 18",
+    name: "Argenta",
     status: "active",
     code: "ARG",
     teamSize: "large",
@@ -2548,7 +2548,7 @@ export const initialPartners: Partner[] = [
       { initials: "SJo", color: "bg-orange-500" },
       { initials: "DLa", color: "bg-purple-500" },
     ],
-    owner: "Internal",
+    owner: "Michael van Oosten",
     okrs: {
       email: {
         value: "info@argenta.be",
@@ -2626,7 +2626,7 @@ export const initialPartners: Partner[] = [
   {
     id: 19,
     idVnemer: 1019,
-    name: "Customer 19",
+    name: "Atenor Group",
     status: "active",
     code: "ATN",
     teamSize: "medium",
@@ -2697,7 +2697,7 @@ export const initialPartners: Partner[] = [
       { initials: "LMa", color: "bg-teal-500" },
       { initials: "RVa", color: "bg-pink-500" },
     ],
-    owner: "Internal",
+    owner: "Laura Martin",
     okrs: {
       email: {
         value: "info@atenor.com",
@@ -2775,7 +2775,7 @@ export const initialPartners: Partner[] = [
   {
     id: 20,
     idVnemer: 1020,
-    name: "Customer 20",
+    name: "Aveve",
     status: "active",
     code: "AVE",
     teamSize: "medium",
@@ -2846,7 +2846,7 @@ export const initialPartners: Partner[] = [
       { initials: "AM", color: "bg-blue-500" },
       { initials: "TL", color: "bg-green-500" },
     ],
-    owner: "Internal",
+    owner: "Alice Martin",
     okrs: {
       email: {
         value: "contact@aveve.be",
@@ -2924,7 +2924,7 @@ export const initialPartners: Partner[] = [
   {
     id: 21,
     idVnemer: 1021,
-    name: "Customer 21",
+    name: "Axe Investments",
     status: "active",
     code: "AXE",
     teamSize: "small",
@@ -2995,7 +2995,7 @@ export const initialPartners: Partner[] = [
       { initials: "AM", color: "bg-blue-500" },
       { initials: "TL", color: "bg-green-500" },
     ],
-    owner: "Internal",
+    owner: "Alice Martin",
     okrs: {
       email: {
         value: "contact@axeinvestments.be",
@@ -3093,7 +3093,7 @@ export const initialPartners: Partner[] = [
   {
     id: 22,
     idVnemer: 1022,
-    name: "Customer 22",
+    name: "Barco",
     status: "active",
     code: "BAR",
     teamSize: "large",
@@ -3164,7 +3164,7 @@ export const initialPartners: Partner[] = [
       { initials: "AM", color: "bg-blue-500" },
       { initials: "TL", color: "bg-green-500" },
     ],
-    owner: "Internal",
+    owner: "Alice Martin",
     okrs: {
       revenue: {
         type: "Objective",
@@ -3253,7 +3253,7 @@ export const initialPartners: Partner[] = [
   {
     id: 23,
     idVnemer: 1023,
-    name: "Customer 23",
+    name: "Beaulieu International Group",
     status: "active",
     code: "BIG",
     teamSize: "large",
@@ -3324,7 +3324,7 @@ export const initialPartners: Partner[] = [
       { initials: "AM", color: "bg-blue-500" },
       { initials: "TL", color: "bg-green-500" },
     ],
-    owner: "Internal",
+    owner: "Alice Martin",
     okrs: {
       revenue: {
         type: "Objective",
@@ -3413,7 +3413,7 @@ export const initialPartners: Partner[] = [
   {
     id: 24,
     idVnemer: 1024,
-    name: "Customer 24",
+    name: "Bekaert",
     status: "active",
     code: "BEK",
     teamSize: "large",
@@ -3484,7 +3484,7 @@ export const initialPartners: Partner[] = [
       { initials: "AM", color: "bg-blue-500" },
       { initials: "TL", color: "bg-green-500" },
     ],
-    owner: "Internal",
+    owner: "Alice Martin",
     okrs: {
       revenue: {
         type: "Objective",
@@ -3573,7 +3573,7 @@ export const initialPartners: Partner[] = [
   {
     id: 25,
     idVnemer: 1025,
-    name: "Customer 25",
+    name: "Belfius",
     status: "active",
     code: "BEL",
     teamSize: "enterprise",
@@ -3644,7 +3644,7 @@ export const initialPartners: Partner[] = [
       { initials: "AM", color: "bg-blue-500" },
       { initials: "TL", color: "bg-green-500" },
     ],
-    owner: "Internal",
+    owner: "Alice Martin",
     okrs: {
       revenue: {
         type: "Objective",
@@ -3701,7 +3701,7 @@ export const initialPartners: Partner[] = [
   {
     id: 101,
     idVnemer: 2001,
-    name: "Customer 101",
+    name: "Sophie Dubois",
     status: "active",
     code: "SDUB",
     teamSize: "small",
@@ -3725,11 +3725,11 @@ export const initialPartners: Partner[] = [
     desiredProducts: "Car Insurance",
     partnerCount: 1,
     team: [{ initials: "JB", color: "bg-purple-500" }],
-    owner: "Internal",
+    owner: "Julie Bertrand",
     okrs: {
       email: {
         label: "Email",
-        value: "",
+        value: "sophie.dubois@email.be",
         status: "active",
       },
       "address-line-1": {
@@ -3758,7 +3758,7 @@ export const initialPartners: Partner[] = [
   {
     id: 102,
     idVnemer: 2002,
-    name: "Customer 102",
+    name: "Marc Dubois",
     status: "active",
     code: "MDUB",
     teamSize: "small",
@@ -3782,11 +3782,11 @@ export const initialPartners: Partner[] = [
     desiredProducts: "Life Insurance",
     partnerCount: 1,
     team: [{ initials: "JB", color: "bg-purple-500" }],
-    owner: "Internal",
+    owner: "Julie Bertrand",
     okrs: {
       email: {
         label: "Email",
-        value: "",
+        value: "marc.dubois@email.be",
         status: "active",
       },
       "address-line-1": {
@@ -3815,7 +3815,7 @@ export const initialPartners: Partner[] = [
   {
     id: 103,
     idVnemer: 2003,
-    name: "Customer 103",
+    name: "Emma Laurent",
     status: "active",
     code: "ELAU",
     teamSize: "small",
@@ -3839,11 +3839,11 @@ export const initialPartners: Partner[] = [
     desiredProducts: "Health Insurance",
     partnerCount: 1,
     team: [{ initials: "PD", color: "bg-indigo-500" }],
-    owner: "Internal",
+    owner: "Pierre Dubois",
     okrs: {
       email: {
         label: "Email",
-        value: "",
+        value: "emma.laurent@email.be",
         status: "active",
       },
       "address-line-1": {
@@ -3872,7 +3872,7 @@ export const initialPartners: Partner[] = [
   {
     id: 104,
     idVnemer: 2004,
-    name: "Customer 104",
+    name: "Thomas Laurent",
     status: "active",
     code: "TLAU",
     teamSize: "small",
@@ -3896,11 +3896,11 @@ export const initialPartners: Partner[] = [
     desiredProducts: "Home Insurance",
     partnerCount: 1,
     team: [{ initials: "PD", color: "bg-indigo-500" }],
-    owner: "Internal",
+    owner: "Pierre Dubois",
     okrs: {
       email: {
         label: "Email",
-        value: "",
+        value: "thomas.laurent@email.be",
         status: "active",
       },
       "address-line-1": {
@@ -3929,7 +3929,7 @@ export const initialPartners: Partner[] = [
   {
     id: 105,
     idVnemer: 2005,
-    name: "Customer 105",
+    name: "Julie Peeters",
     status: "active",
     code: "JPEE",
     teamSize: "small",
@@ -3953,11 +3953,11 @@ export const initialPartners: Partner[] = [
     desiredProducts: "Car Insurance",
     partnerCount: 1,
     team: [{ initials: "MV", color: "bg-green-500" }],
-    owner: "Internal",
+    owner: "Marie Vermeulen",
     okrs: {
       email: {
         label: "Email",
-        value: "",
+        value: "julie.peeters@email.be",
         status: "active",
       },
       "address-line-1": {
@@ -3986,7 +3986,7 @@ export const initialPartners: Partner[] = [
   {
     id: 106,
     idVnemer: 2006,
-    name: "Customer 106",
+    name: "Lucas Janssens",
     status: "active",
     code: "LJAN",
     teamSize: "small",
@@ -4010,11 +4010,11 @@ export const initialPartners: Partner[] = [
     desiredProducts: "Life Insurance",
     partnerCount: 1,
     team: [{ initials: "SL", color: "bg-blue-500" }],
-    owner: "Internal",
+    owner: "Sophie Lambert",
     okrs: {
       email: {
         label: "Email",
-        value: "",
+        value: "lucas.janssens@email.be",
         status: "active",
       },
       "address-line-1": {
@@ -4043,7 +4043,7 @@ export const initialPartners: Partner[] = [
   {
     id: 107,
     idVnemer: 2007,
-    name: "Customer 107",
+    name: "Marie Janssens",
     status: "active",
     code: "MJAN",
     teamSize: "small",
@@ -4067,11 +4067,11 @@ export const initialPartners: Partner[] = [
     desiredProducts: "Health Insurance",
     partnerCount: 1,
     team: [{ initials: "SL", color: "bg-blue-500" }],
-    owner: "Internal",
+    owner: "Sophie Lambert",
     okrs: {
       email: {
         label: "Email",
-        value: "",
+        value: "marie.janssens@email.be",
         status: "active",
       },
       "address-line-1": {
@@ -4100,7 +4100,7 @@ export const initialPartners: Partner[] = [
   {
     id: 108,
     idVnemer: 2008,
-    name: "Customer 108",
+    name: "Pierre Vermeulen",
     status: "active",
     code: "PVER",
     teamSize: "small",
@@ -4124,11 +4124,11 @@ export const initialPartners: Partner[] = [
     desiredProducts: "Car Insurance",
     partnerCount: 1,
     team: [{ initials: "LC", color: "bg-orange-500" }],
-    owner: "Internal",
+    owner: "Luc Claes",
     okrs: {
       email: {
         label: "Email",
-        value: "",
+        value: "pierre.vermeulen@email.be",
         status: "active",
       },
       "address-line-1": {
@@ -4157,7 +4157,7 @@ export const initialPartners: Partner[] = [
   {
     id: 109,
     idVnemer: 2009,
-    name: "Customer 109",
+    name: "Isabelle Maes",
     status: "active",
     code: "IMAE",
     teamSize: "small",
@@ -4181,11 +4181,11 @@ export const initialPartners: Partner[] = [
     desiredProducts: "Life Insurance",
     partnerCount: 1,
     team: [{ initials: "TD", color: "bg-pink-500" }],
-    owner: "Internal",
+    owner: "Thomas Dubois",
     okrs: {
       email: {
         label: "Email",
-        value: "",
+        value: "isabelle.maes@email.be",
         status: "active",
       },
       "address-line-1": {
@@ -4214,7 +4214,7 @@ export const initialPartners: Partner[] = [
   {
     id: 110,
     idVnemer: 2010,
-    name: "Customer 110",
+    name: "Nicolas Claes",
     status: "active",
     code: "NCLA",
     teamSize: "small",
@@ -4238,11 +4238,11 @@ export const initialPartners: Partner[] = [
     desiredProducts: "Home Insurance",
     partnerCount: 1,
     team: [{ initials: "AM", color: "bg-teal-500" }],
-    owner: "Internal",
+    owner: "Anne Martin",
     okrs: {
       email: {
         label: "Email",
-        value: "",
+        value: "nicolas.claes@email.be",
         status: "active",
       },
       "address-line-1": {

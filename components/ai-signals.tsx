@@ -40,8 +40,8 @@ const CONFIDENCE: Record<string, number> = {
 }
 
 // ── Mock customer generator ───────────────────────────────────────────────────
-const FIRST_NAMES = ["Customer"]
-const LAST_NAMES = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T"]
+const FIRST_NAMES = ["Thomas", "Marie", "Pieter", "Sophie", "Luc", "Emma", "Jan", "Julie", "Koen", "Laura", "David", "Nathalie", "Stef", "Elien", "Wim", "Charlotte", "Raf", "Ines", "Tim", "Hanne", "Bram", "Katrien", "Joris", "Lies", "Niels"]
+const LAST_NAMES  = ["Declercq", "Janssen", "Peeters", "De Smedt", "Claes", "Wouters", "Willems", "Maes", "Leclercq", "Goossens", "Hermans", "Bogaert", "Van Acker", "De Wolf", "Baert", "Desmet", "Stevens", "Cools", "Dubois", "Mertens"]
 const PRODUCTS    = ["Auto + Brand", "Auto only", "Brand + BA", "Hospitalisatie", "Auto + Hospitalisatie", "Brand + Schuldsaldo", "BA / Familiale", "Multi-product"]
 const CITIES      = ["Gent", "Antwerpen", "Brussel", "Brugge", "Leuven", "Mechelen", "Hasselt", "Kortrijk", "Aalst", "Roeselare"]
 
@@ -200,15 +200,17 @@ function makeContacts(customerName: string, customerIdx: number) {
   const seed = customerName.split("").reduce((a, c) => a + c.charCodeAt(0), customerIdx)
   const rng = (() => { let s = seed; return () => { s = (s * 1664525 + 1013904223) & 0xffffffff; return Math.abs(s) / 0xffffffff } })()
   const count = Math.floor(rng() * 3) + 1
-  const CONTACT_LAST  = ["A", "B", "C", "D", "E", "F", "G", "H"]
+  const CONTACT_FIRST = ["Luc", "Marie", "Peter", "Sophie", "Tom", "Anna", "Bart", "Ellen"]
+  const CONTACT_LAST  = ["Janssen", "Peeters", "De Smedt", "Willems", "Claes", "Maes"]
   return Array.from({ length: count }, (_, i) => {
-    const last = CONTACT_LAST[Math.floor(rng() * CONTACT_LAST.length)]
+    const first = CONTACT_FIRST[Math.floor(rng() * CONTACT_FIRST.length)]
+    const last  = CONTACT_LAST[Math.floor(rng() * CONTACT_LAST.length)]
     const hasEmail = rng() > 0.25
     return {
       id: `${customerName}-contact-${i}`,
-      name: `Contact ${last}`,
-      email: hasEmail ? `contact-${last.toLowerCase()}-${i}@example.com` : null,
-      initials: `C${last}`,
+      name: `${first} ${last}`,
+      email: hasEmail ? `${first.toLowerCase()}.${last.toLowerCase().replace(" ", "")}@gmail.com` : null,
+      initials: `${first[0]}${last[0]}`,
     }
   })
 }
