@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { Sparkles, BarChart3 } from "lucide-react"
 import PortfolioOverview from "@/components/portfolio-overview"
 import PriorityRecommendations from "@/components/priority-recommendations"
+import AskAiPanel from "@/components/ask-ai-panel"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -82,6 +83,8 @@ export default function PortfolioIntelligence({ onOpenTemplate, onCreateCampaign
           />
         )}
       </div>
+
+      <AskAiPanel />
     </div>
   )
 }

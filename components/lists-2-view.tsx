@@ -2778,19 +2778,56 @@ export default function Lists2View({
   }, [savedLists, searchTerm])
 
   // Handle AI prompt submit
-  const handleAIPromptSubmit = () => {
+  const handleAIPromptSubmit = async () => {
     if (!aiPrompt.trim()) return
     setIsGenerating(true)
-    // Simulate API call
-    setTimeout(() => {
-      setIsGenerating(false)
-      setAIPromptExpanded(false) // Collapse AI prompt after submission
-      toast({
-        title: "Audience Generated",
-        description: "Your custom audience is being created. You'll be notified when it's ready.",
+    try {
+      const aiRes = await fetch("/api/agent/smart-list", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ prompt: aiPrompt.trim() }),
       })
-      // In a real scenario, this would trigger the generation and potentially open the new list
-    }, 1500)
+      const aiData = await aiRes.json()
+      if (!aiRes.ok) {
+        toast({
+          title: "Couldn't generate list",
+          description: aiData.message ?? aiData.error ?? `HTTP ${aiRes.status}`,
+        })
+        return
+      }
+
+      const { saveUserSavedList } = await import("@/lib/user-saved-lists")
+      const saved = await saveUserSavedList({
+        name: aiData.proposal.name,
+        type: aiData.proposal.type,
+        customerIds: aiData.customerIds,
+        description: aiData.proposal.description,
+        sourceUseCaseId: "ai-generated",
+        sourceTitle: "AI Generated",
+        iconBg: "#EEF2FF",
+        iconColor: "#4F46E5",
+      })
+
+      if (!saved) {
+        toast({ title: "Generated, but couldn't save", description: "Try again." })
+        return
+      }
+
+      toast({
+        title: "Smart list created",
+        description: `"${saved.name}" — ${saved.customerCount} customers.`,
+      })
+      setAIPromptExpanded(false)
+      setListFilter("saved")
+      setAiPrompt("")
+    } catch (err) {
+      toast({
+        title: "Couldn't generate list",
+        description: err instanceof Error ? err.message : String(err),
+      })
+    } finally {
+      setIsGenerating(false)
+    }
   }
 
   return (
