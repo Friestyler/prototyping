@@ -106,17 +106,19 @@ function PreviewTable({ customers }: { customers: MasterCustomer[] }) {
         )}
       </div>
 
-      {hidden > 0 && (
-        <div className="flex items-center justify-center gap-2 px-5 py-3 border-t border-gray-100 text-sm text-gray-600">
-          <Lock className="w-3.5 h-3.5 text-gray-400" />
-          <span>
-            Showing {visible.length} of {customers.length} customers ·{" "}
-            <span className="text-gray-700 font-medium">
-              Save this list to view and refine all results with filters
-            </span>
+      <div className="flex items-center justify-center gap-2 px-5 py-3 border-t border-gray-100 text-sm text-gray-600">
+        <Lock className="w-3.5 h-3.5 text-gray-400" />
+        <span>
+          {hidden > 0 && (
+            <>
+              Showing {visible.length} of {customers.length} customers ·{" "}
+            </>
+          )}
+          <span className="text-gray-700 font-medium">
+            Save this list to view and refine all results with filters
           </span>
-        </div>
-      )}
+        </span>
+      </div>
     </div>
   )
 }
