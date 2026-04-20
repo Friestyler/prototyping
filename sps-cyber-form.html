@@ -8,17 +8,17 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f9fafb; color: #333; }
-        .header { background: #fff; color: #163A6B; border-bottom: 1px solid #e5e7eb; }
-        .header-ribbon { height: 8px; background: linear-gradient(90deg, #1E40AF 0%, #06B6D4 100%); }
-        .header-inner { max-width: 1100px; margin: 0 auto; padding: 20px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 24px; }
-        .header .logo { height: 64px; width: auto; display: block; }
+        .header { background: linear-gradient(90deg, #1E40AF 0%, #2563EB 55%, #06B6D4 100%); color: #fff; border-bottom: 1px solid rgba(255,255,255,0.15); }
+        .header-inner { max-width: 1100px; margin: 0 auto; padding: 22px 20px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 24px; }
+        .header .logo-pill { background: #fff; border-radius: 10px; padding: 8px 14px; display: inline-flex; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.15); }
+        .header .logo { height: 56px; width: auto; display: block; }
         .header .logo-left { justify-self: start; }
         .header .logo-right { justify-self: end; }
-        .header-title { font-size: 22px; font-weight: 700; color: #163A6B; text-align: center; letter-spacing: 0.2px; }
+        .header-title { font-size: 24px; font-weight: 700; color: #fff; text-align: center; letter-spacing: 0.3px; text-shadow: 0 1px 2px rgba(0,0,0,0.15); }
         @media (max-width: 640px) {
             .header-inner { grid-template-columns: 1fr; justify-items: center; gap: 12px; }
-            .header .logo { height: 48px; }
-            .header-title { font-size: 18px; }
+            .header .logo { height: 44px; }
+            .header-title { font-size: 19px; }
         }
         .progress-bar-wrap { background: #fff; border-bottom: 1px solid #e5e7eb; padding: 16px 0; }
         .progress-inner { max-width: 1100px; margin: 0 auto; padding: 0 20px; }
@@ -121,11 +121,10 @@
 </head>
 <body>
     <div class="header">
-        <div class="header-ribbon"></div>
         <div class="header-inner">
-            <img src="cyberinsur_logo.svg" alt="CyberInsur" class="logo logo-left" onerror="this.style.display='none'">
+            <div class="logo-pill logo-left"><img src="cyberinsur_logo.svg" alt="CyberInsur" class="logo" onerror="this.parentElement.style.display='none'"></div>
             <h1 class="header-title">Cyberinsurance Questionnaire</h1>
-            <img src="insurteam_group_logo.svg" alt="InsurTeam Group" class="logo logo-right" onerror="this.style.display='none'">
+            <div class="logo-pill logo-right"><img src="insurteam_group_logo.svg" alt="InsurTeam Group" class="logo" onerror="this.parentElement.style.display='none'"></div>
         </div>
     </div>
 
@@ -769,29 +768,35 @@
 
     // PDF Generation
     function drawPdfHeader(doc) {
-        // Blue ribbon across the top
+        // Full blue ribbon spanning the header area
+        var ribbonH = 30;
         doc.setFillColor(30, 64, 175);
-        doc.rect(0, 0, 210, 6, 'F');
+        doc.rect(0, 0, 210, ribbonH, 'F');
 
-        var logoH = 16, topY = 12;
+        // Logo pills on white rounded backdrops
+        var pillW = 42, pillH = 16, pillY = (ribbonH - pillH) / 2;
+        var pad = 2;
+        doc.setFillColor(255, 255, 255);
+        doc.roundedRect(12, pillY, pillW, pillH, 2, 2, 'F');
+        doc.roundedRect(210 - 12 - pillW, pillY, pillW, pillH, 2, 2, 'F');
+
         if (LEFT_LOGO.dataUrl) {
-            var lw = logoH * (LEFT_LOGO.w / LEFT_LOGO.h);
-            if (lw > 50) { lw = 50; }
-            doc.addImage(LEFT_LOGO.dataUrl, 'PNG', 15, topY, lw, lw * (LEFT_LOGO.h / LEFT_LOGO.w));
+            var availW = pillW - pad*2, availH = pillH - pad*2;
+            var ratio = LEFT_LOGO.w / LEFT_LOGO.h;
+            var dw = availW, dh = dw / ratio;
+            if (dh > availH) { dh = availH; dw = dh * ratio; }
+            doc.addImage(LEFT_LOGO.dataUrl, 'PNG', 12 + (pillW - dw)/2, pillY + (pillH - dh)/2, dw, dh);
         }
         if (RIGHT_LOGO.dataUrl) {
-            var rw = logoH * (RIGHT_LOGO.w / RIGHT_LOGO.h);
-            if (rw > 50) { rw = 50; }
-            doc.addImage(RIGHT_LOGO.dataUrl, 'PNG', 195 - rw, topY, rw, rw * (RIGHT_LOGO.h / RIGHT_LOGO.w));
+            var availW2 = pillW - pad*2, availH2 = pillH - pad*2;
+            var ratio2 = RIGHT_LOGO.w / RIGHT_LOGO.h;
+            var dw2 = availW2, dh2 = dw2 / ratio2;
+            if (dh2 > availH2) { dh2 = availH2; dw2 = dh2 * ratio2; }
+            doc.addImage(RIGHT_LOGO.dataUrl, 'PNG', (210 - 12 - pillW) + (pillW - dw2)/2, pillY + (pillH - dh2)/2, dw2, dh2);
         }
 
-        doc.setFont('Helvetica','bold'); doc.setFontSize(16); doc.setTextColor(22,58,107);
-        doc.text('Cyberinsurance Questionnaire', 105, 22, { align: 'center' });
-
-        // Thin divider under header
-        doc.setDrawColor(229, 231, 235);
-        doc.setLineWidth(0.3);
-        doc.line(15, 34, 195, 34);
+        doc.setFont('Helvetica','bold'); doc.setFontSize(15); doc.setTextColor(255, 255, 255);
+        doc.text('Cyberinsurance Questionnaire', 105, ribbonH/2 + 2, { align: 'center' });
     }
 
     function generatePDF() {
