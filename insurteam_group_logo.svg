@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 240" width="600" height="240">
+  <defs>
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1E40AF"/>
+      <stop offset="100%" stop-color="#0B2A6B"/>
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#22C55E"/>
+      <stop offset="100%" stop-color="#16A34A"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Shield emblem -->
+  <g transform="translate(30, 40)">
+    <path d="M80 0 L150 25 L150 85 C150 130 115 155 80 165 C45 155 10 130 10 85 L10 25 Z"
+          fill="url(#shieldGrad)" stroke="#0B2A6B" stroke-width="2"/>
+    <!-- Three figures representing 'team' -->
+    <g fill="#FFFFFF">
+      <!-- left person -->
+      <circle cx="50" cy="70" r="11"/>
+      <path d="M32 110 C32 94 42 85 50 85 C58 85 68 94 68 110 L68 120 L32 120 Z"/>
+      <!-- center person (taller) -->
+      <circle cx="80" cy="60" r="13"/>
+      <path d="M60 108 C60 90 70 78 80 78 C90 78 100 90 100 108 L100 125 L60 125 Z"/>
+      <!-- right person -->
+      <circle cx="110" cy="70" r="11"/>
+      <path d="M92 110 C92 94 102 85 110 85 C118 85 128 94 128 110 L128 120 L92 120 Z"/>
+    </g>
+    <!-- accent checkmark -->
+    <path d="M55 138 L75 152 L110 120" stroke="url(#accentGrad)" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- Wordmark -->
+  <g transform="translate(210, 100)">
+    <text x="0" y="0" font-family="Helvetica, Arial, sans-serif" font-size="54" font-weight="800" fill="#0B2A6B" letter-spacing="-1">
+      INSURTEAM
+    </text>
+    <text x="2" y="42" font-family="Helvetica, Arial, sans-serif" font-size="28" font-weight="400" fill="#22C55E" letter-spacing="14">
+      GROUP
+    </text>
+    <line x1="0" y1="58" x2="360" y2="58" stroke="#0B2A6B" stroke-width="2"/>
+    <text x="0" y="82" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="500" fill="#6B7280" letter-spacing="3">
+      BROKERS  ·  ADVISORS  ·  PARTNERS
+    </text>
+  </g>
+</svg>

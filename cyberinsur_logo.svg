@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 240" width="600" height="240">
+  <defs>
+    <linearGradient id="cyberGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#06B6D4"/>
+      <stop offset="50%" stop-color="#3B82F6"/>
+      <stop offset="100%" stop-color="#7C3AED"/>
+    </linearGradient>
+    <linearGradient id="cyberDark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#1E293B"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Hex shield icon -->
+  <g transform="translate(30, 40)">
+    <!-- hex shield outline -->
+    <path d="M80 5 L145 40 L145 110 C145 135 115 155 80 165 C45 155 15 135 15 110 L15 40 Z"
+          fill="url(#cyberDark)"/>
+    <path d="M80 5 L145 40 L145 110 C145 135 115 155 80 165 C45 155 15 135 15 110 L15 40 Z"
+          fill="none" stroke="url(#cyberGrad)" stroke-width="3"/>
+
+    <!-- circuit lines -->
+    <g stroke="url(#cyberGrad)" stroke-width="1.5" fill="none" opacity="0.7">
+      <path d="M30 60 L55 60 L55 85"/>
+      <path d="M130 60 L105 60 L105 85"/>
+      <path d="M30 130 L50 130"/>
+      <path d="M130 130 L110 130"/>
+    </g>
+    <g fill="url(#cyberGrad)">
+      <circle cx="30" cy="60" r="2.5"/>
+      <circle cx="130" cy="60" r="2.5"/>
+      <circle cx="30" cy="130" r="2.5"/>
+      <circle cx="130" cy="130" r="2.5"/>
+    </g>
+
+    <!-- padlock in the middle -->
+    <g transform="translate(80, 95)">
+      <path d="M-18 -18 C-18 -30 -10 -38 0 -38 C10 -38 18 -30 18 -18 L18 -5 L-18 -5 Z"
+            fill="none" stroke="url(#cyberGrad)" stroke-width="4"/>
+      <rect x="-24" y="-10" width="48" height="38" rx="5" fill="url(#cyberGrad)"/>
+      <!-- keyhole -->
+      <circle cx="0" cy="5" r="4" fill="#0F172A"/>
+      <rect x="-2" y="5" width="4" height="10" fill="#0F172A"/>
+    </g>
+  </g>
+
+  <!-- Wordmark -->
+  <g transform="translate(210, 105)">
+    <text x="0" y="0" font-family="Helvetica, Arial, sans-serif" font-size="58" font-weight="800" fill="#0F172A" letter-spacing="-2">
+      Cyber<tspan fill="url(#cyberGrad)">Insur</tspan>
+    </text>
+    <text x="3" y="32" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#64748B" letter-spacing="6">
+      DIGITAL  RISK  COVERAGE
+    </text>
+  </g>
+</svg>

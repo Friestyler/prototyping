@@ -3,15 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Je Makelaar - Cyber Insurance Questionnaire</title>
+    <title>Cyberinsurance Questionnaire</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f9fafb; color: #333; }
-        .header { background: #fff; color: #163A6B; padding: 20px 0; border-bottom: 1px solid #e5e7eb; }
-        .header-inner { max-width: 1100px; margin: 0 auto; padding: 0 20px; display: flex; justify-content: space-between; align-items: center; gap: 24px; }
-        .header .logo { height: 72px; width: auto; display: block; }
-        .header h2 { font-size: 16px; font-weight: 500; color: #163A6B; text-align: right; }
+        .header { background: #fff; color: #163A6B; border-bottom: 1px solid #e5e7eb; }
+        .header-ribbon { height: 8px; background: linear-gradient(90deg, #1E40AF 0%, #06B6D4 100%); }
+        .header-inner { max-width: 1100px; margin: 0 auto; padding: 20px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 24px; }
+        .header .logo { height: 64px; width: auto; display: block; }
+        .header .logo-left { justify-self: start; }
+        .header .logo-right { justify-self: end; }
+        .header-title { font-size: 22px; font-weight: 700; color: #163A6B; text-align: center; letter-spacing: 0.2px; }
+        @media (max-width: 640px) {
+            .header-inner { grid-template-columns: 1fr; justify-items: center; gap: 12px; }
+            .header .logo { height: 48px; }
+            .header-title { font-size: 18px; }
+        }
         .progress-bar-wrap { background: #fff; border-bottom: 1px solid #e5e7eb; padding: 16px 0; }
         .progress-inner { max-width: 1100px; margin: 0 auto; padding: 0 20px; }
         .progress-label { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 13px; color: #666; }
@@ -113,9 +121,11 @@
 </head>
 <body>
     <div class="header">
+        <div class="header-ribbon"></div>
         <div class="header-inner">
-            <img src="jemakelaar-logo.png" alt="Je Makelaar" class="logo" onerror="this.style.display='none'">
-            <h2>Cyber Insurance Questionnaire</h2>
+            <img src="cyberinsur_logo.svg" alt="CyberInsur" class="logo logo-left" onerror="this.style.display='none'">
+            <h1 class="header-title">Cyberinsurance Questionnaire</h1>
+            <img src="insurteam_group_logo.svg" alt="InsurTeam Group" class="logo logo-right" onerror="this.style.display='none'">
         </div>
     </div>
 
@@ -179,7 +189,7 @@
             <!-- STEP 2 -->
             <div id="step-2" class="step hidden">
                 <h2 class="step-title">Applicant Declarations</h2>
-                <p class="step-subtitle">Please answer all 14 questions. Certain answers trigger a manual underwriter review.</p>
+                <p class="step-subtitle">A few key questions on data handling and security controls. Answers are optional for this demo.</p>
                 <div id="custom-offer-warning" class="warning-box hidden">
                     <p>Note: One or more responses require a manual underwriter review. This submission will be flagged as requiring a custom offer.</p>
                 </div>
@@ -274,8 +284,23 @@
     // SET THIS after deploying the Google Apps Script (see instructions below)
     var GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxqTkBuNfGjngnNeQdtFbtHc_M0iT3xZV50ZLvVy1blbUwkLXMxhZJjxZicxX8vx3Ex/exec';
 
-    var LOGO_IMG = new Image();
-    LOGO_IMG.src = 'jemakelaar-logo.png';
+    var LEFT_LOGO = { img: new Image(), dataUrl: null, w: 600, h: 240 };
+    var RIGHT_LOGO = { img: new Image(), dataUrl: null, w: 600, h: 240 };
+    function prepareLogo(obj, src) {
+        obj.img.onload = function() {
+            try {
+                var canvas = document.createElement('canvas');
+                canvas.width = obj.img.naturalWidth || 600;
+                canvas.height = obj.img.naturalHeight || 240;
+                obj.w = canvas.width; obj.h = canvas.height;
+                canvas.getContext('2d').drawImage(obj.img, 0, 0);
+                obj.dataUrl = canvas.toDataURL('image/png');
+            } catch(e) { /* CORS or draw issue — PDF falls back to text */ }
+        };
+        obj.img.src = src;
+    }
+    prepareLogo(LEFT_LOGO, 'cyberinsur_logo.svg');
+    prepareLogo(RIGHT_LOGO, 'insurteam_group_logo.svg');
 
     var PRICING = {
         "1000000":   { "250000":{price:750,ret:1000}, "500000":{price:945,ret:1000}, "1000000":{price:1350,ret:1000} },
@@ -291,24 +316,9 @@
     };
 
     var DECLARATIONS = [
-        { key:'q1', label:'Is the applicant a subsidiary of another company?',
-          subYes: { key:'q1_interconnect', label:'If yes, is there System Interconnectivity between the applicant and the parent company? (shared Active Directory, folders, email, security systems, network, datacenter, cloud tenancy, ERP/CRM, IT team, web domain, endpoints)' } },
-        { key:'q2', label:'Does the applicant have establishments outside the European Economic Area?' },
-        { key:'q3', label:'Is the applicant already insured for Cyber coverage?' },
-        { key:'q4', label:'Does the applicant have establishments, subsidiaries, participations, joint ventures, or conduct business in Cuba, Iran, Myanmar, Sudan, Syria, North Korea, Belarus, Zimbabwe, or the Crimea region?' },
-        { key:'q5', label:'Does the applicant collect, process or store Personally Identifiable Information (PII)?',
-          textYes: { key:'q5_count', label:'If yes, estimated number of unique PII records:', type:'number' } },
-        { key:'q6', label:'Does the applicant collect, process or store Payment Card Information (PCI)?',
-          subYes: { key:'q6_dss', label:'If yes, does the applicant hold PCI DSS certification?' },
-          textYes: { key:'q6_count', label:'If yes, estimated number of unique PCI transactions per year:', type:'number' } },
-        { key:'q7', label:'Does the applicant collect, process or store Protected Health Information (PHI)?' },
-        { key:'q8', label:'Does the applicant depend on an Outsource Service Provider?',
-          providerListYes: { key:'q8_providers', label:'If yes, list provider names and services:' } },
+        { key:'q5', label:'Does the applicant collect, process or store Personally Identifiable Information (PII)?' },
         { key:'q9', label:'Does the applicant scan and patch operating systems and applications monthly?' },
-        { key:'q10', label:'Does the applicant have security software and hardware controls (antivirus, anti-malware, anti-spyware, firewalls) on all business networks?' },
-        { key:'q11', label:'Does the applicant have access controls for all employees and other users with access to sensitive business data?' },
         { key:'q12', label:'Does the applicant have weekly backups and restoration procedures (tested twice yearly) for all critical systems, data and information assets?' },
-        { key:'q13', label:'Does the applicant train employees on computer use, email use, data processing, cyber incident reporting and other cyber security best practices?' },
         { key:'q14', label:'Does the applicant declare no claims in the last 5 years that would have qualified for coverage under the above warranties?' }
     ];
 
@@ -323,13 +333,7 @@
 
     var currentStep = 1;
     var formData = {
-        q1:null, q1_interconnect:null,
-        q2:null, q3:null, q4:null,
-        q5:null, q5_count:'',
-        q6:null, q6_dss:null, q6_count:'',
-        q7:null,
-        q8:null, q8_providers:[{name:'',services:''},{name:'',services:''},{name:'',services:''}],
-        q9:null, q10:null, q11:null, q12:null, q13:null, q14:null,
+        q5:null, q9:null, q12:null, q14:null,
         q15a:'', q15b:'', q15c:'', q15d:''
     };
 
@@ -353,42 +357,19 @@
         return +val('turnover') <= 50000000 ? 30 : 25;
     }
     function isCustomOffer() {
-        if (formData.q1 === true || formData.q2 === true || formData.q3 === true || formData.q4 === true || formData.q7 === true) return true;
-        if (formData.q9 === false || formData.q10 === false || formData.q11 === false ||
-            formData.q12 === false || formData.q13 === false || formData.q14 === false) return true;
+        if (formData.q9 === false || formData.q12 === false || formData.q14 === false) return true;
         return false;
     }
 
     function isStepValid(step) {
-        switch(step) {
-            case 1: return !!(val('policyholder') && val('legalForm') && val('cbeNumber') && val('activities') && val('turnover') && val('insuredAddress'));
-            case 2:
-                for (var i = 0; i < DECLARATIONS.length; i++) {
-                    var d = DECLARATIONS[i];
-                    if (formData[d.key] === null) return false;
-                    if (formData[d.key] === true) {
-                        if (d.subYes && formData[d.subYes.key] === null) return false;
-                        if (d.textYes && !String(formData[d.textYes.key] || '').trim()) return false;
-                        if (d.providerListYes) {
-                            var rows = formData[d.providerListYes.key] || [];
-                            var hasComplete = rows.some(function(r) { return (r.name || '').trim() && (r.services || '').trim(); });
-                            if (!hasComplete) return false;
-                        }
-                    }
-                }
-                return true;
-            case 3:
-                for (var j = 0; j < IMPACT_SCENARIOS.length; j++) {
-                    if (!formData[IMPACT_SCENARIOS[j].key]) return false;
-                }
-                return true;
-            case 4: return !!(val('option1Lol') && val('option2Lol') && val('option1Lol') !== val('option2Lol'));
-            case 5:
-                var email = val('declarationEmail');
-                var emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-                return !!(val('declarationPlace') && val('declarationDate') && val('declarationFirstName') && val('declarationLastName') && emailOk && val('declarationFunction') && val('declarationCompany') && $('confirmCorrect').checked);
-            default: return true;
+        // Steps 1–4 are optional for this demo — users can click Next without filling fields.
+        // Step 5 (Declaration) remains required.
+        if (step === 5) {
+            var email = val('declarationEmail');
+            var emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+            return !!(val('declarationPlace') && val('declarationDate') && val('declarationFirstName') && val('declarationLastName') && emailOk && val('declarationFunction') && val('declarationCompany') && $('confirmCorrect').checked);
         }
+        return true;
     }
 
     function updateProgress() {
@@ -789,6 +770,32 @@
     }
 
     // PDF Generation
+    function drawPdfHeader(doc) {
+        // Blue ribbon across the top
+        doc.setFillColor(30, 64, 175);
+        doc.rect(0, 0, 210, 6, 'F');
+
+        var logoH = 16, topY = 12;
+        if (LEFT_LOGO.dataUrl) {
+            var lw = logoH * (LEFT_LOGO.w / LEFT_LOGO.h);
+            if (lw > 50) { lw = 50; }
+            doc.addImage(LEFT_LOGO.dataUrl, 'PNG', 15, topY, lw, lw * (LEFT_LOGO.h / LEFT_LOGO.w));
+        }
+        if (RIGHT_LOGO.dataUrl) {
+            var rw = logoH * (RIGHT_LOGO.w / RIGHT_LOGO.h);
+            if (rw > 50) { rw = 50; }
+            doc.addImage(RIGHT_LOGO.dataUrl, 'PNG', 195 - rw, topY, rw, rw * (RIGHT_LOGO.h / RIGHT_LOGO.w));
+        }
+
+        doc.setFont('Helvetica','bold'); doc.setFontSize(16); doc.setTextColor(22,58,107);
+        doc.text('Cyberinsurance Questionnaire', 105, 22, { align: 'center' });
+
+        // Thin divider under header
+        doc.setDrawColor(229, 231, 235);
+        doc.setLineWidth(0.3);
+        doc.line(15, 34, 195, 34);
+    }
+
     function generatePDF() {
         if (!window.jspdf) { alert('PDF library not loaded. Please check your internet connection.'); return; }
         var jsPDF = window.jspdf.jsPDF;
@@ -798,35 +805,31 @@
         var p1 = getPricing('option1Lol'), p2 = getPricing('option2Lol');
         var v1 = val('option1Lol'), v2 = val('option2Lol');
 
-        doc.setFont('Helvetica','bold'); doc.setFontSize(24); doc.setTextColor(51,51,51);
-        doc.text('Cyber Insurance Quote', 15, 20);
-        if (LOGO_IMG.complete && LOGO_IMG.naturalWidth > 0) {
-            var logoH = 14;
-            var logoW = logoH * (LOGO_IMG.naturalWidth / LOGO_IMG.naturalHeight);
-            var maxW = 60;
-            if (logoW > maxW) { logoW = maxW; logoH = logoW * (LOGO_IMG.naturalHeight / LOGO_IMG.naturalWidth); }
-            doc.addImage(LOGO_IMG, 'PNG', 195 - logoW, 12, logoW, logoH);
-        } else {
-            doc.setFontSize(12); doc.setTextColor(22,58,107);
-            doc.text('Je Makelaar', 170, 20);
-        }
+        drawPdfHeader(doc);
+
         doc.setFont('Helvetica','normal'); doc.setFontSize(10); doc.setTextColor(100,100,100);
-        doc.text('Date: ' + today.toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}), 15, 35);
+        doc.text('Date: ' + today.toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}), 15, 42);
         doc.setFontSize(11); doc.setTextColor(51,51,51);
-        doc.text('In accordance with your request for a proposal, we are pleased to submit the following quotation:', 15, 50);
+        doc.text('In accordance with your request for a proposal, we are pleased to submit the following quotation:', 15, 54);
 
         doc.setFont('Helvetica','bold'); doc.setFontSize(10);
-        doc.text('INSURED:', 15, 65); doc.setFont('Helvetica','normal'); doc.text(val('policyholder'), 50, 65);
-        doc.setFont('Helvetica','bold'); doc.text('ADDRESS:', 15, 73); doc.setFont('Helvetica','normal');
-        doc.text(doc.splitTextToSize(val('insuredAddress'), 140), 50, 73);
+        doc.text('INSURED:', 15, 68); doc.setFont('Helvetica','normal'); doc.text(val('policyholder') || '\u2014', 50, 68);
+        doc.setFont('Helvetica','bold'); doc.text('ADDRESS:', 15, 76); doc.setFont('Helvetica','normal');
+        doc.text(doc.splitTextToSize(val('insuredAddress') || '\u2014', 140), 50, 76);
 
         doc.setFont('Helvetica','bold'); doc.setFontSize(11);
-        doc.text('INSURANCE QUOTE — JE MAKELAAR', 15, 90);
+        doc.text('INSURANCE QUOTE', 15, 93);
 
-        var colW = 60, rowH = 6, y = 100;
+        var colW = 60, rowH = 6, y = 103;
         doc.setFontSize(7);
+        var optCol1 = v1 ? 'Option 1 \u20AC' + v1 : 'Option 1';
+        var optCol2 = v2 ? 'Option 2 \u20AC' + v2 : 'Option 2';
+        var retRow1 = p1 ? '\u20AC' + p1.ret : '\u2014';
+        var retRow2 = p2 ? '\u20AC' + p2.ret : '\u2014';
+        var premRow1 = p1 ? '\u20AC' + p1.price : '\u2014';
+        var premRow2 = p2 ? '\u20AC' + p2.price : '\u2014';
         var tableRows = [
-            ['Coverage', 'Option 1 \u20AC'+v1, 'Option 2 \u20AC'+v2],
+            ['Coverage', optCol1, optCol2],
             ['Management of an insured event','Full limit','Full limit'],
             ['First Response','48 hours','48 hours'],
             ['Privacy Investigations','Full limit','Full limit'],
@@ -838,8 +841,8 @@
             ['Cyber Theft','\u20AC100,000','\u20AC100,000'],
             ['Telephone System Hacking','\u20AC100,000','\u20AC100,000'],
             ['Criminal Reward Fund','\u20AC100,000','\u20AC100,000'],
-            ['RETENTIONS','\u20AC'+p1.ret,'\u20AC'+p2.ret],
-            ['PREMIUM','\u20AC'+p1.price,'\u20AC'+p2.price]
+            ['RETENTIONS', retRow1, retRow2],
+            ['PREMIUM', premRow1, premRow2]
         ];
         for (var i = 0; i < tableRows.length; i++) {
             var row = tableRows[i];
@@ -854,13 +857,14 @@
 
         // Page 2
         doc.addPage();
+        drawPdfHeader(doc);
         doc.setFont('Helvetica','bold'); doc.setFontSize(12); doc.setTextColor(51,51,51);
-        doc.text('GENERAL INFORMATION', 15, 20);
+        doc.text('GENERAL INFORMATION', 15, 44);
         doc.setFont('Helvetica','normal'); doc.setFontSize(10);
-        var iy = 30;
+        var iy = 54;
         var infoItems = [
             'Quote Effective Until: '+effectiveUntil.toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}),
-            'Broker: Je Makelaar','Named Insured: '+val('policyholder'),'Insurer: Partner Insurer (TBC)'
+            'Broker: Je Makelaar','Named Insured: '+(val('policyholder')||'\u2014'),'Insurer: Partner Insurer (TBC)'
         ];
         for (var j = 0; j < infoItems.length; j++) { doc.text(infoItems[j], 15, iy); iy += 8; }
 
@@ -886,7 +890,8 @@
             doc.text('CUSTOM OFFER - MANUAL REVIEW REQUIRED', 15, iy+10);
         }
 
-        doc.save('JeMakelaar_Cyber_Quote_'+val('policyholder').replace(/\s+/g,'_')+'_'+today.getTime()+'.pdf');
+        var safeName = (val('policyholder') || 'Cyberinsurance').replace(/\s+/g,'_');
+        doc.save('Cyberinsurance_Quote_'+safeName+'_'+today.getTime()+'.pdf');
     }
 
     // Google Sheets Submission
@@ -904,25 +909,10 @@
             activities: val('activities'),
             turnover: $('turnover').selectedOptions[0].text,
             insuredAddress: val('insuredAddress'),
-            q1_subsidiary: formData.q1 ? 'Yes' : 'No',
-            q1_interconnect: formData.q1_interconnect === null ? 'N/A' : formData.q1_interconnect ? 'Yes' : 'No',
-            q2_outsideEEA: formData.q2 ? 'Yes' : 'No',
-            q3_alreadyInsured: formData.q3 ? 'Yes' : 'No',
-            q4_sanctionedBusiness: formData.q4 ? 'Yes' : 'No',
-            q5_hasPII: formData.q5 ? 'Yes' : 'No',
-            q5_piiCount: formData.q5_count || '',
-            q6_hasPCI: formData.q6 ? 'Yes' : 'No',
-            q6_pciDss: formData.q6_dss === null ? 'N/A' : formData.q6_dss ? 'Yes' : 'No',
-            q6_pciCount: formData.q6_count || '',
-            q7_hasPHI: formData.q7 ? 'Yes' : 'No',
-            q8_outsourced: formData.q8 ? 'Yes' : 'No',
-            q8_providers: (formData.q8_providers || []).filter(function(r){ return (r.name||'').trim() || (r.services||'').trim(); }).map(function(r){ return (r.name||'').trim() + ' \u2014 ' + (r.services||'').trim(); }).join('; '),
-            q9_patching: formData.q9 ? 'Yes' : 'No',
-            q10_securitySoftware: formData.q10 ? 'Yes' : 'No',
-            q11_accessControls: formData.q11 ? 'Yes' : 'No',
-            q12_backups: formData.q12 ? 'Yes' : 'No',
-            q13_training: formData.q13 ? 'Yes' : 'No',
-            q14_noClaims: formData.q14 ? 'Yes' : 'No',
+            q5_hasPII: formData.q5 === null ? 'N/A' : formData.q5 ? 'Yes' : 'No',
+            q9_patching: formData.q9 === null ? 'N/A' : formData.q9 ? 'Yes' : 'No',
+            q12_backups: formData.q12 === null ? 'N/A' : formData.q12 ? 'Yes' : 'No',
+            q14_noClaims: formData.q14 === null ? 'N/A' : formData.q14 ? 'Yes' : 'No',
             q15a_fraudulentTx: formData.q15a ? IMPACT_LABELS[formData.q15a] : '',
             q15b_credentialsModified: formData.q15b ? IMPACT_LABELS[formData.q15b] : '',
             q15c_scadaIcsOt: formData.q15c ? IMPACT_LABELS[formData.q15c] : '',
