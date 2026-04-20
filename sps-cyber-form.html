@@ -246,22 +246,22 @@
                     <p style="font-size:13px;color:#555;line-height:1.6">The answers to the questions listed above are considered sufficient to inform the insurers of the risk to be insured. However, please notify us of any particular element known to you which in your opinion is likely to significantly increase the risk for the insurers. Returning this questionnaire binds neither the policyholder nor the insurers. Cover is only acquired upon receipt of written acceptance of the quote by the insurer.</p>
                 </div>
                 <div class="grid-2">
-                    <div class="field"><label>Place *</label><input type="text" id="declarationPlace" placeholder="City"></div>
-                    <div class="field"><label>Date *</label><input type="date" id="declarationDate"></div>
+                    <div class="field"><label>Place</label><input type="text" id="declarationPlace" placeholder="City"></div>
+                    <div class="field"><label>Date</label><input type="date" id="declarationDate"></div>
                 </div>
                 <div class="grid-2">
-                    <div class="field"><label>First Name *</label><input type="text" id="declarationFirstName" placeholder="First name"></div>
-                    <div class="field"><label>Last Name *</label><input type="text" id="declarationLastName" placeholder="Last name"></div>
+                    <div class="field"><label>First Name</label><input type="text" id="declarationFirstName" placeholder="First name"></div>
+                    <div class="field"><label>Last Name</label><input type="text" id="declarationLastName" placeholder="Last name"></div>
                 </div>
                 <div class="field"><label>Email Address *</label><input type="email" id="declarationEmail" placeholder="name@company.com"></div>
                 <div class="grid-2">
-                    <div class="field"><label>Function *</label><input type="text" id="declarationFunction" placeholder="e.g., CEO, CFO, Security Manager"></div>
-                    <div class="field"><label>Company *</label><input type="text" id="declarationCompany" placeholder="Company name"></div>
+                    <div class="field"><label>Function</label><input type="text" id="declarationFunction" placeholder="e.g., CEO, CFO, Security Manager"></div>
+                    <div class="field"><label>Company</label><input type="text" id="declarationCompany" placeholder="Company name"></div>
                 </div>
                 <div class="field"><label>Additional Notes (optional)</label><textarea id="additionalNotes" rows="4" placeholder="Any additional information for the insurers"></textarea></div>
                 <div class="checkbox-row">
                     <input type="checkbox" id="confirmCorrect">
-                    <label for="confirmCorrect">I hereby confirm that the above-mentioned information is correct and complete. *</label>
+                    <label for="confirmCorrect">I hereby confirm that the above-mentioned information is correct and complete.</label>
                 </div>
             </div>
 
@@ -365,9 +365,7 @@
         // Steps 1–4 are optional for this demo — users can click Next without filling fields.
         // Step 5 (Declaration) remains required.
         if (step === 5) {
-            var email = val('declarationEmail');
-            var emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-            return !!(val('declarationPlace') && val('declarationDate') && val('declarationFirstName') && val('declarationLastName') && emailOk && val('declarationFunction') && val('declarationCompany') && $('confirmCorrect').checked);
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val('declarationEmail'));
         }
         return true;
     }
