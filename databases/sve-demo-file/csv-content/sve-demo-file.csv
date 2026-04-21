@@ -1,0 +1,9 @@
+customer_id,first_name,last_name,date_of_birth,customer_type,dossier_id,product_code,product_status
+1001,Jane,Smith,1960-05-12,natural_person,DOSS-001,Brand ER,active
+1001,Jane,Smith,1960-05-12,natural_person,DOSS-001,Brand FIRE,active
+1002,John,Doe,1955-11-03,natural_person,DOSS-002,Brand FIRE,active
+1003,Acme B.V.,,1998-01-01,legal_entity,DOSS-003,Brand ER,active
+1004,Maria,Garcia,1968-07-22,natural_person,DOSS-004,Brand AUTO,active
+1005,Peter,Janssen,1972-02-14,natural_person,DOSS-005,Brand ER,lapsed
+1006,Lisa,Chen,1980-09-30,natural_person,DOSS-006,Brand FIRE,active
+1007,Robert,Brown,1948-03-17,natural_person,DOSS-007,Brand AUTO,active

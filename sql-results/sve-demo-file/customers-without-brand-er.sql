@@ -1,0 +1,5 @@
+-- SQL result for business requirement: Customers without Brand ER
+-- Database: sve-demo-file
+-- Source CSV: databases/sve-demo-file/csv-content/sve-demo-file.csv
+-- Linked requirement file: databases/sve-demo-file/business-requirements/customers-without-brand-er.md
+-- Update this file as the business requirement evolves.
