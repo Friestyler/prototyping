@@ -1,0 +1,42 @@
+CSV Column,Import as Entity,Attribute,External ID,Additional info
+Dossier,customers,externalId,x,
+Naam,customers,name,,This column in the CSV maps to more than 1 attribute
+Voornaam,customers,firstName,,
+Polis,products,externalId,x,
+Domein - Omschrijving,categories,parentId,,This column in the CSV maps to more than 1 attribute
+Polistype - Omschrijving,categories,name,"x
++ Domein - Omschrijving",
+Naam maatschappij,products,insurerId,,CSV supplies insurer name; see mappings README §2
+Natuurlijk/Rechtsp - Omschrijving,customers,customerType,,Code-list translation; see code-lists.md
+Geboortedatum,customers,dateOfBirth,,
+Overlijdensdatum,customers,dateOfDeath,,
+Situatie - Omschrijving,products,situationId,,CSV supplies situation description; see mappings README §2
+Naam beheerder,customers,ownerId,,CSV supplies owner name; see mappings README §2
+Rechtsvorm - Omschrijving,customers,legalEntityType,,
+Laatste termijn totale premie,products,lastPremium,,jsonb money; see mappings README §3
+Aanvangsdatum,products,contractStartDate,,
+Risico-object type - Waarde,risk_object_types,externalId,X,This column in the CSV maps to more than 1 attribute
+Risico-object type - Waarde,product_risk_objects,externalId,X,This column in the CSV maps to more than 1 attribute
+Risico-object type - Omschrijving,risk_object_types,name,,This column in the CSV maps to more than 1 attribute
+Risico-object type - Omschrijving,product_risk_objects,name,,This column in the CSV maps to more than 1 attribute
+Waarborg - Waarde,coverage_types,name,x,This column in the CSV maps to more than 1 attribute
+Waarborg - Waarde,product_coverages,name,x,This column in the CSV maps to more than 1 attribute
+Waarborg - Omschrijving,coverage_types,description,,This column in the CSV maps to more than 1 attribute
+Waarborg - Omschrijving,product_coverages,description,,This column in the CSV maps to more than 1 attribute
+Straat,customers,addressStreet,,Denormalized address attribute; see mappings README §1
+Huisnr,customers,addressHouseNumber,,Denormalized address attribute; see mappings README §1
+Bus,customers,addressUnitNumber,,Denormalized address attribute; see mappings README §1
+Land - Omschrijving,customers,addressCountry,,Denormalized address attribute; see mappings README §1
+Postcode,customers,addressPostalCode,,Denormalized address attribute; see mappings README §1
+Plaats,customers,addressCity,,Denormalized address attribute; see mappings README §1
+Naam,customers,lastName,,This column in the CSV maps to more than 1 attribute
+Domein - Omschrijving,products,"name
++ Polistype - Omschrijving
++ Maatschappij
+(using the space option)",,This column in the CSV maps to more than 1 attribute
+Domein - Omschrijving,product_templates,"name
++ Polistype - Omschrijving
++ Maatschappij
+(using the space option)","X
++ Polistype - Omschrijving
++ Maatschappij",This column in the CSV maps to more than 1 attribute

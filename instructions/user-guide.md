@@ -28,14 +28,19 @@ databases/
   <your-csv-name>/
     csv-content/            ← your original CSV lives here
     business-requirements/  ← one Markdown file per business question you ask
+    qollabi-view.sql        ← translation from your CSV to Qollabi's shape (Claude manages this)
 ```
 
-The SQL answers live in a matching folder under `sql-results/`:
+When Claude sets up a new database, it'll ask which source system the CSV came from (Brio, Brokercloud, etc.) so it can build `qollabi-view.sql` from the matching mapping. You don't need to touch that file — it's there so the SQL stays correct and portable.
+
+The SQL answer, a result CSV you can open directly, **and** a short mapping report all live in a matching folder under `sql-results/`:
 
 ```
 sql-results/
   <your-csv-name>/
-    <your-business-requirement>.sql
+    <your-business-requirement>.sql         ← the generated SQL
+    <your-business-requirement>.csv         ← the query's output applied to your CSV
+    <your-business-requirement>.report.md   ← how the mapping was made + assumptions + doubts
 ```
 
 So if you upload `sales-export.csv`, you'll end up with:
@@ -43,6 +48,10 @@ So if you upload `sales-export.csv`, you'll end up with:
 - `databases/sales-export/csv-content/sales-export.csv`
 - `databases/sales-export/business-requirements/<your-requirement>.md`
 - `sql-results/sales-export/<your-requirement>.sql`
+- `sql-results/sales-export/<your-requirement>.csv`
+- `sql-results/sales-export/<your-requirement>.report.md`
+
+The report is the best place to look when you want to know **why** the SQL was written the way it was, which CSV columns were read as which Qollabi fields, and what Claude was unsure about. If something in the report looks wrong, tell Claude — that's usually the fastest way to land on the right query.
 
 ---
 
@@ -52,8 +61,10 @@ You can refine the same business requirement as many times as you need to. When 
 
 - Update the **same** `.md` file under `business-requirements/` (adding your latest phrasing and a note about what changed).
 - Update the **same** `.sql` file under `sql-results/`.
+- Regenerate the **same** result `.csv` under `sql-results/` so it reflects the new logic.
+- Refresh the **same** `.report.md` so the assumptions and doubts match the new SQL.
 
-You will **not** end up with `v1`, `v2`, `final-final` files. One requirement = one `.md` + one `.sql`, kept up to date.
+You will **not** end up with `v1`, `v2`, `final-final` files. One requirement = one `.md` + one `.sql` + one result `.csv` + one `.report.md`, all kept up to date.
 
 ---
 

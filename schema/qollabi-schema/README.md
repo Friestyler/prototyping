@@ -18,6 +18,8 @@ Add the Qollabi schema artifacts into this folder as they become available. Typi
 - Relationship descriptions (how customers relate to dossiers, products, policies, etc.).
 - Canonical code lists (product codes, customer types, status values).
 - Naming conventions used across the schema.
+- [`mappings/`](mappings/README.md) — source-system → Qollabi column mappings (Brio, Brokercloud, …) used to reconcile uploaded CSVs against the schema.
+- [`code-lists.md`](code-lists.md) — canonical Qollabi enum values and the CSV-value translations the translation layer applies for code-list columns.
 
 ## Rules
 

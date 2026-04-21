@@ -2,7 +2,7 @@
 
 This project turns **CSV files** plus **plain-language business requirements** into **SQL queries**.
 
-You speak in business language. Claude translates that into SQL. There is no UI, no app, no backend, and no database system — everything is organized through files and folders inside this repo.
+You speak in business language. Claude translates that into SQL against the Qollabi schema, executes it via **DuckDB** over your CSV (using a per-database translation layer), and writes the results back as a CSV you can open in Excel. There is no UI, no app, no backend, and no database server — everything is organized through files and folders inside this repo.
 
 ---
 
@@ -27,12 +27,17 @@ project-root/
     claude-code-guide.md
 ```
 
-Each database folder contains exactly two things:
+Each database folder contains:
 
 1. `csv-content/` — the original uploaded CSV, stored **unchanged** as a `.csv` file.
 2. `business-requirements/` — one Markdown file per business requirement for that dataset.
+3. `qollabi-view.sql` — the canonical CSV → Qollabi translation layer (DuckDB CTEs) used by every SQL query for this database.
 
-The matching `sql-results/<database-name>/` folder contains one `.sql` file per business requirement.
+The matching `sql-results/<database-name>/` folder contains, for each business requirement, **three** files sharing the same name:
+
+- `<name>.sql` — the generated SQL.
+- `<name>.csv` — the query's result applied to the source CSV.
+- `<name>.report.md` — a short report on how the mapping was made, what assumptions were taken, and any open doubts.
 
 ---
 
@@ -50,6 +55,8 @@ Every business requirement is linked to:
 - **One** database
 - **One** source CSV
 - **One** SQL file
+- **One** result CSV (the SQL's output applied to the source CSV)
+- **One** mapping report (how the mapping was made, assumptions, and doubts)
 
 Business requirements never live outside their database folder.
 
@@ -75,9 +82,12 @@ databases/
       sve-demo-file.csv
     business-requirements/
       customers-without-brand-er.md
+    qollabi-view.sql
 sql-results/
   sve-demo-file/
     customers-without-brand-er.sql
+    customers-without-brand-er.csv
+    customers-without-brand-er.report.md
 ```
 
 ---
