@@ -21,6 +21,13 @@ interface SaveSmartListDialogProps {
   onOpenChange: (open: boolean) => void
   defaultName: string
   onConfirm: (name: string, type: UserSavedListType) => void
+  /**
+   * "list" (default) renders the full Save-Smart-List flow with a
+   * dynamic/static toggle. "agent" renames the Name field to "Agent Name",
+   * drops the "List Type" header and the Static option (agents are always
+   * dynamic), and updates CTA copy accordingly.
+   */
+  variant?: "list" | "agent"
 }
 
 export function SaveSmartListDialog({
@@ -28,7 +35,9 @@ export function SaveSmartListDialog({
   onOpenChange,
   defaultName,
   onConfirm,
+  variant = "list",
 }: SaveSmartListDialogProps) {
+  const isAgent = variant === "agent"
   const [name, setName] = useState(defaultName)
   const [type, setType] = useState<UserSavedListType>("dynamic")
 
@@ -42,34 +51,36 @@ export function SaveSmartListDialog({
   const handleSubmit = () => {
     const trimmed = name.trim()
     if (!trimmed) return
-    onConfirm(trimmed, type)
+    onConfirm(trimmed, isAgent ? "dynamic" : type)
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[560px]">
         <DialogHeader>
-          <DialogTitle>Save Smart List</DialogTitle>
+          <DialogTitle>{isAgent ? "Save Agent" : "Save Smart List"}</DialogTitle>
           <DialogDescription>
-            Choose how you want to save this smart list and give it a name.
+            {isAgent
+              ? "Give your agent a name. It will keep the list in sync as customers match the criteria."
+              : "Choose how you want to save this smart list and give it a name."}
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-5 py-2">
           <div className="grid gap-2">
             <Label htmlFor="smart-list-name">
-              List Name <span className="text-red-600">*</span>
+              {isAgent ? "Agent Name" : "List Name"} <span className="text-red-600">*</span>
             </Label>
             <Input
               id="smart-list-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Give your list a name"
+              placeholder={isAgent ? "Give your agent a name" : "Give your list a name"}
             />
           </div>
 
           <div className="grid gap-2">
-            <Label>List Type</Label>
+            {!isAgent && <Label>List Type</Label>}
             <div className="grid gap-3">
               <TypeOption
                 selected={type === "dynamic"}
@@ -78,13 +89,15 @@ export function SaveSmartListDialog({
                 title="Advanced Dynamic List"
                 description="Automatically updates as customers meet or no longer meet the criteria. Always shows current matches based on real-time data."
               />
-              <TypeOption
-                selected={type === "static"}
-                onSelect={() => setType("static")}
-                icon={<ListIcon className="w-4 h-4" />}
-                title="Static List"
-                description="Saves the current snapshot of customers. The list remains fixed even if customer data changes over time."
-              />
+              {!isAgent && (
+                <TypeOption
+                  selected={type === "static"}
+                  onSelect={() => setType("static")}
+                  icon={<ListIcon className="w-4 h-4" />}
+                  title="Static List"
+                  description="Saves the current snapshot of customers. The list remains fixed even if customer data changes over time."
+                />
+              )}
             </div>
           </div>
         </div>
@@ -94,7 +107,7 @@ export function SaveSmartListDialog({
             Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={!name.trim()}>
-            Save List
+            {isAgent ? "Save Agent" : "Save List"}
           </Button>
         </DialogFooter>
       </DialogContent>

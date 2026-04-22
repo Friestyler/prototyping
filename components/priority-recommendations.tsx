@@ -48,6 +48,7 @@ interface PriorityRecommendationsProps {
 export default function PriorityRecommendations({ onCreateCampaignFor }: PriorityRecommendationsProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [savingFor, setSavingFor] = useState<SmartListUseCase | null>(null)
+  const [savingAgentFor, setSavingAgentFor] = useState<SmartListUseCase | null>(null)
   const { requestNavigation } = useAiInsights()
 
   const growthScore = 68
@@ -55,6 +56,19 @@ export default function PriorityRecommendations({ onCreateCampaignFor }: Priorit
 
   const handleSaveList = (uc: SmartListUseCase) => {
     setSavingFor(uc)
+  }
+
+  const handleSaveAgent = (uc: SmartListUseCase) => {
+    setSavingAgentFor(uc)
+  }
+
+  const handleConfirmSaveAgent = async (name: string) => {
+    if (!savingAgentFor) return
+    toast({
+      title: "Agent saved",
+      description: `"${name}" will keep "${savingAgentFor.title}" in sync.`,
+    })
+    setSavingAgentFor(null)
   }
 
   const handleConfirmSave = async (name: string, type: UserSavedListType) => {
@@ -151,6 +165,7 @@ export default function PriorityRecommendations({ onCreateCampaignFor }: Priorit
                 expanded={expandedId === uc.id}
                 onToggle={() => setExpandedId(expandedId === uc.id ? null : uc.id)}
                 onSave={() => handleSaveList(uc)}
+                onSaveAgent={() => handleSaveAgent(uc)}
                 onCreateCampaign={() => handleCreateCampaign(uc)}
               />
             ))}
@@ -163,6 +178,14 @@ export default function PriorityRecommendations({ onCreateCampaignFor }: Priorit
         onOpenChange={(o) => !o && setSavingFor(null)}
         defaultName={savingFor?.title ?? ""}
         onConfirm={handleConfirmSave}
+      />
+
+      <SaveSmartListDialog
+        variant="agent"
+        open={!!savingAgentFor}
+        onOpenChange={(o) => !o && setSavingAgentFor(null)}
+        defaultName={savingAgentFor?.title ?? ""}
+        onConfirm={(name) => handleConfirmSaveAgent(name)}
       />
     </>
   )
@@ -326,12 +349,14 @@ function SmartListCard({
   expanded,
   onToggle,
   onSave,
+  onSaveAgent,
   onCreateCampaign,
 }: {
   useCase: SmartListUseCase
   expanded: boolean
   onToggle: () => void
   onSave: () => void
+  onSaveAgent: () => void
   onCreateCampaign: () => void
 }) {
   const Icon = ICON_MAP[useCase.icon]
@@ -450,7 +475,14 @@ function SmartListCard({
                 <Bookmark className="w-3.5 h-3.5" />
                 Save list
               </Button>
-              <Button variant="outline" size="sm" onClick={(e) => e.stopPropagation()}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onSaveAgent()
+                }}
+              >
                 <Bot className="w-3.5 h-3.5" />
                 Agent
               </Button>
