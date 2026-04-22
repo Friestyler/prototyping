@@ -19,6 +19,7 @@ import {
 import { campaigns as seedCampaigns, campaignStats } from "@/lib/lc-data/campaigns";
 import { templates as seedTemplates } from "@/lib/lc-data/templates";
 import CampaignWizard from "@/components/leads-campaigns/campaign-wizard";
+import CampaignAnalytics from "@/components/leads-campaigns/campaign-analytics";
 import NewTemplateDialog from "@/components/leads-campaigns/new-template-dialog";
 import {
   USER_CAMPAIGNS_CHANGE_EVENT,
@@ -108,6 +109,7 @@ export default function CampaignsPage({ initialCampaignName, onInitialConsumed }
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<Tab>("campaigns");
   const [wizard, setWizard] = useState<WizardState | null>(null);
+  const [analyticsCampaignId, setAnalyticsCampaignId] = useState<string | null>(null);
   const [showNewTemplate, setShowNewTemplate] = useState(false);
   const [userCampaigns, setUserCampaigns] = useState<UserCampaign[]>([]);
   const [userTemplates, setUserTemplates] = useState<UserCampaignTemplate[]>([]);
@@ -219,6 +221,23 @@ export default function CampaignsPage({ initialCampaignName, onInitialConsumed }
         onBack={handleWizardClose}
       />
     );
+  }
+
+  if (analyticsCampaignId) {
+    const c = allCampaigns.find((x) => x.id === analyticsCampaignId);
+    if (c) {
+      return (
+        <CampaignAnalytics
+          campaign={{
+            id: c.id,
+            name: c.name,
+            status: c.status,
+            recipients: c.recipients,
+          }}
+          onBack={() => setAnalyticsCampaignId(null)}
+        />
+      );
+    }
   }
 
   return (
@@ -427,7 +446,12 @@ export default function CampaignsPage({ initialCampaignName, onInitialConsumed }
                                 Edit
                               </DropdownMenuItem>
                             )}
-                            <DropdownMenuItem>
+                            <DropdownMenuItem
+                              disabled={c.status !== "Active"}
+                              onClick={() => {
+                                if (c.status === "Active") setAnalyticsCampaignId(c.id);
+                              }}
+                            >
                               <BarChart3 className="h-3.5 w-3.5" />
                               View analytics
                             </DropdownMenuItem>
