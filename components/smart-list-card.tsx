@@ -1,7 +1,7 @@
 "use client"
 
 import type { ReactNode } from "react"
-import { Star, Users, Bookmark, Send } from "lucide-react"
+import { Star, Users, Bookmark, Send, MessageSquare } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -44,6 +44,9 @@ export interface SmartListCardProps {
 
   primaryAction?: CardAction
   secondaryAction?: CardAction
+
+  /** Optional refine-with-AI handler. When provided, wires up the icon's click. */
+  onRefine?: () => void
 }
 
 function formatNumberCompact(n: number): string {
@@ -71,6 +74,7 @@ export default function SmartListCard({
   onClick,
   primaryAction,
   secondaryAction,
+  onRefine,
 }: SmartListCardProps) {
   const showFooter = primaryAction || secondaryAction
   const showMetrics = metaText !== undefined || customerCount !== undefined || dollarValue !== undefined
@@ -86,22 +90,36 @@ export default function SmartListCard({
       onClick={onClick}
     >
       <CardContent className="p-6 flex flex-col flex-1">
-        {badge && (
-          <Badge
-            className="absolute top-4 right-4 rounded-lg border"
-            style={
-              badgeStyle
-                ? {
-                    backgroundColor: badgeStyle.bg,
-                    color: badgeStyle.text,
-                    borderColor: badgeStyle.border ?? "transparent",
-                  }
-                : undefined
-            }
+        <div className="absolute top-3 right-3 flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              onRefine?.()
+            }}
+            title="Refine with AI"
+            aria-label="Refine with AI"
+            className="h-7 w-7 inline-flex items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-colors"
           >
-            {badge}
-          </Badge>
-        )}
+            <MessageSquare className="h-3.5 w-3.5" />
+          </button>
+          {badge && (
+            <Badge
+              className="rounded-lg border"
+              style={
+                badgeStyle
+                  ? {
+                      backgroundColor: badgeStyle.bg,
+                      color: badgeStyle.text,
+                      borderColor: badgeStyle.border ?? "transparent",
+                    }
+                  : undefined
+              }
+            >
+              {badge}
+            </Badge>
+          )}
+        </div>
 
         {/* Icon / logo */}
         <div
