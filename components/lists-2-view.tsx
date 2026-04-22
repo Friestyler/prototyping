@@ -3526,7 +3526,7 @@ export default function Lists2View({
 
           {(selectedListId || openedSmartList || listFilter === "my-customers") && !aiPromptExpanded && (
             <>
-              {listFilter === "my-customers" && !selectedListId && !openedSmartList && (
+              {listFilter === "my-customers" && (
                 <div className="mt-6 mb-4 rounded-xl border border-indigo-200 bg-gradient-to-r from-indigo-50/70 to-white p-4">
                   <div className="flex items-center gap-2 mb-2 text-sm text-indigo-900">
                     <Sparkles className="h-4 w-4 text-indigo-600" />
