@@ -73,6 +73,7 @@ import { Loader2 } from "lucide-react"
 import { initialPartners as initialCustomers, type Partner as Customer } from "@/lib/okr-data"
 import { customerRecordToMasterCustomer } from "@/lib/customer-database"
 import { CustomerTable } from "@/components/customer-table"
+import CreateWithAiWorkspace from "@/components/create-with-ai-workspace"
 console.log("[v0] initialCustomers loaded, first customer:", initialCustomers[0])
 console.log("[v0] First customer productInstances:", initialCustomers[0]?.productInstances)
 import type { FilterGroup } from "./advanced-query-builder"
@@ -870,6 +871,12 @@ export default function Lists2View({
   const [showSaveSmartListDialog, setShowSaveSmartListDialog] = useState(false)
 
   const [openedSmartList, setOpenedSmartList] = useState<SmartListSuggestion | null>(null)
+  // When the user submits the "Refine with AI" bar on the My Customers tab, we
+  // swap the table view for an inline full-page chat (same UX as the portfolio
+  // Create-with-AI workspace). `customersAiSeed` is the prompt to auto-send on
+  // mount; cleared once the workspace consumes it.
+  const [customersAiActive, setCustomersAiActive] = useState(false)
+  const [customersAiSeed, setCustomersAiSeed] = useState<string | null>(null)
   // Tracks whether the user has applied refinements to a template draft. Flipped
   // on when filters/columns are touched while a template preview is active, and
   // cleared whenever the draft is opened, saved, or discarded.
@@ -2962,6 +2969,7 @@ export default function Lists2View({
                   setListFilter("my-customers")
                   setSelectedListId(null)
                   setAIPromptExpanded(false)
+                  setCustomersAiActive(false)
                 })
               }
               className={cn(
@@ -2983,6 +2991,7 @@ export default function Lists2View({
                   setDraftDirty(false)
                   setListFilter("templates")
                   setActiveTemplateCategory("all")
+                  setCustomersAiActive(false)
                 })
               }
               className={cn(
@@ -3005,6 +3014,7 @@ export default function Lists2View({
                   setListFilter("saved")
                   setSelectedListId(null)
                   setAIPromptExpanded(false)
+                  setCustomersAiActive(false)
                 })
               }
               className={cn(
@@ -3526,7 +3536,7 @@ export default function Lists2View({
 
           {(selectedListId || openedSmartList || listFilter === "my-customers") && !aiPromptExpanded && (
             <>
-              {listFilter === "my-customers" && (
+              {listFilter === "my-customers" && !customersAiActive && (
                 <div className="mt-6 mb-4 rounded-xl border border-indigo-200 bg-gradient-to-r from-indigo-50/70 to-white p-4">
                   <div className="flex items-center gap-2 mb-2 text-sm text-indigo-900">
                     <Sparkles className="h-4 w-4 text-indigo-600" />
@@ -3538,8 +3548,11 @@ export default function Lists2View({
                   <form
                     onSubmit={(e) => {
                       e.preventDefault()
-                      if (!aiPrompt.trim()) return
-                      openPanelWithPrompt(aiPrompt.trim(), { newSession: true })
+                      const trimmed = aiPrompt.trim()
+                      if (!trimmed) return
+                      setCustomersAiSeed(trimmed)
+                      setCustomersAiActive(true)
+                      setAiPrompt("")
                     }}
                     className="flex items-center gap-2"
                   >
@@ -3561,6 +3574,36 @@ export default function Lists2View({
                 </div>
               )}
 
+              {listFilter === "my-customers" && customersAiActive && (
+                <div className="mt-6 mb-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCustomersAiActive(false)
+                        setCustomersAiSeed(null)
+                      }}
+                      className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"
+                    >
+                      <ChevronLeftIcon className="h-3.5 w-3.5" />
+                      Back to customer list
+                    </button>
+                  </div>
+                  <CreateWithAiWorkspace
+                    initialPrompt={customersAiSeed ?? undefined}
+                    onInitialPromptConsumed={() => setCustomersAiSeed(null)}
+                    onSavedListOpen={(listId) => {
+                      setCustomersAiActive(false)
+                      setCustomersAiSeed(null)
+                      setListFilter("saved")
+                      setSelectedListId(listId)
+                    }}
+                  />
+                </div>
+              )}
+
+              {!(listFilter === "my-customers" && customersAiActive) && (
+              <>
               <div className="mt-10 mb-4 space-y-3">
                 <div className="flex items-center justify-end gap-2.5">
                   <Button variant="outline" size="sm">
@@ -3722,6 +3765,8 @@ export default function Lists2View({
                   />
                 </CardContent>
               </Card>
+              </>
+              )}
 
               {selectedOKR && (
                 <Dialog open={!!selectedOKR} onOpenChange={() => setSelectedOKR(null)}>

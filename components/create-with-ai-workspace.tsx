@@ -111,9 +111,18 @@ function ChartView({ chart }: { chart: ChartData }) {
 interface Props {
   onSavedListOpen?: (listId: string) => void
   onChartPinned?: () => void
+  /** Optional prompt to auto-send once when the component mounts. */
+  initialPrompt?: string
+  /** Called after the auto-seeded prompt is dispatched, so the parent can clear its seed. */
+  onInitialPromptConsumed?: () => void
 }
 
-export default function CreateWithAiWorkspace({ onSavedListOpen, onChartPinned }: Props = {}) {
+export default function CreateWithAiWorkspace({
+  onSavedListOpen,
+  onChartPinned,
+  initialPrompt,
+  onInitialPromptConsumed,
+}: Props = {}) {
   const {
     activeSession,
     activeSessionId,
@@ -127,11 +136,20 @@ export default function CreateWithAiWorkspace({ onSavedListOpen, onChartPinned }
 
   const [prompt, setPrompt] = useState("")
   const scrollRef = useRef<HTMLDivElement | null>(null)
+  const seedFiredRef = useRef(false)
   const turns = activeSession.turns
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
   }, [turns, activeSessionId])
+
+  useEffect(() => {
+    if (!initialPrompt || seedFiredRef.current) return
+    seedFiredRef.current = true
+    ask(initialPrompt)
+    onInitialPromptConsumed?.()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialPrompt])
 
   function isArtefactCommitted(turnId: string, kind: "chart" | "smartList"): boolean {
     return committed.some((c) => c.kind === kind && c.versions.some((v) => v.turnId === turnId))
