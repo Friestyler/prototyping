@@ -3087,6 +3087,12 @@ export default function Lists2View({
                             }
                             selected={selectedListId === list.id}
                             onClick={() => handleSavedListClick(list)}
+                            onRefine={() =>
+                              openPanelWithPrompt(
+                                `I want to keep iterating on the "${list.name}" list (${list.customerCount.toLocaleString()} customers${list.smartListDescription ? ` — ${list.smartListDescription}` : ""}). Help me refine who's included.`,
+                                { newSession: true },
+                              )
+                            }
                           />
                         </CarouselItem>
                       ))}
