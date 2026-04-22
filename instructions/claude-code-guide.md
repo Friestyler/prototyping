@@ -67,6 +67,8 @@ instructions/
 
 ## When a new CSV is uploaded
 
+**Any CSV path the user mentions in this repo counts as an upload — even one referenced from outside the project directory** (e.g. `~/Downloads/...`, an `@` file mention, or a drag-and-drop). As soon as the user introduces a CSV, run the scaffolding steps below **before** writing SQL, inspecting data with ad-hoc scripts, or answering any business question. Reading the CSV with pandas/DuckDB/shell and replying from memory — without persisting the database folder, requirement file, SQL, result CSV, and report — is a violation of this workflow, regardless of how simple the question looks.
+
 1. Create `databases/<database-name>/` where `<database-name>` is the CSV filename without its extension.
 2. Create `databases/<database-name>/csv-content/` and save the **original** CSV there, unchanged, as a `.csv` file.
 3. Create `databases/<database-name>/business-requirements/` (empty at first).
