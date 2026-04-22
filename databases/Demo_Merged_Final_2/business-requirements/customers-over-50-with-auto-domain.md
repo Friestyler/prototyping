@@ -27,3 +27,4 @@ Return every distinct customer whose age is 50 or older **and** who holds at lea
 
 ## Iteration notes
 - Initial version. Interpretation of "over 50" as inclusive (≥ 50) is flagged in the report under *Open doubts* — flip to strict (> 50) if the user prefers.
+- Switched the business-logic SELECT to emit Qollabi attribute names (`externalId`, `firstName`, `lastName`, `dateOfBirth`, `customerType`, `email`) instead of the original CSV-column aliases (`Dossier`, `Voornaam`, etc.). Keeps the query portable to a real Qollabi Postgres database. Result CSV headers follow.

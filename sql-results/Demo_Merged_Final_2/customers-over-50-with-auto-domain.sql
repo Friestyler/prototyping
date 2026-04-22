@@ -70,20 +70,21 @@ products AS (
 
 -- ────────────────────────────────────────────────────────────────────────────
 -- Business logic — customers aged 50 or older holding at least one Auto-domain policy.
+-- Output columns use Qollabi attribute names; `age` is derived (not a schema column).
 -- ────────────────────────────────────────────────────────────────────────────
 SELECT
-  c."externalId"   AS "Dossier",
-  c."firstName"    AS "Voornaam",
-  c."lastName"     AS "Naam",
-  c."dateOfBirth"  AS "Geboortedatum",
+  c."externalId",
+  c."firstName",
+  c."lastName",
+  c."dateOfBirth",
   date_diff('year', c."dateOfBirth", CURRENT_DATE)
     - CASE
         WHEN (MONTH(CURRENT_DATE), DAY(CURRENT_DATE))
              < (MONTH(c."dateOfBirth"), DAY(c."dateOfBirth"))
         THEN 1 ELSE 0
-      END                                   AS "Leeftijd",
-  c."customerType" AS "CustomerType",
-  c."email"        AS "E-mail"
+      END                                   AS age,
+  c."customerType",
+  c."email"
 FROM customers c
 WHERE c."dateOfBirth" IS NOT NULL
   AND c."dateOfBirth" <= CURRENT_DATE - INTERVAL 50 YEAR

@@ -1,4 +1,4 @@
-Dossier;Voornaam;Naam;Geboortedatum;Leeftijd;CustomerType;E-mail
+externalId;firstName;lastName;dateOfBirth;age;customerType;email
 369/00;Jan;Baert;09/01/1942;84;naturalPerson;jan.baert@qollabi.com
 314/00;Dirk;Bogaert;20/08/1960;65;naturalPerson;dirk.bogaert@qollabi.com
 495/00;Jozef;Brouwers;10/05/1941;84;naturalPerson;jozef.brouwers@qollabi.com

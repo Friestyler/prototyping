@@ -222,6 +222,7 @@ Do not create `-v2`, `-final`, `-iteration-3` files. One requirement = one `.md`
 - Shipping a `.sql` file without its matching result `.csv` and `.report.md`, or letting any of the three drift out of sync.
 - Skipping the report because "it's obvious" — if something is truly obvious, write one line and move on, but don't omit the file.
 - Writing the business-logic SQL directly against raw CSV columns (`"Polis"`, `"Dossier"`) instead of the Qollabi-shaped CTEs. That couples the query to the source-system CSV shape and defeats portability.
+- Aliasing the SELECT output back to CSV column names (e.g. `c."externalId" AS "Dossier"`, `c."firstName" AS "Voornaam"`). The final SELECT must emit **Qollabi attribute names** — the query, including its output shape, should port unchanged to a real Qollabi Postgres database. Derived columns (e.g. `age`) are fine as long as they aren't named after CSV columns.
 - Hand-simulating the result CSV instead of executing the `.sql` through DuckDB. The `.csv` must be real query output.
 - Writing the result CSV in a different dialect than the source (e.g. `,` when the source used `;`). Excel compatibility breaks silently.
 - Converting the CSV to a different format "for convenience".
