@@ -59,11 +59,11 @@ export function SaveSmartListDialog({
       <DialogContent className="sm:max-w-[560px]">
         <DialogHeader>
           <DialogTitle>{isAgent ? "Save Agent" : "Save Smart List"}</DialogTitle>
-          <DialogDescription>
-            {isAgent
-              ? "Give your agent a name. It will keep the list in sync as customers match the criteria."
-              : "Choose how you want to save this smart list and give it a name."}
-          </DialogDescription>
+          {!isAgent && (
+            <DialogDescription>
+              Choose how you want to save this smart list and give it a name.
+            </DialogDescription>
+          )}
         </DialogHeader>
 
         <div className="grid gap-5 py-2">
