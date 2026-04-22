@@ -35,6 +35,7 @@ import {
   useAiInsights,
   type Artefact,
   type ChartData,
+  type ChatTurn,
   type SmartListPayload,
 } from "@/components/ai-insights-context"
 import { saveUserSavedList, type UserSavedListType } from "@/lib/user-saved-lists"
@@ -123,25 +124,53 @@ export default function CreateWithAiWorkspace({
   initialPrompt,
   onInitialPromptConsumed,
 }: Props = {}) {
-  const {
-    activeSession,
-    activeSessionId,
-    newSession,
-    appendTurn,
-    updateTurn,
-    commitArtefact,
-    committed,
-    activeDraft,
-  } = useAiInsights()
+  // Each workspace instance keeps its own chat state so two mounted instances
+  // (e.g. Portfolio Create-with-AI and Customers Refine-with-AI) don't leak
+  // turns into each other or into the floating AskAi side panel.
+  const { commitArtefact, committed } = useAiInsights()
 
+  const [sessionId, setSessionId] = useState<string>(() => crypto.randomUUID())
+  const [sessionTitle, setSessionTitle] = useState<string>("New chat")
+  const [turns, setTurns] = useState<ChatTurn[]>([])
   const [prompt, setPrompt] = useState("")
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const seedFiredRef = useRef(false)
-  const turns = activeSession.turns
+
+  const appendTurn = (turn: ChatTurn) => {
+    setTurns((prev) => {
+      if (prev.length === 0) {
+        const trimmed = turn.prompt.trim().replace(/\s+/g, " ")
+        setSessionTitle(trimmed.length <= 48 ? trimmed : `${trimmed.slice(0, 45)}…`)
+      }
+      return [...prev, turn]
+    })
+  }
+
+  const updateTurn = (turnId: string, patch: Partial<ChatTurn>) => {
+    setTurns((prev) => prev.map((t) => (t.id === turnId ? { ...t, ...patch } : t)))
+  }
+
+  const newSession = () => {
+    setSessionId(crypto.randomUUID())
+    setSessionTitle("New chat")
+    setTurns([])
+    setPrompt("")
+    seedFiredRef.current = false
+  }
+
+  // The latest artefact emitted in this workspace — used as follow-up context
+  // when the user asks another question, and for the right-rail CTAs.
+  const activeDraft: Artefact | null = (() => {
+    for (let i = turns.length - 1; i >= 0; i--) {
+      const t = turns[i]
+      if (t.artefact) return t.artefact
+    }
+    return null
+  })()
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
-  }, [turns, activeSessionId])
+  }, [turns, sessionId])
 
   useEffect(() => {
     if (!initialPrompt || seedFiredRef.current) return
@@ -167,10 +196,11 @@ export default function CreateWithAiWorkspace({
     const p = (text ?? prompt).trim()
     if (!p) return
     const id = crypto.randomUUID()
+    const priorTurns = turns
     appendTurn({ id, prompt: p, loading: true })
     setPrompt("")
 
-    const history = turns
+    const history = priorTurns
       .filter((t) => !t.loading && !t.error)
       .flatMap((t) => {
         const entries: { role: "user" | "assistant"; content: string }[] = [
@@ -237,7 +267,7 @@ export default function CreateWithAiWorkspace({
     }
 
     commitArtefact({
-      sessionId: activeSessionId,
+      sessionId,
       kind: "smartList",
       artefact: { kind: "smartList", payload },
       prompt: turns.find((t) => t.id === turnId)?.prompt ?? "",
@@ -254,7 +284,7 @@ export default function CreateWithAiWorkspace({
 
   function handlePinChart(turnId: string, chart: ChartData) {
     commitArtefact({
-      sessionId: activeSessionId,
+      sessionId,
       kind: "chart",
       artefact: { kind: "chart", chart },
       prompt: turns.find((t) => t.id === turnId)?.prompt ?? "",
@@ -539,7 +569,7 @@ export default function CreateWithAiWorkspace({
           <div className="text-sm font-semibold text-gray-900 mb-2">Session</div>
           <div className="flex items-center gap-2 text-xs text-gray-600">
             <MessageSquare className="w-3.5 h-3.5 text-gray-400" />
-            <span className="truncate">{activeSession.title}</span>
+            <span className="truncate">{sessionTitle}</span>
           </div>
           <div className="text-[11px] text-gray-400 mt-1 tabular-nums">
             {turns.length} {turns.length === 1 ? "turn" : "turns"}
