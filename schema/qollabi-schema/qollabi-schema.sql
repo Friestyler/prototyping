@@ -1298,7 +1298,7 @@ CREATE TABLE public.customers (
     "firstName" text,
     "dateOfDeath" timestamp without time zone,
     "legalEntityType" text,
-    CONSTRAINT customers_customer_type_check CHECK ((("customerType" IS NULL) OR ("customerType" = ANY (ARRAY['naturalPerson'::text, 'legalEntity'::text]))))
+    CONSTRAINT customers_customer_type_check CHECK ((("customerType" IS NULL) OR ("customerType" = ANY (ARRAY['naturalPerson'::text, 'legalEntity'::text, 'group'::text]))))
 );
 
 ALTER TABLE ONLY public.customers FORCE ROW LEVEL SECURITY;

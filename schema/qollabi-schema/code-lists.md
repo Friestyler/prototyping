@@ -6,12 +6,13 @@ Canonical Qollabi enum values and the CSV-value translations applied in the tran
 
 ## `customers."customerType"`
 
-CHECK constraint in the schema: value must be `'naturalPerson'` or `'legalEntity'` (see [`qollabi-schema.sql:1301`](qollabi-schema.sql)).
+CHECK constraint in the schema: value must be `'naturalPerson'`, `'legalEntity'`, or `'group'` (see [`qollabi-schema.sql:1301`](qollabi-schema.sql)).
 
 | Source system | CSV column | CSV value | Qollabi value |
 | --- | --- | --- | --- |
 | Brio | `Natuurlijk/Rechtsp - Omschrijving` | `Natuurlijk persoon` | `naturalPerson` |
 | Brio | `Natuurlijk/Rechtsp - Omschrijving` | `Rechtspersoon` | `legalEntity` |
+| Brio | `Natuurlijk/Rechtsp - Omschrijving` | `Groepering van natuurlijke en/of rechtspersonen` | `group` |
 
 ## `products."lifecycleStage"`
 
@@ -49,8 +50,9 @@ The CTE for the affected entity applies a `CASE` expression mapping each CSV val
 
 ```sql
 CASE "Natuurlijk/Rechtsp - Omschrijving"
-  WHEN 'Natuurlijk persoon' THEN 'naturalPerson'
-  WHEN 'Rechtspersoon'      THEN 'legalEntity'
+  WHEN 'Natuurlijk persoon'                               THEN 'naturalPerson'
+  WHEN 'Rechtspersoon'                                    THEN 'legalEntity'
+  WHEN 'Groepering van natuurlijke en/of rechtspersonen'  THEN 'group'
   ELSE NULL  -- unrecognized value; flag in the mapping report's sanity metrics
 END AS "customerType"
 ```
