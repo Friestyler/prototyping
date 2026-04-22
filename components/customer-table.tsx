@@ -9,9 +9,9 @@ import {
   ChevronsLeft,
   ChevronsRight,
   ChevronsUpDown,
-  Lock,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Table,
   TableBody,
@@ -27,7 +27,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { cn } from "@/lib/utils"
 import type { MasterCustomer } from "@/lib/customer-database"
 
 type SortKey =
@@ -56,11 +55,12 @@ const PREVIEW_VISIBLE_ROWS = 12
 interface CustomerTableProps {
   customers: MasterCustomer[]
   /**
-   * When true, renders a read-only preview: first 12 rows visible, the rest
-   * faded under a gradient, with a "Save this list to refine results" hint.
-   * No sorting, no pagination — used by the Priority Recommendations cards.
+   * Read-only preview: first 12 rows visible, remainder faded under a gradient.
+   * No sorting or pagination — used by the Priority Recommendations cards.
    */
   previewMode?: boolean
+  /** Retained for backward compatibility; no longer rendered inside the table. */
+  onSave?: () => void
 }
 
 export function CustomerTable({ customers, previewMode = false }: CustomerTableProps) {
@@ -78,8 +78,11 @@ function PreviewTable({ customers }: { customers: MasterCustomer[] }) {
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              {COLUMNS.map((col, i) => (
-                <TableHead key={col.key} className={cn("select-none", i === 0 && "pl-5")}>
+              <TableHead className="pl-5 w-10">
+                <Checkbox disabled />
+              </TableHead>
+              {COLUMNS.map((col) => (
+                <TableHead key={col.key} className="select-none">
                   {col.label}
                 </TableHead>
               ))}
@@ -88,7 +91,10 @@ function PreviewTable({ customers }: { customers: MasterCustomer[] }) {
           <TableBody>
             {visible.map((c) => (
               <TableRow key={c.id}>
-                <TableCell className="pl-5 font-medium text-gray-900 tabular-nums">{c.dossierNumber}</TableCell>
+                <TableCell className="pl-5">
+                  <Checkbox disabled />
+                </TableCell>
+                <TableCell className="font-medium text-gray-900 tabular-nums">{c.dossierNumber}</TableCell>
                 <TableCell className="text-gray-600">{c.customerType}</TableCell>
                 <TableCell className="text-gray-900">{c.firstName}</TableCell>
                 <TableCell className="text-gray-900">
@@ -105,20 +111,6 @@ function PreviewTable({ customers }: { customers: MasterCustomer[] }) {
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-white via-white/85 to-transparent" />
         )}
       </div>
-
-      <div className="flex items-center justify-center gap-2 px-5 py-3 border-t border-gray-100 text-sm text-gray-600">
-        <Lock className="w-3.5 h-3.5 text-gray-400" />
-        <span>
-          {hidden > 0 && (
-            <>
-              Showing {visible.length} of {customers.length} customers ·{" "}
-            </>
-          )}
-          <span className="text-gray-700 font-medium">
-            Save this list to view and refine all results with filters
-          </span>
-        </span>
-      </div>
     </div>
   )
 }
@@ -128,6 +120,7 @@ function FullTable({ customers }: { customers: MasterCustomer[] }) {
   const [sortDir, setSortDir] = useState<SortDir>("asc")
   const [pageSize, setPageSize] = useState(50)
   const [page, setPage] = useState(1)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
 
   const sorted = [...customers].sort((a, b) => {
     const av = sortKey === "products" ? a.products.join(", ") : (a[sortKey] ?? "")
@@ -153,6 +146,24 @@ function FullTable({ customers }: { customers: MasterCustomer[] }) {
     setPage(1)
   }
 
+  const toggleRow = (id: string) => {
+    const next = new Set(selected)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    setSelected(next)
+  }
+
+  const allVisibleSelected = rows.length > 0 && rows.every((r) => selected.has(r.id))
+  const toggleAll = () => {
+    const next = new Set(selected)
+    if (allVisibleSelected) {
+      rows.forEach((r) => next.delete(r.id))
+    } else {
+      rows.forEach((r) => next.add(r.id))
+    }
+    setSelected(next)
+  }
+
   const SortIcon = ({ col }: { col: SortKey }) => {
     if (sortKey !== col) return <ChevronsUpDown className="w-3 h-3 text-gray-400" />
     return sortDir === "asc" ? (
@@ -167,10 +178,17 @@ function FullTable({ customers }: { customers: MasterCustomer[] }) {
       <Table>
         <TableHeader>
           <TableRow className="hover:bg-transparent">
-            {COLUMNS.map((col, i) => (
+            <TableHead className="pl-5 w-10">
+              <Checkbox
+                checked={allVisibleSelected}
+                onCheckedChange={toggleAll}
+                aria-label="Select all"
+              />
+            </TableHead>
+            {COLUMNS.map((col) => (
               <TableHead
                 key={col.key}
-                className={cn("cursor-pointer select-none", i === 0 && "pl-5")}
+                className="cursor-pointer select-none"
                 onClick={() => toggleSort(col.key)}
               >
                 <span className="inline-flex items-center gap-1.5 hover:text-gray-900 transition-colors">
@@ -182,19 +200,29 @@ function FullTable({ customers }: { customers: MasterCustomer[] }) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.map((c) => (
-            <TableRow key={c.id}>
-              <TableCell className="pl-5 font-medium text-gray-900 tabular-nums">{c.dossierNumber}</TableCell>
-              <TableCell className="text-gray-600">{c.customerType}</TableCell>
-              <TableCell className="text-gray-900">{c.firstName}</TableCell>
-              <TableCell className="text-gray-900">
-                {c.lastName || <span className="text-gray-400">—</span>}
-              </TableCell>
-              <TableCell className="text-gray-600 tabular-nums">{c.dateOfBirth}</TableCell>
-              <TableCell className="text-gray-600">{c.address}</TableCell>
-              <TableCell className="text-gray-600">{c.products.join(", ")}</TableCell>
-            </TableRow>
-          ))}
+          {rows.map((c) => {
+            const isSelected = selected.has(c.id)
+            return (
+              <TableRow key={c.id} data-state={isSelected ? "selected" : undefined}>
+                <TableCell className="pl-5">
+                  <Checkbox
+                    checked={isSelected}
+                    onCheckedChange={() => toggleRow(c.id)}
+                    aria-label={`Select ${c.firstName} ${c.lastName}`}
+                  />
+                </TableCell>
+                <TableCell className="font-medium text-gray-900 tabular-nums">{c.dossierNumber}</TableCell>
+                <TableCell className="text-gray-600">{c.customerType}</TableCell>
+                <TableCell className="text-gray-900">{c.firstName}</TableCell>
+                <TableCell className="text-gray-900">
+                  {c.lastName || <span className="text-gray-400">—</span>}
+                </TableCell>
+                <TableCell className="text-gray-600 tabular-nums">{c.dateOfBirth}</TableCell>
+                <TableCell className="text-gray-600">{c.address}</TableCell>
+                <TableCell className="text-gray-600">{c.products.join(", ")}</TableCell>
+              </TableRow>
+            )
+          })}
         </TableBody>
       </Table>
 

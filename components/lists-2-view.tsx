@@ -6,6 +6,7 @@ import React from "react"
 
 import { useState, useEffect, useMemo, useCallback } from "react"
 import { Card, CardContent } from "@/components/ui/card"
+import SmartListCard from "@/components/smart-list-card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -24,7 +25,6 @@ import {
   LayoutGrid,
   ListIcon,
   SearchIcon,
-  MoreHorizontalIcon,
   TargetIcon,
   Network,
   GitBranch,
@@ -58,6 +58,7 @@ import {
   ShieldOff,
   Layers,
   ChevronRight,
+  ChevronLeft as ChevronLeftIcon,
   Megaphone,
   Send,
   BookmarkPlus,
@@ -65,6 +66,7 @@ import {
   AlertTriangle,
   CheckCircle,
   UserMinus,
+  Package,
 } from "lucide-react"
 import { Loader2 } from "lucide-react"
 // </CHANGE>
@@ -87,6 +89,8 @@ import { getCreditCost, getListType } from "@/lib/credit-costs"
 import { useVoucher } from "./voucher-context"
 import { CreditConfirmationDialog } from "./credit-confirmation-dialog" // Added import
 import { CreditIndicator } from "@/components/credit-indicator"
+import { SaveSmartListDialog } from "@/components/save-smart-list-dialog"
+import { useAiInsights } from "@/components/ai-insights-context"
 
 // Import Carousel components
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"
@@ -722,6 +726,10 @@ interface Lists2ViewProps {
   pendingTemplate?: string
   /** Called once pendingTemplate has been consumed */
   onTemplateMounted?: () => void
+  /** Saved list id to auto-select (e.g. from AI chat after saving). */
+  pendingOpenListId?: string
+  /** Called once pendingOpenListId has been consumed. */
+  onListOpened?: () => void
 }
 
 export default function Lists2View({
@@ -731,6 +739,8 @@ export default function Lists2View({
   onCreateCampaign,
   pendingTemplate,
   onTemplateMounted,
+  pendingOpenListId,
+  onListOpened,
 }: Lists2ViewProps) {
   const { toast } = useToast()
   // Removed useVoucher context as it's not used in this component
@@ -805,7 +815,7 @@ export default function Lists2View({
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards") // Redeclared viewMode, this is the correct one.
 
   // Renamed smartListFilter to listFilter for unified filtering
-  const [listFilter, setListFilter] = useState<"all" | "offered" | "radar" | "saved" | "templates">("saved") // Added 'templates' filter
+  const [listFilter, setListFilter] = useState<"all" | "offered" | "radar" | "saved" | "templates" | "my-customers">("my-customers")
   const [activeTemplateCategory, setActiveTemplateCategory] = useState<
     "all" | "pre-built" | "branded" | "market-radar"
   >("all") // State for template category filtering
@@ -823,6 +833,7 @@ export default function Lists2View({
   const [showAiPanel, setShowAiPanel] = useState(false)
   const [isFocused, setIsFocused] = useState(false) // State for input focus
   const [aiPromptExpanded, setAIPromptExpanded] = useState(false) // State to control AI prompt section visibility
+  const { openPanelWithPrompt } = useAiInsights()
 
   const [showAIGenerationDialog, setShowAIGenerationDialog] = useState(false)
   const [aiPrompt, setAiPrompt] = useState("")
@@ -857,10 +868,14 @@ export default function Lists2View({
   const [selectedExistingList, setSelectedExistingList] = useState<string | null>(null)
 
   const [showSaveSmartListDialog, setShowSaveSmartListDialog] = useState(false)
-  const [selectedListType, setSelectedListType] = useState<"dynamic" | "static">("dynamic")
-  const [smartListName, setSmartListName] = useState("")
 
   const [openedSmartList, setOpenedSmartList] = useState<SmartListSuggestion | null>(null)
+  // Tracks whether the user has applied refinements to a template draft. Flipped
+  // on when filters/columns are touched while a template preview is active, and
+  // cleared whenever the draft is opened, saved, or discarded.
+  const [draftDirty, setDraftDirty] = useState(false)
+  // Action to run after the user confirms discarding a dirty draft.
+  const [pendingDiscardAction, setPendingDiscardAction] = useState<(() => void) | null>(null)
 
   // Auto-open a template requested from Portfolio Insights
   useEffect(() => {
@@ -876,6 +891,17 @@ export default function Lists2View({
     onTemplateMounted?.()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingTemplate])
+
+  // Auto-open a saved list requested from the AI chat.
+  useEffect(() => {
+    if (!pendingOpenListId) return
+    if (!savedLists.some((l) => l.id === pendingOpenListId)) return // wait for merge effect
+    setListFilter("saved")
+    setOpenedSmartList(null)
+    setSelectedListId(pendingOpenListId)
+    onListOpened?.()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingOpenListId, savedLists])
 
   const [showAddToCampaignDialog, setShowAddToCampaignDialog] = useState(false)
   const [showCampaignTemplateDialog, setShowCampaignTemplateDialog] = useState(false)
@@ -1257,6 +1283,7 @@ export default function Lists2View({
 
     setOpenedSmartList(suggestion)
     setSelectedListId(null)
+    setDraftDirty(false)
 
     toast({
       title: "Smart List Opened",
@@ -1326,16 +1353,12 @@ export default function Lists2View({
     })
   }
 
-  // Updated handleSavePreviewList to accept type
-  const handleSavePreviewList = (type: "dynamic" | "static") => {
+  const handleSavePreviewList = () => {
     if (!openedSmartList) return
-
-    setSmartListName(openedSmartList.name)
-    setSelectedListType(type)
     setShowSaveSmartListDialog(true)
   }
 
-  const handleConfirmSaveSmartList = () => {
+  const handleConfirmSaveSmartList = (name: string, type: "dynamic" | "static") => {
     if (!openedSmartList) return
 
     const listType = getListType(openedSmartList)
@@ -1343,29 +1366,31 @@ export default function Lists2View({
 
     const newList: SavedList = {
       id: Date.now().toString(),
-      name: smartListName,
-      type: selectedListType,
+      name,
+      type,
       customerCount: openedSmartList.userCount || 0,
-      advancedFilters: null, // This should likely be populated from openedSmartList.rules
+      advancedFilters: null,
       createdAt: new Date().toISOString(),
-      // Store smart list metadata
       isFromSmartList: true,
       smartListIcon: openedSmartList.icon,
       smartListColor: openedSmartList.color,
       smartListDescription: openedSmartList.description,
       originalSmartListId: openedSmartList.id,
-      updatedAt: new Date().toISOString(), // Added updatedAt
+      updatedAt: new Date().toISOString(),
     }
 
     setSavedLists((prev) => [newList, ...prev])
 
-    deductCredits(creditCost, smartListName)
+    deductCredits(creditCost, name)
 
     setOpenedSmartList(null)
+    setDraftDirty(false)
     setShowSaveSmartListDialog(false)
-    setSmartListName("")
 
-    // Show toast with balance update
+    // Open the newly-saved list on the Customers page.
+    setListFilter("saved")
+    setSelectedListId(newList.id)
+
     if (creditCost > 0) {
       const newBalance = creditBalance - creditCost
       if (newBalance < 0) {
@@ -1383,10 +1408,9 @@ export default function Lists2View({
     } else {
       toast({
         title: "List Saved",
-        description: `"${newList.name}" has been saved as a ${selectedListType} list`,
+        description: `"${newList.name}" has been saved as a ${type} list`,
       })
     }
-    // </CHANGE>
   }
 
   const handleDiscardSmartList = () => {
@@ -1426,6 +1450,14 @@ export default function Lists2View({
   }
 
   const updateCurrentListFilter = (filter: FilterGroup | null) => {
+    if (openedSmartList) {
+      setListFilters((prev) => ({
+        ...prev,
+        [openedSmartList.id]: filter,
+      }))
+      setDraftDirty(true)
+      return
+    }
     if (selectedListId === "1") {
       setAllCustomersFilter(filter)
     } else if (selectedListId) {
@@ -2755,10 +2787,27 @@ export default function Lists2View({
 
   const handleDisregardSmartList = () => {
     setOpenedSmartList(null)
+    setDraftDirty(false)
     toast({
       title: "Smart List Closed",
       description: "You have returned to the main customer view.",
     })
+  }
+
+  // Runs `action` immediately if the template draft is clean; otherwise queues
+  // it behind a "Discard draft?" confirmation dialog.
+  const guardDraft = (action: () => void) => {
+    if (openedSmartList && draftDirty) {
+      setPendingDiscardAction(() => action)
+      return
+    }
+    action()
+  }
+
+  const discardDraft = () => {
+    setOpenedSmartList(null)
+    setDraftDirty(false)
+    setListFilter("templates")
   }
 
   const handleVoucherApply = (code: string) => {
@@ -2776,6 +2825,17 @@ export default function Lists2View({
     // Filter saved lists based on searchTerm
     return savedLists.filter((list) => list.name.toLowerCase().includes(searchTerm.toLowerCase()))
   }, [savedLists, searchTerm])
+
+  const handleSuggestionSave = (suggestion: SmartListSuggestion) => {
+    setOpenedSmartList(suggestion)
+    setShowSaveSmartListDialog(true)
+  }
+
+  // Start Campaign CTA on a template card → opens the suggestion preview
+  // (which is where the existing campaign-launch UI lives).
+  const handleSuggestionStartCampaign = (suggestion: SmartListSuggestion) => {
+    handleSuggestionClick(suggestion)
+  }
 
   // Handle AI prompt submit
   const handleAIPromptSubmit = async () => {
@@ -2832,7 +2892,13 @@ export default function Lists2View({
 
   return (
     <TooltipProvider>
-      <div className="flex-1 flex flex-col overflow-hidden bg-gradient-to-b from-blue-100/50 via-blue-50/30 via-5% to-white to-7%">
+      <div
+        className="flex-1 flex flex-col overflow-hidden"
+        style={{
+          background:
+            "linear-gradient(to bottom, rgba(219, 234, 254, 0.5) 0, rgba(239, 246, 255, 0.3) 90px, #fff 180px)",
+        }}
+      >
         <div className="flex items-center justify-between px-6 py-1.5 border-b border-gray-100">
           <div className="flex items-center gap-3">
             <button className="text-gray-400 hover:text-gray-600 transition-colors">
@@ -2845,14 +2911,29 @@ export default function Lists2View({
               <span className="text-gray-400">...</span>
               <span className="text-gray-300">/</span>
               <span className="text-blue-600 font-normal">Customers</span>
-              {(selectedList || openedSmartList) && (
+              {openedSmartList ? (
                 <>
                   <span className="text-gray-300">/</span>
+                  <button
+                    type="button"
+                    onClick={() => guardDraft(discardDraft)}
+                    className="text-blue-600 font-normal hover:underline"
+                  >
+                    Templates
+                  </button>
+                  <span className="text-gray-300">/</span>
                   <span className="text-gray-700">
-                    {selectedList?.name || openedSmartList?.name}
-                    {openedSmartList && <span className="text-gray-400 ml-1.5">(Preview)</span>}
+                    {openedSmartList.name}
+                    <span className="text-gray-400 ml-1.5">(draft)</span>
                   </span>
                 </>
+              ) : (
+                selectedList && (
+                  <>
+                    <span className="text-gray-300">/</span>
+                    <span className="text-gray-700">{selectedList.name}</span>
+                  </>
+                )
               )}
             </div>
           </div>
@@ -2874,28 +2955,36 @@ export default function Lists2View({
             <Button
               size="lg"
               variant="ghost"
-              onClick={() => {
-                setListFilter("saved")
-                setSelectedListId(null)
-                setAIPromptExpanded(false)
-              }}
+              onClick={() =>
+                guardDraft(() => {
+                  setOpenedSmartList(null)
+                  setDraftDirty(false)
+                  setListFilter("my-customers")
+                  setSelectedListId(null)
+                  setAIPromptExpanded(false)
+                })
+              }
               className={cn(
                 "rounded-lg px-6 py-2.5 font-medium transition-all border",
-                listFilter === "saved" && !aiPromptExpanded
+                listFilter === "my-customers" && !aiPromptExpanded
                   ? "bg-[rgb(224,231,255)] text-primary border-transparent hover:bg-[rgb(214,221,245)]"
                   : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50",
               )}
             >
-              <Bookmark className="w-4 h-4 mr-2 text-gray-500" />
-              My Lists
+              <Users className="w-4 h-4 mr-2 text-gray-500" />
+              My Customers
             </Button>
             <Button
               size="lg"
               variant="ghost"
-              onClick={() => {
-                setListFilter("templates")
-                setActiveTemplateCategory("all")
-              }}
+              onClick={() =>
+                guardDraft(() => {
+                  setOpenedSmartList(null)
+                  setDraftDirty(false)
+                  setListFilter("templates")
+                  setActiveTemplateCategory("all")
+                })
+              }
               className={cn(
                 "rounded-lg px-6 py-2.5 font-medium transition-all border",
                 listFilter === "templates" && !aiPromptExpanded
@@ -2909,18 +2998,25 @@ export default function Lists2View({
             <Button
               size="lg"
               variant="ghost"
-              onClick={() => setAIPromptExpanded(true)}
+              onClick={() =>
+                guardDraft(() => {
+                  setOpenedSmartList(null)
+                  setDraftDirty(false)
+                  setListFilter("saved")
+                  setSelectedListId(null)
+                  setAIPromptExpanded(false)
+                })
+              }
               className={cn(
                 "rounded-lg px-6 py-2.5 font-medium transition-all border",
-                aiPromptExpanded
+                listFilter === "saved" && !aiPromptExpanded
                   ? "bg-[rgb(224,231,255)] text-primary border-transparent hover:bg-[rgb(214,221,245)]"
                   : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50",
               )}
             >
-              <Sparkles className="w-4 h-4 mr-2 text-gray-500" />
-              Create with AI
+              <Bookmark className="w-4 h-4 mr-2 text-gray-500" />
+              My Lists
             </Button>
-            {/* </CHANGE> */}
           </div>
         </div>
         {/* </CHANGE> */}
@@ -2932,7 +3028,7 @@ export default function Lists2View({
           {listFilter === "saved" && !aiPromptExpanded && (
             <div className="max-w-7xl mx-auto">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-semibold text-gray-900">Your Audiences</h2>
+                <h2 className="text-xl font-semibold text-gray-900">Your Audiences</h2>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm" className="gap-2 rounded-xl bg-transparent">
@@ -2967,34 +3063,21 @@ export default function Lists2View({
                     {/* Added px-4 to CarouselContent to create space between arrows and cards, preventing ring clipping */}
                     <CarouselContent className="-ml-4 py-2 px-4">
                       {filteredSavedLists.map((list) => (
-                        <CarouselItem key={list.id} className="pl-4 md:basis-1/2 lg:basis-1/3 xl:basis-1/4">
-                          <Card
-                            className={cn(
-                              "group cursor-pointer transition-all rounded-2xl overflow-hidden border-gray-200",
-                              selectedListId === list.id
-                                ? "ring-2 ring-primary ring-offset-2 shadow-xl -translate-y-1"
-                                : "hover:shadow-lg hover:-translate-y-1",
-                            )}
+                        <CarouselItem key={list.id} className="pl-4 md:basis-1/2 lg:basis-1/3">
+                          <SmartListCard
+                            name={list.name}
+                            description={list.smartListDescription}
+                            iconNode={<Bookmark className="h-6 w-6" />}
+                            customerCount={list.customerCount}
+                            badge={list.type === "dynamic" ? "Dynamic" : "Static"}
+                            badgeStyle={
+                              list.type === "dynamic"
+                                ? { bg: "#EEF2FF", text: "#4338CA", border: "#C7D2FE" }
+                                : { bg: "#F3F4F6", text: "#374151", border: "#E5E7EB" }
+                            }
+                            selected={selectedListId === list.id}
                             onClick={() => handleSavedListClick(list)}
-                          >
-                            <CardContent className="p-6">
-                              {/* Icon Container */}
-                              <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mb-4">
-                                <Bookmark className="h-6 w-6 text-primary" />
-                              </div>
-
-                              {/* Content */}
-                              <h3 className="font-semibold text-base mb-2 line-clamp-2 leading-tight">{list.name}</h3>
-                              <p className="text-sm text-gray-600 mb-3 line-clamp-1">
-                                {list.customerCount.toLocaleString()} customers
-                              </p>
-                              {list.createdAt && (
-                                <p className="text-xs text-gray-400">
-                                  Edited {new Date(list.createdAt).toLocaleDateString()}
-                                </p>
-                              )}
-                            </CardContent>
-                          </Card>
+                          />
                         </CarouselItem>
                       ))}
                     </CarouselContent>
@@ -3035,8 +3118,9 @@ export default function Lists2View({
           )}
 
           {/* Templates View */}
-          {listFilter === "templates" && !aiPromptExpanded && (
+          {listFilter === "templates" && !aiPromptExpanded && !openedSmartList && (
             <div className="max-w-7xl mx-auto">
+              <h2 className="text-xl font-semibold text-gray-900 mb-6">Explore Templates</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 pt-2">
                 {/* Pre-built Smart Lists */}
                 <Card
@@ -3148,144 +3232,72 @@ export default function Lists2View({
                           .filter((s) => !s.isBranded && !s.isMarketRadar)
                           .slice(0, 8)
                           .map((suggestion) => (
-                            <CarouselItem key={suggestion.id} className="pl-4 md:basis-1/2 lg:basis-1/3 xl:basis-1/4">
-                              <Card
-                                className="group cursor-pointer transition-all hover:shadow-xl hover:-translate-y-1 rounded-2xl overflow-hidden bg-white border-gray-200 h-full"
-                                onClick={() => handleSuggestionClick(suggestion)}
-                              >
-                                <CardContent className="p-5">
-                                  {suggestion.isAISignal ? (
-                                    /* ── AI Signal card variant ── */
-                                    (() => {
-                                      const catColor = suggestion.signalCatColor ?? "#0D9488"
-                                      const catLabel = SIGNAL_CATEGORIES.find(c => c.type === suggestion.signalCategoryType)?.label ?? suggestion.signalCategoryType ?? ""
-                                      const urgency = suggestion.signalUrgency ?? "medium"
-                                      const IconComp = (typeof suggestion.icon === "string" ? (SIGNAL_ICON_MAP[suggestion.icon] ?? Sparkles) : null)
-                                      const URGENCY_COLORS: Record<string, { bg: string; text: string; label: string }> = {
-                                        critical: { bg: "#FEE2E2", text: "#DC2626", label: "Critical" },
-                                        high:     { bg: "#FED7AA", text: "#EA580C", label: "High" },
-                                        medium:   { bg: "#FEF3C7", text: "#D97706", label: "Medium" },
-                                        low:      { bg: "#D1FAE5", text: "#059669", label: "Low" },
-                                      }
-                                      const urg = URGENCY_COLORS[urgency] ?? URGENCY_COLORS.medium
-                                      return (
-                                        <>
-                                          {/* Category + urgency badges */}
-                                          <div className="flex items-center gap-1.5 mb-3 flex-wrap">
-                                            <span
-                                              className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9.5px] font-bold uppercase tracking-wide border"
-                                              style={{ color: catColor, backgroundColor: catColor + "14", borderColor: catColor + "30" }}
-                                            >
-                                              {catLabel}
-                                            </span>
-                                            <span
-                                              className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9.5px] font-bold uppercase tracking-wide"
-                                              style={{ color: urg.text, backgroundColor: urg.bg }}
-                                            >
-                                              {urg.label}
-                                            </span>
-                                          </div>
+                            <CarouselItem key={suggestion.id} className="pl-4 md:basis-1/2 lg:basis-1/3">
+                              {(() => {
+                                if (!suggestion.isAISignal) {
+                                  return (
+                                    <SmartListCard
+                                      name={suggestion.name}
+                                      description={suggestion.description}
+                                      byLabel="by Brand Broker"
+                                      rating={suggestion.rating}
+                                      iconNode={<span className="text-2xl">{suggestion.icon}</span>}
+                                      customerCount={suggestion.userCount}
+                                      dollarValue={suggestion.dollarValue}
+                                      onClick={() => handleSuggestionClick(suggestion)}
+                                      primaryAction={{ label: "Save list", onClick: () => handleSuggestionSave(suggestion) }}
+                                      secondaryAction={{ label: "Start campaign", onClick: () => handleSuggestionStartCampaign(suggestion) }}
+                                    />
+                                  )
+                                }
 
-                                          {/* Icon */}
-                                          <div
-                                            className="w-10 h-10 rounded-xl flex items-center justify-center mb-3"
-                                            style={{ background: `linear-gradient(135deg, ${suggestion.signalGradient?.[0] ?? "#F0FDFA"}, ${suggestion.signalGradient?.[1] ?? "#CCFBF1"})` }}
-                                          >
-                                            {IconComp
-                                              ? <IconComp size={17} style={{ color: catColor }} />
-                                              : <Sparkles size={17} style={{ color: catColor }} />
-                                            }
-                                          </div>
+                                const catColor = suggestion.signalCatColor ?? "#0D9488"
+                                const catLabel =
+                                  SIGNAL_CATEGORIES.find((c) => c.type === suggestion.signalCategoryType)?.label ??
+                                  suggestion.signalCategoryType ??
+                                  ""
+                                const urgency = suggestion.signalUrgency ?? "medium"
+                                const URGENCY_STYLES: Record<string, { bg: string; text: string; label: string }> = {
+                                  critical: { bg: "#FEE2E2", text: "#DC2626", label: "Critical" },
+                                  high:     { bg: "#FED7AA", text: "#EA580C", label: "High" },
+                                  medium:   { bg: "#FEF3C7", text: "#D97706", label: "Medium" },
+                                  low:      { bg: "#D1FAE5", text: "#059669", label: "Low" },
+                                }
+                                const urg = URGENCY_STYLES[urgency] ?? URGENCY_STYLES.medium
+                                const IconComp =
+                                  typeof suggestion.icon === "string"
+                                    ? SIGNAL_ICON_MAP[suggestion.icon] ?? Sparkles
+                                    : null
+                                const gradient = `linear-gradient(135deg, ${suggestion.signalGradient?.[0] ?? "#F0FDFA"}, ${suggestion.signalGradient?.[1] ?? "#CCFBF1"})`
+                                const description =
+                                  suggestion.signalKeyReasons && suggestion.signalKeyReasons.length > 0
+                                    ? suggestion.signalKeyReasons.slice(0, 2).join(" · ")
+                                    : suggestion.description
 
-                                          {/* Name */}
-                                          <h3 className="font-semibold text-sm mb-1.5 line-clamp-2 leading-tight text-gray-900">
-                                            {suggestion.name}
-                                          </h3>
-
-                                          {/* Key reasons */}
-                                          {suggestion.signalKeyReasons && suggestion.signalKeyReasons.length > 0 && (
-                                            <ul className="mb-3 space-y-1">
-                                              {suggestion.signalKeyReasons.slice(0, 2).map((r, i) => (
-                                                <li key={i} className="flex items-start gap-1.5 text-[10.5px] text-gray-500 leading-snug">
-                                                  <span className="w-1 h-1 rounded-full mt-1.5 flex-shrink-0" style={{ backgroundColor: catColor }} />
-                                                  {r}
-                                                </li>
-                                              ))}
-                                            </ul>
-                                          )}
-
-                                          {/* Metrics footer */}
-                                          <div className="flex items-center gap-3 text-xs border-t border-gray-100 pt-3 mt-auto">
-                                            <div className="flex items-center gap-1.5">
-                                              <Users className="h-3.5 w-3.5 text-gray-400" />
-                                              <span className="font-medium text-gray-700">{suggestion.userCount}</span>
-                                            </div>
-                                            <div className="flex items-center gap-1 ml-auto">
-                                              <span className="text-gray-400 text-[10px]">potential</span>
-                                              <span className="font-semibold" style={{ color: catColor }}>
-                                                €{suggestion.dollarValue >= 1000
-                                                  ? `${(suggestion.dollarValue / 1000).toFixed(0)}k`
-                                                  : suggestion.dollarValue}
-                                              </span>
-                                            </div>
-                                          </div>
-                                        </>
+                                return (
+                                  <SmartListCard
+                                    name={suggestion.name}
+                                    description={description}
+                                    byLabel={catLabel ? `by ${catLabel}` : undefined}
+                                    badge={urg.label}
+                                    badgeStyle={{ bg: urg.bg, text: urg.text }}
+                                    iconNode={
+                                      IconComp ? (
+                                        <IconComp size={22} style={{ color: catColor }} />
+                                      ) : (
+                                        <Sparkles size={22} style={{ color: catColor }} />
                                       )
-                                    })()
-                                  ) : (
-                                    /* ── Standard pre-built card ── */
-                                    <>
-                                      {/* Icon */}
-                                      <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mb-4">
-                                        <div className="text-2xl text-primary">{suggestion.icon}</div>
-                                      </div>
-
-                                      {/* Content */}
-                                      <h3 className="font-semibold text-base mb-2 line-clamp-2 leading-tight">
-                                        {suggestion.name}
-                                      </h3>
-                                      <p className="text-sm text-gray-600 mb-3 line-clamp-2 leading-snug">
-                                        {suggestion.description}
-                                      </p>
-
-                                      {/* Rating */}
-                                      {suggestion.rating && (
-                                        <div className="flex items-center gap-2 mb-4">
-                                          <div className="flex items-center gap-0.5">
-                                            {[...Array(5)].map((_, i) => (
-                                              <Star
-                                                key={i}
-                                                className={cn(
-                                                  "h-3.5 w-3.5",
-                                                  i < Math.floor(suggestion.rating!)
-                                                    ? "fill-yellow-400 text-yellow-400"
-                                                    : "fill-gray-200 text-gray-200",
-                                                )}
-                                              />
-                                            ))}
-                                          </div>
-                                          <span className="text-sm font-medium">{suggestion.rating}</span>
-                                        </div>
-                                      )}
-
-                                      {/* Metrics */}
-                                      <div className="flex items-center gap-3 text-sm border-t border-gray-100 pt-4">
-                                        <div className="flex items-center gap-1.5">
-                                          <Users className="h-4 w-4 text-gray-400" />
-                                          <span className="font-medium text-xs">{suggestion.userCount} customers</span>
-                                        </div>
-
-                                        <div className="flex items-center gap-1">
-                                          <span className="text-gray-400">€</span>
-                                          <span className="font-medium text-xs">
-                                            {formatNumberCompact(suggestion.dollarValue)}
-                                          </span>
-                                        </div>
-                                      </div>
-                                    </>
-                                  )}
-                                </CardContent>
-                              </Card>
+                                    }
+                                    iconBg={gradient}
+                                    iconColor={catColor}
+                                    customerCount={suggestion.userCount}
+                                    dollarValue={suggestion.dollarValue}
+                                    onClick={() => handleSuggestionClick(suggestion)}
+                                    primaryAction={{ label: "Save list", onClick: () => handleSuggestionSave(suggestion) }}
+                                    secondaryAction={{ label: "Start campaign", onClick: () => handleSuggestionStartCampaign(suggestion) }}
+                                  />
+                                )
+                              })()}
                             </CarouselItem>
                           ))}
                       </CarouselContent>
@@ -3325,90 +3337,21 @@ export default function Lists2View({
                           .filter((s) => s.isBranded)
                           .slice(0, 8)
                           .map((suggestion) => (
-                            <CarouselItem key={suggestion.id} className="pl-4 md:basis-1/2 lg:basis-1/3 xl:basis-1/4">
-                              <Card
-                                className={cn(
-                                  "group cursor-pointer transition-all hover:shadow-xl hover:-translate-y-1 rounded-2xl overflow-hidden h-full",
-                                  suggestion.isAISignal
-                                    ? "bg-white border border-gray-200 border-l-[3px]"
-                                    : "bg-white border-gray-200",
-                                )}
-                                style={suggestion.isAISignal ? { borderLeftColor: suggestion.signalCatColor ?? "#0D9488" } : undefined}
+                            <CarouselItem key={suggestion.id} className="pl-4 md:basis-1/2 lg:basis-1/3">
+                              <SmartListCard
+                                name={suggestion.name}
+                                description={suggestion.description}
+                                byLabel={suggestion.brandedBy ? `by ${suggestion.brandedBy}` : undefined}
+                                badge={suggestion.badge === "Offered" ? "Offered" : undefined}
+                                rating={suggestion.rating}
+                                logoUrl={suggestion.logoUrl}
+                                iconNode={!suggestion.logoUrl ? <span className="text-2xl">{suggestion.icon}</span> : undefined}
+                                customerCount={suggestion.userCount}
+                                dollarValue={suggestion.dollarValue}
                                 onClick={() => handleSuggestionClick(suggestion)}
-                              >
-                                <CardContent className="p-6">
-                                  {/* Badge */}
-                                  {suggestion.badge === "Offered" && (
-                                    <Badge className="absolute top-4 right-4 bg-branded text-branded-foreground rounded-lg">
-                                      {suggestion.badge}
-                                    </Badge>
-                                  )}
-
-                                  {/* Icon/Logo */}
-                                  <div className="w-14 h-14 rounded-2xl bg-branded-muted border border-branded-border flex items-center justify-center mb-4">
-                                    {suggestion.logoUrl ? (
-                                      <img
-                                        src={suggestion.logoUrl || "/placeholder.svg"}
-                                        alt={`${suggestion.brandedBy} logo`}
-                                        className="w-full h-full object-contain p-2"
-                                        onError={(e) => {
-                                          e.currentTarget.src = "/axa-insurance-logo.png"
-                                        }}
-                                      />
-                                    ) : (
-                                      <div className="text-2xl text-branded">{suggestion.icon}</div>
-                                    )}
-                                  </div>
-
-                                  {/* Content */}
-                                  <h3 className="font-semibold text-base mb-2 line-clamp-2 leading-tight">
-                                    {suggestion.name}
-                                  </h3>
-                                  <p className="text-sm text-gray-600 mb-3 line-clamp-2 leading-snug">
-                                    {suggestion.description}
-                                  </p>
-
-                                  {/* Source */}
-                                  {suggestion.brandedBy && (
-                                    <p className="text-xs text-branded font-medium mb-3">by {suggestion.brandedBy}</p>
-                                  )}
-
-                                  {/* Rating */}
-                                  {suggestion.rating && (
-                                    <div className="flex items-center gap-2 mb-4">
-                                      <div className="flex items-center gap-0.5">
-                                        {[...Array(5)].map((_, i) => (
-                                          <Star
-                                            key={i}
-                                            className={cn(
-                                              "h-3.5 w-3.5",
-                                              i < Math.floor(suggestion.rating!)
-                                                ? "fill-yellow-400 text-yellow-400"
-                                                : "fill-gray-200 text-gray-200",
-                                            )}
-                                          />
-                                        ))}
-                                      </div>
-                                      <span className="text-sm font-medium">{suggestion.rating}</span>
-                                    </div>
-                                  )}
-
-                                  {/* Metrics */}
-                                  <div className="flex items-center gap-3 text-sm border-t border-gray-100 pt-4">
-                                    <div className="flex items-center gap-1.5">
-                                      <Users className="h-4 w-4 text-gray-400" />
-                                      <span className="font-medium text-xs">{suggestion.userCount} customers</span>
-                                    </div>
-
-                                    <div className="flex items-center gap-1">
-                                      <span className="text-gray-400">€</span>
-                                      <span className="font-medium text-xs">
-                                        {formatNumberCompact(suggestion.dollarValue)}
-                                      </span>
-                                    </div>
-                                  </div>
-                                </CardContent>
-                              </Card>
+                                primaryAction={{ label: "Save list", onClick: () => handleSuggestionSave(suggestion) }}
+                                secondaryAction={{ label: "Start campaign", onClick: () => handleSuggestionStartCampaign(suggestion) }}
+                              />
                             </CarouselItem>
                           ))}
                       </CarouselContent>
@@ -3447,76 +3390,20 @@ export default function Lists2View({
                           .filter((s) => s.isMarketRadar)
                           .slice(0, 8)
                           .map((suggestion) => (
-                            <CarouselItem key={suggestion.id} className="pl-4 md:basis-1/2 lg:basis-1/3 xl:basis-1/4">
-                              <Card
-                                className="group cursor-pointer transition-all hover:shadow-xl hover:-translate-y-1 rounded-2xl overflow-hidden bg-white border-gray-200 h-full"
+                            <CarouselItem key={suggestion.id} className="pl-4 md:basis-1/2 lg:basis-1/3">
+                              <SmartListCard
+                                name={suggestion.name}
+                                description={suggestion.description}
+                                byLabel={`by ${suggestion.source || "Brand Broker AI"}${suggestion.marketPulseDate ? ` – ${suggestion.marketPulseDate}` : ""}`}
+                                badge={suggestion.daysLeft !== undefined ? `${suggestion.daysLeft} days left` : undefined}
+                                rating={suggestion.rating}
+                                iconNode={<span className="text-2xl">{suggestion.icon}</span>}
+                                customerCount={suggestion.userCount}
+                                dollarValue={suggestion.dollarValue}
                                 onClick={() => handleSuggestionClick(suggestion)}
-                              >
-                                <CardContent className="p-6">
-                                  {/* Badge */}
-                                  {suggestion.daysLeft !== undefined && (
-                                    <Badge className="absolute top-4 right-4 bg-orange-100 text-orange-700 border-orange-200 rounded-lg">
-                                      {suggestion.daysLeft} days left
-                                    </Badge>
-                                  )}
-
-                                  {/* Icon */}
-                                  <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mb-4">
-                                    <div className="text-2xl text-primary">{suggestion.icon}</div>
-                                  </div>
-
-                                  {/* Content */}
-                                  <h3 className="font-semibold text-base mb-2 line-clamp-2 leading-tight">
-                                    {suggestion.name}
-                                  </h3>
-                                  <p className="text-sm text-gray-600 mb-3 line-clamp-2 leading-snug">
-                                    {suggestion.description}
-                                  </p>
-
-                                  {/* Source */}
-                                  {suggestion.isMarketRadar && (
-                                    <p className="text-xs text-blue-600 mb-3">
-                                      by {suggestion.source || "Brand Broker AI"} – Market Pulse,{" "}
-                                      {suggestion.marketPulseDate}
-                                    </p>
-                                  )}
-
-                                  {/* Rating */}
-                                  {suggestion.rating && (
-                                    <div className="flex items-center gap-2 mb-4">
-                                      <div className="flex items-center gap-0.5">
-                                        {[...Array(5)].map((_, i) => (
-                                          <Star
-                                            key={i}
-                                            className={cn(
-                                              "h-3.5 w-3.5",
-                                              i < Math.floor(suggestion.rating!)
-                                                ? "fill-yellow-400 text-yellow-400"
-                                                : "fill-gray-200 text-gray-200",
-                                            )}
-                                          />
-                                        ))}
-                                      </div>
-                                      <span className="text-sm font-medium">{suggestion.rating}</span>
-                                    </div>
-                                  )}
-
-                                  {/* Metrics */}
-                                  <div className="flex items-center gap-3 text-sm border-t border-gray-100 pt-4">
-                                    <div className="flex items-center gap-1.5">
-                                      <Users className="h-4 w-4 text-gray-400" />
-                                      <span className="font-medium text-xs">{suggestion.userCount} customers</span>
-                                    </div>
-
-                                    <div className="flex items-center gap-1">
-                                      <span className="text-gray-400">€</span>
-                                      <span className="font-medium text-xs">
-                                        {formatNumberCompact(suggestion.dollarValue)}
-                                      </span>
-                                    </div>
-                                  </div>
-                                </CardContent>
-                              </Card>
+                                primaryAction={{ label: "Save list", onClick: () => handleSuggestionSave(suggestion) }}
+                                secondaryAction={{ label: "Start campaign", onClick: () => handleSuggestionStartCampaign(suggestion) }}
+                              />
                             </CarouselItem>
                           ))}
                       </CarouselContent>
@@ -3637,98 +3524,97 @@ export default function Lists2View({
             </div>
           )}
 
-          {selectedListId && !aiPromptExpanded && (
+          {(selectedListId || openedSmartList || listFilter === "my-customers") && !aiPromptExpanded && (
             <>
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3 flex-1">
+              {listFilter === "my-customers" && !selectedListId && !openedSmartList && (
+                <div className="mt-6 mb-4 rounded-xl border border-indigo-200 bg-gradient-to-r from-indigo-50/70 to-white p-4">
+                  <div className="flex items-center gap-2 mb-2 text-sm text-indigo-900">
+                    <Sparkles className="h-4 w-4 text-indigo-600" />
+                    <span className="font-medium">Refine with AI</span>
+                    <span className="text-indigo-700/80">
+                      Describe a segment in plain English — e.g. "Life insurance, aged 30–55, no claims in 2 years".
+                    </span>
+                  </div>
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault()
+                      if (!aiPrompt.trim()) return
+                      openPanelWithPrompt(aiPrompt.trim(), { newSession: true })
+                    }}
+                    className="flex items-center gap-2"
+                  >
+                    <div className="relative flex-1">
+                      <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-indigo-500 pointer-events-none" />
+                      <Input
+                        type="text"
+                        placeholder="Ask to refine your customers…"
+                        value={aiPrompt}
+                        onChange={(e) => setAiPrompt(e.target.value)}
+                        className="pl-9"
+                      />
+                    </div>
+                    <Button type="submit" size="sm" disabled={!aiPrompt.trim()}>
+                      <Sparkles className="h-[13px] w-[13px]" />
+                      Refine
+                    </Button>
+                  </form>
+                </div>
+              )}
+
+              <div className="mt-10 mb-4 space-y-3">
+                <div className="flex items-center justify-end gap-2.5">
+                  <Button variant="outline" size="sm">
+                    <DownloadIcon className="h-[13px] w-[13px]" />
+                    Export customers as CSV
+                  </Button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button size="sm">
+                          <PlusIcon className="h-[13px] w-[13px]" />
+                          New customer
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="left" className="max-w-xs">
+                        <p className="text-xs">
+                          New customers are added to "All Customers" and will appear in other lists only if they match
+                          the list's criteria.
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+
+                <div className="flex items-center gap-2.5">
                   <div className="relative flex-1 max-w-md">
-                    <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
                     <Input
                       type="text"
                       placeholder="Customer name"
-                      className="pl-10 h-10"
+                      className="pl-9"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                     />
                   </div>
 
-                  {/* Show View, Filters, and Columns buttons only for saved lists */}
-                  {selectedListId && (
-                    <>
-                      <Button
-                        variant="outline"
-                        className="h-10 px-4 gap-2 bg-transparent font-normal rounded-xl"
-                        onClick={() => {
-                          // Placeholder - no functionality
-                        }}
-                      >
-                        <Bookmark className="h-4 w-4" />
-                        View
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="h-10 px-4 gap-2 bg-transparent font-normal rounded-xl"
-                        onClick={() => {
-                          // Placeholder - no functionality
-                        }}
-                      >
-                        <Filter className="h-4 w-4" />
-                        Filters
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="h-10 px-4 gap-2 bg-transparent font-normal rounded-xl"
-                        onClick={() => {
-                          // Placeholder - no functionality
-                        }}
-                      >
-                        <Columns3 className="h-4 w-4" />
-                        Columns
-                      </Button>
-                      {/* </CHANGE> */}
-                    </>
-                  )}
+                  <Button variant="outline" size="sm">
+                    <Bookmark className="h-[13px] w-[13px]" />
+                    View
+                  </Button>
+                  <Button variant="outline" size="sm">
+                    <Filter className="h-[13px] w-[13px]" />
+                    Filters
+                  </Button>
+                  <Button variant="outline" size="sm">
+                    <Columns3 className="h-[13px] w-[13px]" />
+                    Columns
+                  </Button>
+                  <Button variant="outline" size="sm">
+                    <Package className="h-[13px] w-[13px]" />
+                    Products
+                  </Button>
                 </div>
-
-                {/* Actions dropdown with Export and New Customer - aligned to the right */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="h-10 px-3 rounded-xl bg-transparent">
-                      <MoreHorizontalIcon className="h-4 w-4" />
-                    </Button>
-                    {/* </CHANGE> */}
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuItem className="flex items-center gap-2 cursor-pointer">
-                      <DownloadIcon className="w-4 h-4" />
-                      Export customers as CSV
-                    </DropdownMenuItem>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <DropdownMenuItem
-                            className="flex items-center gap-2 cursor-pointer"
-                            onSelect={(e) => {
-                              e.preventDefault()
-                              // New customer action here
-                            }}
-                          >
-                            <PlusIcon className="w-4 h-4" />
-                            New customer
-                          </DropdownMenuItem>
-                        </TooltipTrigger>
-                        <TooltipContent side="left" className="max-w-xs">
-                          <p className="text-xs">
-                            New customers are added to "All Customers" and will appear in other lists only if they match
-                            the list's criteria.
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </DropdownMenuContent>
-                </DropdownMenu>
               </div>
-              {/* </CHANGE> */}
 
               {/* Breadcrumb */}
 
@@ -3787,6 +3673,45 @@ export default function Lists2View({
                     <XIcon className="h-4 w-4 mr-1" />
                     Clear
                   </Button>
+                </div>
+              )}
+
+              {openedSmartList && (
+                <div className="sticky top-0 z-20 -mx-6 mb-3 border-b border-indigo-200 bg-indigo-50/90 px-6 py-2.5 backdrop-blur supports-[backdrop-filter]:bg-indigo-50/75">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 text-sm text-indigo-900 min-w-0">
+                      <Sparkles className="h-4 w-4 text-indigo-600 shrink-0" />
+                      <span className="font-medium shrink-0">Previewing</span>
+                      <span className="text-indigo-700/80 truncate">
+                        <span className="font-semibold">{openedSmartList.name}</span>. Any refinements you apply are saved when you commit this list.
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => guardDraft(discardDraft)}
+                        className="ml-2 shrink-0 inline-flex items-center gap-1 rounded-full border border-indigo-200 bg-white px-2.5 py-0.5 text-xs font-medium text-indigo-700 hover:bg-indigo-50"
+                      >
+                        <ChevronLeftIcon className="h-3 w-3" />
+                        Back to Templates
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => guardDraft(discardDraft)}
+                        className="text-indigo-900 hover:bg-indigo-100"
+                      >
+                        Discard
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => setShowSaveSmartListDialog(true)}
+                      >
+                        <Bookmark className="h-3.5 w-3.5" />
+                        Save list
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -4062,137 +3987,43 @@ export default function Lists2View({
                 </DialogContent>
               </Dialog>
 
-              <Dialog open={showSaveSmartListDialog} onOpenChange={setShowSaveSmartListDialog}>
+              <SaveSmartListDialog
+                open={showSaveSmartListDialog}
+                onOpenChange={setShowSaveSmartListDialog}
+                defaultName={openedSmartList?.name ?? ""}
+                onConfirm={handleConfirmSaveSmartList}
+              />
+
+              <Dialog
+                open={!!pendingDiscardAction}
+                onOpenChange={(open) => {
+                  if (!open) setPendingDiscardAction(null)
+                }}
+              >
                 <DialogContent className="max-w-md">
                   <DialogHeader>
-                    <DialogTitle>Save Smart List</DialogTitle>
+                    <DialogTitle>Discard draft?</DialogTitle>
                     <DialogDescription>
-                      Choose how you want to save this smart list and give it a name.
+                      You've applied refinements to this template preview. Leaving now will discard them.
                     </DialogDescription>
                   </DialogHeader>
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="smart-list-name" className="text-sm font-medium">
-                        List Name
-                      </Label>
-                      <Input
-                        id="smart-list-name"
-                        value={smartListName}
-                        onChange={(e) => setSmartListName(e.target.value)}
-                        placeholder="Enter list name..."
-                        className="mt-1"
-                      />
-                    </div>
-
-                    {openedSmartList &&
-                      (() => {
-                        const listType = getListType(openedSmartList)
-                        const creditCost = getCreditCost(listType)
-                        const isUnlocked = isTemplateUnlocked(openedSmartList.id)
-                        if (creditCost > 0 && !isUnlocked) {
-                          const newBalance = creditBalance - creditCost
-                          return (
-                            <div
-                              className={`p-3 rounded-lg border ${newBalance < 0 ? "bg-red-50 border-red-200" : "bg-gray-50 border-gray-200"}`}
-                            >
-                              <div className="flex items-center justify-between text-sm">
-                                <span className="font-medium text-gray-700">Credit cost:</span>
-                                <span className="font-semibold text-gray-900">{creditCost} credits</span>
-                              </div>
-                              <div className="flex items-center justify-between text-sm mt-2">
-                                <span className="text-gray-600">New balance:</span>
-                                <span className={`font-semibold ${newBalance < 0 ? "text-red-600" : "text-gray-900"}`}>
-                                  {newBalance} credits
-                                </span>
-                              </div>
-                              {newBalance < 0 && (
-                                <div className="mt-2 pt-2 border-t border-red-200">
-                                  <p className="text-xs text-red-700">
-                                    You'll be charged for the additional credits in your next billing period.
-                                  </p>
-                                </div>
-                              )}
-                            </div>
-                          )
-                        }
-                        return null
-                      })()}
-
-                    <div className="space-y-3">
-                      <label className="text-sm font-medium">List Type</label>
-
-                      <div className="space-y-3">
-                        <div
-                          className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                            selectedListType === "dynamic"
-                              ? "border-purple-500 bg-purple-50"
-                              : "border-gray-200 hover:border-gray-300"
-                          }`}
-                          onClick={() => setSelectedListType("dynamic")}
-                        >
-                          <div className="flex items-start gap-3">
-                            <div className="flex items-center h-5">
-                              <input
-                                type="radio"
-                                checked={selectedListType === "dynamic"}
-                                onChange={() => setSelectedListType("dynamic")}
-                                className="h-4 w-4 text-purple-600"
-                              />
-                            </div>
-                            <div className="flex-1">
-                              <div className="font-medium text-sm">Smart Dynamic List </div>
-                              <div className="text-xs text-gray-600 mt-1">
-                                Automatically updates as customers meet or no longer meet the criteria. Always shows
-                                current matches based on real-time data.
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div
-                          className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                            selectedListType === "static"
-                              ? "border-purple-500 bg-purple-50"
-                              : "border-gray-200 hover:border-gray-300"
-                          }`}
-                          onClick={() => setSelectedListType("static")}
-                        >
-                          <div className="flex items-start gap-3">
-                            <div className="flex items-center h-5">
-                              <input
-                                type="radio"
-                                checked={selectedListType === "static"}
-                                onChange={() => setSelectedListType("static")}
-                                className="h-4 w-4 text-purple-600"
-                              />
-                            </div>
-                            <div className="flex-1">
-                              <div className="font-medium text-sm">Static List</div>
-                              <div className="text-xs text-gray-600 mt-1">
-                                Saves the current snapshot of customers. The list remains fixed even if customer data
-                                changes over time.
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex justify-end gap-2 pt-2">
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          setShowSaveSmartListDialog(false)
-                          setSmartListName("")
-                        }}
-                      >
-                        Cancel
-                      </Button>
-                      <Button onClick={handleConfirmSaveSmartList} disabled={!smartListName.trim()}>
-                        Save List
-                      </Button>
-                    </div>
-                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setPendingDiscardAction(null)}>
+                      Keep editing
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={() => {
+                        const action = pendingDiscardAction
+                        setPendingDiscardAction(null)
+                        setOpenedSmartList(null)
+                        setDraftDirty(false)
+                        action?.()
+                      }}
+                    >
+                      Discard draft
+                    </Button>
+                  </DialogFooter>
                 </DialogContent>
               </Dialog>
 

@@ -17,6 +17,8 @@ import {
 import { leads, leadSmartLists } from "@/lib/lc-data/leads";
 import { getOwnerMeta, users } from "@/lib/lc-data/users";
 import { Filter, FilterOperator } from "@/lib/lc-types";
+import SmartListCard from "@/components/smart-list-card";
+import { Bookmark } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -320,31 +322,29 @@ export default function LeadsPage() {
       {/* Saved Lists card grid */}
       {activeListTab === "Saved Lists" && (
         <div className="px-7 pt-4 pb-1 bg-white">
-          <div className="grid grid-cols-3 gap-3.5">
-            {leadSmartLists.length === 0 ? (
-              <div className="col-span-3 py-8 text-center text-[13px] text-muted-foreground border border-dashed border-b2 rounded-lg">
-                No saved lists yet.
-              </div>
-            ) : (
-              leadSmartLists.map((list) => (
-                <button
+          {leadSmartLists.length === 0 ? (
+            <div className="py-8 text-center text-[13px] text-muted-foreground border border-dashed border-b2 rounded-lg">
+              No saved lists yet.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {leadSmartLists.map((list) => (
+                <SmartListCard
                   key={list.id}
-                  className="text-left rounded-lg border border-border bg-white p-4 hover:border-brand hover:shadow-sm transition-all"
-                >
-                  <div className="text-[14px] font-semibold text-brand mb-2">{list.name}</div>
-                  <Badge variant={list.type === "Dynamic" ? "default" : "secondary"} className="rounded-md">
-                    {list.type === "Dynamic" ? (
-                      <Zap className="h-2.5 w-2.5" />
-                    ) : (
-                      <Layers className="h-2.5 w-2.5" />
-                    )}
-                    {list.type === "Dynamic" ? "Filtered Dynamic" : "Static"}
-                  </Badge>
-                  <div className="text-xs text-muted-foreground mt-2">{list.count} leads</div>
-                </button>
-              ))
-            )}
-          </div>
+                  name={list.name}
+                  iconNode={<Bookmark className="h-6 w-6" />}
+                  customerCount={list.count}
+                  countLabel="leads"
+                  badge={list.type === "Dynamic" ? "Dynamic" : "Static"}
+                  badgeStyle={
+                    list.type === "Dynamic"
+                      ? { bg: "#EEF2FF", text: "#4338CA", border: "#C7D2FE" }
+                      : { bg: "#F3F4F6", text: "#374151", border: "#E5E7EB" }
+                  }
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
 

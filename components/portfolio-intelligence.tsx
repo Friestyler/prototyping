@@ -4,11 +4,13 @@ import { useEffect, useState } from "react"
 import { Sparkles, BarChart3 } from "lucide-react"
 import PortfolioOverview from "@/components/portfolio-overview"
 import PriorityRecommendations from "@/components/priority-recommendations"
-import AskAiPanel from "@/components/ask-ai-panel"
+import AiChartBoard from "@/components/ai-chart-board"
+import CreateWithAiWorkspace from "@/components/create-with-ai-workspace"
+import { useAiInsights } from "@/components/ai-insights-context"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
-type ActiveTab = "priority" | "insights"
+type ActiveTab = "create-ai" | "priority" | "insights"
 
 interface PortfolioIntelligenceProps {
   onCreateSmartList?: (name: string, clientCount: number) => void
@@ -17,14 +19,21 @@ interface PortfolioIntelligenceProps {
 }
 
 export default function PortfolioIntelligence({ onOpenTemplate, onCreateCampaignFor }: PortfolioIntelligenceProps) {
-  const [activeTab, setActiveTab] = useState<ActiveTab>("priority")
+  const [activeTab, setActiveTab] = useState<ActiveTab>("create-ai")
   const [signalFilter, setSignalFilter] = useState<string | undefined>()
   const [started, setStarted] = useState(false)
+  const { setPanelOpen, committed } = useAiInsights()
+  const pinnedChartCount = committed.filter((c) => c.kind === "chart").length
 
   useEffect(() => {
     const t = setTimeout(() => setStarted(true), 200)
     return () => clearTimeout(t)
   }, [])
+
+  // Any time a new chart is pinned, surface it by snapping to the Insights sub-tab.
+  useEffect(() => {
+    if (pinnedChartCount > 0) setActiveTab("insights")
+  }, [pinnedChartCount])
 
   const switchToSignals = (filter?: string) => {
     setSignalFilter(filter)
@@ -40,6 +49,20 @@ export default function PortfolioIntelligence({ onOpenTemplate, onCreateCampaign
         </p>
 
         <div className="flex items-center justify-center gap-2">
+          <Button
+            size="lg"
+            variant="ghost"
+            onClick={() => setActiveTab("create-ai")}
+            className={cn(
+              "rounded-lg px-6 py-2.5 font-medium transition-all border",
+              activeTab === "create-ai"
+                ? "bg-[rgb(224,231,255)] text-primary border-transparent hover:bg-[rgb(214,221,245)]"
+                : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50",
+            )}
+          >
+            <Sparkles className="w-4 h-4 mr-2 text-gray-500" />
+            Create with AI
+          </Button>
           <Button
             size="lg"
             variant="ghost"
@@ -72,19 +95,23 @@ export default function PortfolioIntelligence({ onOpenTemplate, onCreateCampaign
       </div>
 
       <div className="px-6 pb-10">
+        {activeTab === "create-ai" && (
+          <CreateWithAiWorkspace onChartPinned={() => setActiveTab("insights")} />
+        )}
         {activeTab === "priority" && (
           <PriorityRecommendations onCreateCampaignFor={onCreateCampaignFor} />
         )}
         {activeTab === "insights" && (
-          <PortfolioOverview
-            onSwitchToSignals={switchToSignals}
-            onOpenTemplate={onOpenTemplate}
-            started={started}
-          />
+          <>
+            <AiChartBoard onOpenChat={() => setPanelOpen(true)} />
+            <PortfolioOverview
+              onSwitchToSignals={switchToSignals}
+              onOpenTemplate={onOpenTemplate}
+              started={started}
+            />
+          </>
         )}
       </div>
-
-      <AskAiPanel />
     </div>
   )
 }

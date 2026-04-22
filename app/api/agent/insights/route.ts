@@ -8,10 +8,13 @@
  */
 
 import { NextResponse } from "next/server"
+import { anthropic } from "@ai-sdk/anthropic"
 import { generateObject } from "ai"
 import { z } from "zod"
-import { getModel } from "@/lib/ai/client"
 import { computePortfolioFacts } from "@/lib/ai/portfolio-context"
+
+// Insights favour latency over depth — Haiku handles the structured chart spec fast.
+const INSIGHTS_MODEL_ID = process.env.CLAUDE_INSIGHTS_MODEL_ID ?? "claude-haiku-4-5"
 
 export const runtime = "nodejs"
 export const maxDuration = 60
@@ -38,6 +41,11 @@ const responseSchema = z.object({
   ),
 })
 
+interface HistoryTurn {
+  role: "user" | "assistant"
+  content: string
+}
+
 export async function POST(request: Request) {
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json(
@@ -46,9 +54,9 @@ export async function POST(request: Request) {
     )
   }
 
-  let body: { prompt?: string }
+  let body: { prompt?: string; history?: HistoryTurn[]; currentChart?: unknown }
   try {
-    body = (await request.json()) as { prompt?: string }
+    body = (await request.json()) as typeof body
   } catch {
     return NextResponse.json({ error: "invalid_json" }, { status: 400 })
   }
@@ -56,11 +64,16 @@ export async function POST(request: Request) {
   const prompt = body.prompt?.trim()
   if (!prompt) return NextResponse.json({ error: "prompt_required" }, { status: 400 })
 
+  const history = Array.isArray(body.history) ? body.history.slice(-10) : []
+  const historyTranscript = history
+    .map((t) => `${t.role === "user" ? "User" : "Assistant"}: ${t.content}`)
+    .join("\n")
+
   const facts = computePortfolioFacts()
 
   try {
     const { object } = await generateObject({
-      model: getModel(),
+      model: anthropic(INSIGHTS_MODEL_ID),
       schema: responseSchema,
       maxOutputTokens: 1500,
       temperature: 0.4,
@@ -69,9 +82,12 @@ export async function POST(request: Request) {
         "Answer the broker's question using the data summary below. Be concise and concrete (specific numbers, EUR amounts, customer counts).",
         "If the question naturally calls for a chart, return one. If text is enough, return chart=null.",
         "When you reference customers, use anonymised aggregates — never fabricate names or invent data not present below.",
+        "If the user asks to refine or modify a chart you previously returned (e.g. 'remove the smallest', 'only show life products', 'switch to a pie chart'), return the updated chart as a new chart spec — don't describe the change in text.",
         "",
         "Portfolio summary (single source of truth):",
         JSON.stringify(facts, null, 2),
+        historyTranscript ? `\nConversation so far:\n${historyTranscript}` : "",
+        body.currentChart ? `\nChart currently displayed to the user:\n${JSON.stringify(body.currentChart)}` : "",
       ].join("\n"),
       prompt,
     })

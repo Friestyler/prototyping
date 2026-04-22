@@ -14,6 +14,7 @@ import {
   Sparkles,
   ShieldAlert,
   Rocket,
+  Lock,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -28,6 +29,7 @@ import {
 import { toast } from "@/hooks/use-toast"
 import { SaveSmartListDialog } from "@/components/save-smart-list-dialog"
 import { saveUserSavedList, type UserSavedListType } from "@/lib/user-saved-lists"
+import { useAiInsights } from "@/components/ai-insights-context"
 
 const ICON_MAP: Record<SmartListIcon, React.ComponentType<{ className?: string }>> = {
   clock: Clock,
@@ -47,6 +49,7 @@ export default function PriorityRecommendations({ onCreateCampaignFor }: Priorit
   const [period, setPeriod] = useState<Period>("30d")
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [savingFor, setSavingFor] = useState<SmartListUseCase | null>(null)
+  const { requestNavigation } = useAiInsights()
 
   const growthScore = 68
   const churnScore = 54
@@ -71,8 +74,9 @@ export default function PriorityRecommendations({ onCreateCampaignFor }: Priorit
     if (saved) {
       toast({
         title: "Smart list saved",
-        description: `"${name}" added to My Lists as ${type === "dynamic" ? "a dynamic list" : "a static list"}.`,
+        description: `"${name}" opened in Customers.`,
       })
+      requestNavigation({ menu: "customers", listId: saved.id })
     } else {
       toast({
         title: "Couldn't save list",
@@ -114,6 +118,11 @@ export default function PriorityRecommendations({ onCreateCampaignFor }: Priorit
             badge="Needs Attention"
             description="5 smart list opportunities to increase premium revenue and expand your book of business."
             scoreLabel="Growth score"
+            breakdown={[
+              { label: "Missing products", value: "312 customers", tone: "amber" },
+              { label: "Unactioned life events", value: "47 last 90 days", tone: "amber" },
+              { label: "Tax and pension gaps", value: "€128k potential", tone: "green" },
+            ]}
           />
           <ScoreCard
             kind="churn"
@@ -122,6 +131,12 @@ export default function PriorityRecommendations({ onCreateCampaignFor }: Priorit
             badge="At Risk"
             description="5 retention campaigns to protect your existing portfolio from client attrition."
             scoreLabel="Churn score"
+            breakdown={[
+              { label: "Payment failures", value: "12 last 30 days", tone: "red" },
+              { label: "Premium increase YoY", value: "+8.4%", tone: "red" },
+              { label: "Days to next renewal", value: "avg 48 days", tone: "neutral" },
+              { label: "Active policies per client", value: "avg 1.8", tone: "neutral" },
+            ]}
           />
         </div>
 
@@ -200,6 +215,13 @@ function PeriodPills({ value, onChange }: { value: Period; onChange: (v: Period)
   )
 }
 
+interface ScoreFactor {
+  label: string
+  value: string
+  /** Lightweight qualitative colour so e.g. "high-risk" rows read at a glance. */
+  tone?: "neutral" | "red" | "green" | "amber"
+}
+
 function ScoreCard({
   kind,
   score,
@@ -207,6 +229,7 @@ function ScoreCard({
   badge,
   description,
   scoreLabel,
+  breakdown,
 }: {
   kind: "growth" | "churn"
   score: number
@@ -214,7 +237,9 @@ function ScoreCard({
   badge: string
   description: string
   scoreLabel: string
+  breakdown?: ScoreFactor[]
 }) {
+  const [expanded, setExpanded] = useState(false)
   const isGrowth = kind === "growth"
   const barColor = isGrowth ? "bg-green-500" : "bg-red-500"
   const ringStroke = isGrowth ? "#16A34A" : "#DC2626"
@@ -277,6 +302,48 @@ function ScoreCard({
           />
         </div>
       </div>
+
+      {breakdown && breakdown.length > 0 && (
+        <div className="px-5">
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className="w-full flex items-center justify-between gap-2 text-xs font-medium text-gray-600 hover:text-gray-900 transition-colors pt-3 border-t border-gray-100"
+          >
+            <span>{expanded ? "Hide breakdown" : "See breakdown"}</span>
+            <ChevronDown
+              className={cn(
+                "w-3.5 h-3.5 text-gray-400 transition-transform",
+                expanded && "rotate-180",
+              )}
+            />
+          </button>
+
+          {expanded && (
+            <ul className="mt-3 space-y-2">
+              {breakdown.map((f) => (
+                <li
+                  key={f.label}
+                  className="flex items-center justify-between gap-3 text-sm"
+                >
+                  <span className="text-gray-600">{f.label}</span>
+                  <span
+                    className={cn(
+                      "font-semibold tabular-nums",
+                      f.tone === "red" && "text-red-600",
+                      f.tone === "green" && "text-green-600",
+                      f.tone === "amber" && "text-amber-700",
+                      (!f.tone || f.tone === "neutral") && "text-gray-900",
+                    )}
+                  >
+                    {f.value}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
     </Card>
   )
 }
@@ -302,14 +369,25 @@ function SmartListCard({
 
   const canExpand = !useCase.comingSoon
 
+  const heroAmount =
+    useCase.atRiskEuros != null
+      ? { label: "annual premium at risk", value: useCase.atRiskEuros, color: "text-red-600" }
+      : null
+
   return (
-    <Card className="gap-0 py-0 rounded-2xl border-gray-200 overflow-hidden">
+    <Card
+      className={cn(
+        "gap-0 py-0 rounded-2xl border overflow-hidden transition-all",
+        expanded ? "border-gray-300 shadow-md" : "border-gray-200 hover:border-gray-300",
+      )}
+    >
       <button
         type="button"
         onClick={canExpand ? onToggle : undefined}
         disabled={!canExpand}
+        aria-expanded={expanded}
         className={cn(
-          "w-full text-left p-4 flex items-start gap-4 transition-colors",
+          "w-full text-left p-4 flex items-center gap-4 transition-colors",
           canExpand && "hover:bg-gray-50/60 cursor-pointer",
           !canExpand && "cursor-default",
         )}
@@ -322,95 +400,108 @@ function SmartListCard({
         </div>
 
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <h3 className="text-base font-semibold text-gray-900">{useCase.title}</h3>
+          <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+            <h3 className="text-[15px] font-semibold text-gray-900 truncate">{useCase.title}</h3>
             {useCase.comingSoon && (
               <Badge variant="secondary" className="text-[10.5px]">
                 <Sparkles className="w-3 h-3" />
                 Coming soon
               </Badge>
             )}
+            {!useCase.comingSoon && (
+              <Badge
+                className={cn(
+                  "rounded-full border text-[10.5px] font-medium",
+                  isGrowth
+                    ? "bg-green-50 text-green-700 border-green-200"
+                    : "bg-red-50 text-red-600 border-red-200",
+                )}
+              >
+                <HintIcon className="w-3 h-3" />
+                {useCase.matchPct}% {isGrowth ? "match" : "risk"} · {hintLabel}
+              </Badge>
+            )}
           </div>
-          <p className="text-sm text-gray-600 leading-relaxed">{useCase.description}</p>
+          <p className="text-[13px] text-gray-600 leading-relaxed line-clamp-2">{useCase.description}</p>
         </div>
 
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <Badge
-            className={cn(
-              "rounded-full border",
-              isGrowth
-                ? "bg-green-50 text-green-700 border-green-200"
-                : "bg-red-50 text-red-600 border-red-200",
-            )}
-          >
-            <HintIcon className="w-3 h-3" />
-            {hintLabel}
-          </Badge>
-          {!useCase.comingSoon && (
-            <Badge variant="secondary" className="rounded-full border border-gray-200">
-              {useCase.matchPct}% {isGrowth ? "match" : "risk"}
-            </Badge>
-          )}
-          {canExpand && (
-            <ChevronDown
-              className={cn(
-                "w-4 h-4 text-gray-400 transition-transform",
-                expanded && "rotate-180",
-              )}
-            />
+        <div className="flex-shrink-0 text-right hidden sm:block">
+          {heroAmount ? (
+            <>
+              <div className={cn("text-xl font-semibold tabular-nums", heroAmount.color)}>
+                €{(heroAmount.value / 1000).toFixed(heroAmount.value >= 10_000 ? 0 : 1)}k
+              </div>
+              <div className="text-[11px] text-gray-500 uppercase tracking-wide">
+                {heroAmount.label} · {useCase.clientCount} clients
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="text-xl font-semibold tabular-nums text-gray-900">
+                {useCase.clientCount}
+              </div>
+              <div className="text-[11px] text-gray-500 uppercase tracking-wide">
+                matching clients
+              </div>
+            </>
           )}
         </div>
+
+        {canExpand && (
+          <ChevronDown
+            className={cn(
+              "w-4 h-4 text-gray-400 transition-transform flex-shrink-0",
+              expanded && "rotate-180",
+            )}
+          />
+        )}
       </button>
 
-      <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-gray-100 bg-gray-50/60">
-        <div className="text-sm text-gray-600 flex items-center gap-3 flex-wrap">
-          <span>
-            <span className="font-semibold text-gray-900">{useCase.clientCount}</span> clients
-          </span>
-          {useCase.atRiskEuros != null && (
-            <>
-              <span className="text-gray-300">·</span>
-              <span>
-                <span className="font-semibold text-red-600">€{(useCase.atRiskEuros / 1000).toFixed(0)}k</span> at risk
-              </span>
-            </>
-          )}
-          {useCase.growthPotentialEuros != null && (
-            <>
-              <span className="text-gray-300">·</span>
-              <span>
-                <span className="font-semibold text-green-600">€{(useCase.growthPotentialEuros / 1000).toFixed(1)}k</span> potential
-              </span>
-            </>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={onSave} disabled={useCase.comingSoon}>
-            <Bookmark className="w-3.5 h-3.5" />
-            Save list
-          </Button>
-          <Button size="sm" onClick={onCreateCampaign} disabled={useCase.comingSoon}>
-            <Send className="w-3.5 h-3.5" />
-            Create campaign
-            <ChevronRight className="w-3.5 h-3.5" />
-          </Button>
-        </div>
-      </div>
-
       {expanded && canExpand && (
-        <div className="border-t border-gray-100 bg-white">
-          {useCase.customers.length === 0 ? (
-            <div className="p-10 text-center text-sm text-gray-500">
-              <Sparkles className="w-8 h-8 mx-auto mb-3 text-gray-300" />
-              No customers match this list yet.
+        <>
+          {/* Save-to-refine banner (owns the Save list CTA) */}
+          <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-gray-100 bg-indigo-50/40">
+            <div className="flex items-center gap-2.5 text-sm text-indigo-950/80 min-w-0">
+              <div className="w-7 h-7 rounded-lg bg-white border border-indigo-100 flex items-center justify-center flex-shrink-0">
+                <Lock className="w-3.5 h-3.5 text-indigo-600" />
+              </div>
+              <div className="min-w-0">
+                <div className="font-medium text-[13px] text-gray-900">Preview mode</div>
+                <div className="text-[12px] text-gray-600 truncate">
+                  Save this list to refine with filters and unlock sorting.
+                </div>
+              </div>
             </div>
-          ) : (
-            <CustomerTable customers={useCase.customers} previewMode />
-          )}
-        </div>
+            <Button variant="outline" size="sm" onClick={onSave} className="flex-shrink-0">
+              <Bookmark className="w-3.5 h-3.5" />
+              Save list
+            </Button>
+          </div>
+
+          {/* Preview table */}
+          <div className="border-t border-gray-100 bg-white">
+            {useCase.customers.length === 0 ? (
+              <div className="p-10 text-center text-sm text-gray-500">
+                <Sparkles className="w-8 h-8 mx-auto mb-3 text-gray-300" />
+                No customers match this list yet.
+              </div>
+            ) : (
+              <CustomerTable customers={useCase.customers} previewMode onSave={onSave} />
+            )}
+          </div>
+
+          {/* Primary action footer */}
+          <div className="flex items-center justify-end gap-3 px-4 py-3 border-t border-gray-100 bg-white">
+            <Button onClick={onCreateCampaign}>
+              <Send className="w-3.5 h-3.5" />
+              Create campaign
+              <ChevronRight className="w-3.5 h-3.5" />
+            </Button>
+          </div>
+        </>
       )}
     </Card>
   )
 }
+
 

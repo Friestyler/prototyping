@@ -13,6 +13,9 @@ import MCPSetupPage from "@/components/mcp-setup-page"
 import { type Partner as CustomerRecord } from "@/lib/okr-data"
 import { MASTER_CUSTOMERS_AS_RECORDS } from "@/lib/customer-database"
 import { findSmartListUseCase } from "@/lib/smart-list-use-cases"
+import { AiInsightsProvider, useAiInsights, type PendingNavigation } from "@/components/ai-insights-context"
+import AskAiPanel from "@/components/ask-ai-panel"
+import { useEffect } from "react"
 
 interface SavedList {
   id: string
@@ -34,7 +37,14 @@ export default function OKRDashboard() {
   const [preSelectedList, setPreSelectedList] = useState<SavedList | undefined>()
   // Template to auto-open in Smart Lists when navigating from Portfolio Insights
   const [pendingTemplate, setPendingTemplate] = useState<string | undefined>()
+  const [pendingOpenListId, setPendingOpenListId] = useState<string | undefined>()
   const [campaignsInitialName, setCampaignsInitialName] = useState<string | undefined>()
+
+  const handleAiNavigation = (target: PendingNavigation) => {
+    // Never close the chat panel on navigation — user wants to keep iterating.
+    setActiveMenu(target.menu)
+    if (target.listId) setPendingOpenListId(target.listId)
+  }
 
   const handleCreateCampaign = (savedList?: SavedList, listCustomers?: CustomerRecord[]) => {
     if (savedList && listCustomers) {
@@ -69,54 +79,82 @@ export default function OKRDashboard() {
 
   if (showCampaignFlow) {
     return (
-      <div className="min-h-screen bg-background">
-        <CampaignCreationFlow preSelectedList={preSelectedList} onBack={handleBackFromCampaign} />
-      </div>
+      <AiInsightsProvider>
+        <div className="min-h-screen bg-background">
+          <CampaignCreationFlow preSelectedList={preSelectedList} onBack={handleBackFromCampaign} />
+        </div>
+        <RootAskAiPanel />
+        <NavigationBridge onNavigate={handleAiNavigation} />
+      </AiInsightsProvider>
     )
   }
 
   if (activeMenu === "settings") {
     return (
-      <div className="min-h-screen bg-background">
-        <SmartListsSettings onBack={handleBackFromSettings} />
-      </div>
+      <AiInsightsProvider>
+        <div className="min-h-screen bg-background">
+          <SmartListsSettings onBack={handleBackFromSettings} />
+        </div>
+        <RootAskAiPanel />
+        <NavigationBridge onNavigate={handleAiNavigation} />
+      </AiInsightsProvider>
     )
   }
 
   return (
-    <div className="flex h-screen bg-[#F8F9FA] overflow-hidden">
-      <SidebarNavigation activeMenu={activeMenu} onMenuChange={setActiveMenu} forceCollapsed={sidebarCollapsed} />
+    <AiInsightsProvider>
+      <div className="flex h-screen bg-[#F8F9FA] overflow-hidden">
+        <SidebarNavigation activeMenu={activeMenu} onMenuChange={setActiveMenu} forceCollapsed={sidebarCollapsed} />
 
-      <div className="flex-1 flex flex-col overflow-hidden mt-4">
-        <div className="flex-1 overflow-y-auto overflow-x-hidden rounded-tl-2xl shadow-sm">
-          <div>
-            {activeMenu === "portfolio-insights" && (
-              <PortfolioIntelligence
-                onOpenTemplate={handleOpenTemplate}
-                onCreateCampaignFor={handleCreateCampaignForUseCase}
-              />
-            )}
-            {activeMenu === "leads" && <LeadsPage />}
-            {activeMenu === "mcp-setup" && <MCPSetupPage />}
-            {activeMenu === "campaigns" && (
-              <CampaignsPage
-                initialCampaignName={campaignsInitialName}
-                onInitialConsumed={() => setCampaignsInitialName(undefined)}
-              />
-            )}
-            {(activeMenu === "partners" || activeMenu === "customers") && (
-              <Lists2View
-                data={customers}
-                onChange={setCustomers}
-                onSidebarCollapseChange={setSidebarCollapsed}
-                onCreateCampaign={handleCreateCampaign}
-                pendingTemplate={pendingTemplate}
-                onTemplateMounted={() => setPendingTemplate(undefined)}
-              />
-            )}
+        <div className="flex-1 flex flex-col overflow-hidden mt-4">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden rounded-tl-2xl shadow-sm">
+            <div>
+              {activeMenu === "portfolio-insights" && (
+                <PortfolioIntelligence
+                  onOpenTemplate={handleOpenTemplate}
+                  onCreateCampaignFor={handleCreateCampaignForUseCase}
+                />
+              )}
+              {activeMenu === "leads" && <LeadsPage />}
+              {activeMenu === "mcp-setup" && <MCPSetupPage />}
+              {activeMenu === "campaigns" && (
+                <CampaignsPage
+                  initialCampaignName={campaignsInitialName}
+                  onInitialConsumed={() => setCampaignsInitialName(undefined)}
+                />
+              )}
+              {(activeMenu === "partners" || activeMenu === "customers") && (
+                <Lists2View
+                  data={customers}
+                  onChange={setCustomers}
+                  onSidebarCollapseChange={setSidebarCollapsed}
+                  onCreateCampaign={handleCreateCampaign}
+                  pendingTemplate={pendingTemplate}
+                  onTemplateMounted={() => setPendingTemplate(undefined)}
+                  pendingOpenListId={pendingOpenListId}
+                  onListOpened={() => setPendingOpenListId(undefined)}
+                />
+              )}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+      <RootAskAiPanel />
+      <NavigationBridge onNavigate={handleAiNavigation} />
+    </AiInsightsProvider>
   )
+}
+
+function RootAskAiPanel() {
+  return <AskAiPanel />
+}
+
+function NavigationBridge({ onNavigate }: { onNavigate: (target: PendingNavigation) => void }) {
+  const { pendingNavigation, consumeNavigation } = useAiInsights()
+  useEffect(() => {
+    if (!pendingNavigation) return
+    onNavigate(pendingNavigation)
+    consumeNavigation()
+  }, [pendingNavigation, onNavigate, consumeNavigation])
+  return null
 }

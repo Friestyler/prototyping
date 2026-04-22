@@ -1,7 +1,20 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Sparkles, X, Send, Loader2, MessageSquare } from "lucide-react"
+import {
+  Sparkles,
+  X,
+  Send,
+  Loader2,
+  MessageSquare,
+  Menu,
+  Plus,
+  Trash2,
+  Bookmark,
+  PinIcon,
+  Users,
+  Check,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import {
@@ -19,32 +32,32 @@ import {
   XAxis,
   YAxis,
 } from "recharts"
+import { cn } from "@/lib/utils"
+import {
+  useAiInsights,
+  type Artefact,
+  type ChartData,
+  type SmartListPayload,
+} from "@/components/ai-insights-context"
+import { saveUserSavedList, type UserSavedListType } from "@/lib/user-saved-lists"
+import { toast } from "@/hooks/use-toast"
 
-interface ChartData {
-  type: "bar" | "pie" | "line"
-  title: string
-  xLabel?: string
-  yLabel?: string
-  unit: "count" | "eur" | "percent"
-  data: Array<{ label: string; value: number }>
-}
-
-interface ChatTurn {
-  id: string
-  prompt: string
-  answer?: string
-  chart?: ChartData | null
-  followUps?: string[]
-  loading?: boolean
-  error?: string
-}
-
-const CHART_COLORS = ["#4F46E5", "#0D9488", "#F59E0B", "#DB2777", "#0EA5E9", "#8B5CF6", "#16A34A", "#DC2626", "#6B7280"]
+const CHART_COLORS = [
+  "#4F46E5",
+  "#0D9488",
+  "#F59E0B",
+  "#DB2777",
+  "#0EA5E9",
+  "#8B5CF6",
+  "#16A34A",
+  "#DC2626",
+  "#6B7280",
+]
 
 const STARTERS = [
   "What's my total annual premium?",
-  "Show me a chart of customers by product.",
-  "How many customers have only one product?",
+  "Chart customers by product.",
+  "Show me customers without Life insurance.",
   "Which cities concentrate most of my customers?",
 ]
 
@@ -54,91 +67,312 @@ function fmt(value: number, unit: ChartData["unit"]) {
   return value.toLocaleString("en-BE")
 }
 
-function ChartView({ chart }: { chart: ChartData }) {
-  const data = chart.data
+function ChartView({ chart, compact = true }: { chart: ChartData; compact?: boolean }) {
+  const height = compact ? 200 : 280
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-3 mt-2">
-      <div className="text-[12px] font-medium text-[#111827] mb-2">{chart.title}</div>
-      <div style={{ width: "100%", height: 220 }}>
-        <ResponsiveContainer>
-          {chart.type === "bar" ? (
-            <BarChart data={data} margin={{ top: 4, right: 8, bottom: 8, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
-              <XAxis dataKey="label" tick={{ fontSize: 10 }} interval={0} angle={data.length > 5 ? -25 : 0} textAnchor={data.length > 5 ? "end" : "middle"} height={data.length > 5 ? 60 : 30} />
-              <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => fmt(Number(v), chart.unit)} />
-              <Tooltip formatter={(v: number) => fmt(v, chart.unit)} />
-              <Bar dataKey="value" fill="#4F46E5" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          ) : chart.type === "line" ? (
-            <LineChart data={data} margin={{ top: 4, right: 8, bottom: 8, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
-              <XAxis dataKey="label" tick={{ fontSize: 10 }} />
-              <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => fmt(Number(v), chart.unit)} />
-              <Tooltip formatter={(v: number) => fmt(v, chart.unit)} />
-              <Line type="monotone" dataKey="value" stroke="#4F46E5" strokeWidth={2} dot={{ r: 3 }} />
-            </LineChart>
-          ) : (
-            <PieChart>
-              <Pie data={data} dataKey="value" nameKey="label" outerRadius={80} label={(p) => p.label}>
-                {data.map((_, i) => (
-                  <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(v: number) => fmt(v, chart.unit)} />
-              <Legend wrapperStyle={{ fontSize: 11 }} />
-            </PieChart>
-          )}
-        </ResponsiveContainer>
-      </div>
+    <div style={{ width: "100%", height }}>
+      <ResponsiveContainer>
+        {chart.type === "bar" ? (
+          <BarChart data={chart.data} margin={{ top: 4, right: 8, bottom: 8, left: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
+            <XAxis
+              dataKey="label"
+              tick={{ fontSize: 10 }}
+              interval={0}
+              angle={chart.data.length > 5 ? -25 : 0}
+              textAnchor={chart.data.length > 5 ? "end" : "middle"}
+              height={chart.data.length > 5 ? 60 : 30}
+            />
+            <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => fmt(Number(v), chart.unit)} />
+            <Tooltip formatter={(v: number) => fmt(v, chart.unit)} />
+            <Bar dataKey="value" fill="#4F46E5" radius={[4, 4, 0, 0]} />
+          </BarChart>
+        ) : chart.type === "line" ? (
+          <LineChart data={chart.data} margin={{ top: 4, right: 8, bottom: 8, left: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
+            <XAxis dataKey="label" tick={{ fontSize: 10 }} />
+            <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => fmt(Number(v), chart.unit)} />
+            <Tooltip formatter={(v: number) => fmt(v, chart.unit)} />
+            <Line type="monotone" dataKey="value" stroke="#4F46E5" strokeWidth={2} dot={{ r: 3 }} />
+          </LineChart>
+        ) : (
+          <PieChart>
+            <Pie data={chart.data} dataKey="value" nameKey="label" outerRadius={compact ? 72 : 100} label={(p) => p.label}>
+              {chart.data.map((_, i) => (
+                <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+              ))}
+            </Pie>
+            <Tooltip formatter={(v: number) => fmt(v, chart.unit)} />
+            <Legend wrapperStyle={{ fontSize: 11 }} />
+          </PieChart>
+        )}
+      </ResponsiveContainer>
     </div>
   )
 }
 
-export default function AskAiPanel() {
-  const [open, setOpen] = useState(false)
+function ChartArtefactCard({
+  chart,
+  committed,
+  onPin,
+}: {
+  chart: ChartData
+  committed: boolean
+  onPin: () => void
+}) {
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-3 mt-2">
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <div className="text-[12px] font-semibold text-[#111827] truncate">{chart.title}</div>
+        <Button
+          size="sm"
+          variant={committed ? "outline" : "default"}
+          disabled={committed}
+          onClick={onPin}
+          className="h-7 text-[11px] gap-1"
+        >
+          {committed ? <Check className="w-3 h-3" /> : <PinIcon className="w-3 h-3" />}
+          {committed ? "Pinned" : "Pin to Insights"}
+        </Button>
+      </div>
+      <ChartView chart={chart} />
+    </div>
+  )
+}
+
+function SmartListArtefactCard({
+  payload,
+  committed,
+  onSave,
+}: {
+  payload: SmartListPayload
+  committed: boolean
+  onSave: () => void
+}) {
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-3 mt-2 space-y-2">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="text-[12px] font-semibold text-[#111827] truncate">
+            {payload.proposal.name}
+          </div>
+          <div className="text-[11px] text-gray-600 leading-relaxed line-clamp-2">
+            {payload.proposal.description}
+          </div>
+        </div>
+        <Button
+          size="sm"
+          variant={committed ? "outline" : "default"}
+          disabled={committed}
+          onClick={onSave}
+          className="h-7 text-[11px] gap-1 flex-shrink-0"
+        >
+          {committed ? <Check className="w-3 h-3" /> : <Bookmark className="w-3 h-3" />}
+          {committed ? "Saved" : "Save list"}
+        </Button>
+      </div>
+
+      <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
+        <Users className="w-3 h-3" />
+        <span className="font-medium text-gray-700">{payload.matchCount}</span>
+        <span>matching customers</span>
+        <span className="text-gray-300">·</span>
+        <span className="capitalize">{payload.proposal.type}</span>
+      </div>
+
+      {payload.sample.length > 0 && (
+        <ul className="bg-gray-50 rounded-lg border border-gray-100 divide-y divide-gray-100">
+          {payload.sample.slice(0, 3).map((c) => (
+            <li key={c.id} className="px-2.5 py-1.5 text-[11px] flex items-center justify-between gap-2">
+              <span className="truncate text-gray-700">
+                {c.firstName} {c.lastName ?? ""}
+              </span>
+              <span className="text-gray-400 text-[10px] truncate">{c.products.join(", ")}</span>
+            </li>
+          ))}
+          {payload.matchCount > 3 && (
+            <li className="px-2.5 py-1 text-[10px] text-gray-400">
+              + {payload.matchCount - 3} more
+            </li>
+          )}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+export default function AskAiPanel({
+  open: controlledOpen,
+  onOpenChange,
+}: {
+  open?: boolean
+  onOpenChange?: (next: boolean) => void
+} = {}) {
+  const {
+    sessions,
+    activeSession,
+    activeSessionId,
+    newSession,
+    switchSession,
+    deleteSession,
+    appendTurn,
+    updateTurn,
+    commitArtefact,
+    committed,
+    activeDraft,
+    panelOpen: contextOpen,
+    setPanelOpen,
+    seedPrompt,
+    consumeSeed,
+    requestNavigation,
+  } = useAiInsights()
+
+  const open = controlledOpen ?? contextOpen
+  const setOpen = (next: boolean) => {
+    if (onOpenChange) onOpenChange(next)
+    setPanelOpen(next)
+  }
   const [prompt, setPrompt] = useState("")
-  const [turns, setTurns] = useState<ChatTurn[]>([])
+  const [showSessions, setShowSessions] = useState(false)
   const scrollRef = useRef<HTMLDivElement | null>(null)
 
+  const turns = activeSession.turns
+
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+  }, [turns, open, activeSessionId])
+
+  // Consume seed prompt when opened.
+  useEffect(() => {
+    if (open && seedPrompt) {
+      setPrompt(seedPrompt)
+      consumeSeed()
     }
-  }, [turns, open])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, seedPrompt])
+
+  function isArtefactCommitted(turnId: string, kind: "chart" | "smartList"): boolean {
+    return committed.some(
+      (c) =>
+        c.kind === kind && c.versions.some((v) => v.turnId === turnId),
+    )
+  }
 
   async function ask(text?: string) {
     const p = (text ?? prompt).trim()
     if (!p) return
     const id = crypto.randomUUID()
-    setTurns((prev) => [...prev, { id, prompt: p, loading: true }])
+    appendTurn({ id, prompt: p, loading: true })
     setPrompt("")
+
+    const history = turns
+      .filter((t) => !t.loading && !t.error)
+      .flatMap((t) => {
+        const entries: { role: "user" | "assistant"; content: string }[] = [
+          { role: "user", content: t.prompt },
+        ]
+        if (t.answer) entries.push({ role: "assistant", content: t.answer })
+        return entries
+      })
+
+    const activeArtefactForServer = activeDraft
+      ? activeDraft.kind === "chart"
+        ? { type: "chart" as const, payload: activeDraft.chart }
+        : { type: "smartList" as const, payload: activeDraft.payload }
+      : null
+
     try {
-      const res = await fetch("/api/agent/insights", {
+      const res = await fetch("/api/agent/chat", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ prompt: p }),
+        body: JSON.stringify({
+          prompt: p,
+          history,
+          activeArtefact: activeArtefactForServer,
+        }),
       })
       const data = await res.json()
       if (!res.ok) {
-        setTurns((prev) =>
-          prev.map((t) =>
-            t.id === id ? { ...t, loading: false, error: data.message ?? data.error ?? `HTTP ${res.status}` } : t,
-          ),
-        )
+        updateTurn(id, {
+          loading: false,
+          error: data.message ?? data.error ?? `HTTP ${res.status}`,
+        })
         return
       }
-      setTurns((prev) =>
-        prev.map((t) =>
-          t.id === id
-            ? { ...t, loading: false, answer: data.answer, chart: data.chart, followUps: data.followUpSuggestions }
-            : t,
-        ),
-      )
+
+      let artefact: Artefact | null = null
+      if (data.artefact?.type === "chart") {
+        artefact = { kind: "chart", chart: data.artefact.chart }
+      } else if (data.artefact?.type === "smartList") {
+        artefact = {
+          kind: "smartList",
+          payload: {
+            proposal: data.artefact.proposal,
+            matchCount: data.artefact.matchCount,
+            sample: data.artefact.sample,
+            customerIds: data.artefact.customerIds,
+          },
+        }
+      }
+
+      updateTurn(id, {
+        loading: false,
+        answer: data.answer,
+        artefact,
+      })
     } catch (e) {
-      setTurns((prev) =>
-        prev.map((t) => (t.id === id ? { ...t, loading: false, error: String(e) } : t)),
-      )
+      updateTurn(id, { loading: false, error: String(e) })
     }
+  }
+
+  async function handleSaveSmartList(turnId: string, payload: SmartListPayload) {
+    const saved = await saveUserSavedList({
+      name: payload.proposal.name,
+      type: payload.proposal.type as UserSavedListType,
+      customerIds: payload.customerIds,
+      description: payload.proposal.description,
+      sourceUseCaseId: "ai-generated",
+      sourceTitle: "AI Generated",
+      iconBg: "#EEF2FF",
+      iconColor: "#4F46E5",
+    })
+
+    if (!saved) {
+      toast({ title: "Couldn't save list", description: "Try again." })
+      return
+    }
+
+    commitArtefact({
+      sessionId: activeSessionId,
+      kind: "smartList",
+      artefact: { kind: "smartList", payload },
+      prompt: turns.find((t) => t.id === turnId)?.prompt ?? "",
+      turnId,
+      externalRef: saved.id,
+    })
+
+    // Jump to the Customers page with the new list already selected. Chat panel stays open.
+    requestNavigation({ menu: "customers", listId: saved.id })
+
+    toast({
+      title: "Smart list saved",
+      description: `"${payload.proposal.name}" opened in Customers.`,
+    })
+  }
+
+  function handlePinChart(turnId: string, chart: ChartData) {
+    commitArtefact({
+      sessionId: activeSessionId,
+      kind: "chart",
+      artefact: { kind: "chart", chart },
+      prompt: turns.find((t) => t.id === turnId)?.prompt ?? "",
+      turnId,
+    })
+    requestNavigation({ menu: "portfolio-insights" })
+    toast({
+      title: "Chart pinned",
+      description: `"${chart.title}" added to Portfolio Insights.`,
+    })
   }
 
   return (
@@ -154,24 +388,89 @@ export default function AskAiPanel() {
       )}
 
       {open && (
-        <div className="fixed top-0 right-0 bottom-0 z-50 w-[400px] bg-white border-l border-gray-200 shadow-2xl flex flex-col">
+        <div className="fixed top-0 right-0 bottom-0 z-50 w-[420px] bg-white border-l border-gray-200 shadow-2xl flex flex-col">
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-md bg-[#EEF2FF] flex items-center justify-center">
+            <div className="flex items-center gap-2 min-w-0">
+              <button
+                onClick={() => setShowSessions((v) => !v)}
+                className="text-gray-500 hover:text-gray-900 transition-colors p-1 -ml-1 rounded hover:bg-gray-100"
+                title="Chat sessions"
+              >
+                <Menu className="w-4 h-4" />
+              </button>
+              <div className="w-7 h-7 rounded-md bg-[#EEF2FF] flex items-center justify-center flex-shrink-0">
                 <Sparkles className="w-4 h-4 text-[#4F46E5]" />
               </div>
-              <div>
-                <div className="text-[13px] font-semibold text-[#111827]">Portfolio AI</div>
-                <div className="text-[11px] text-[#6B7280]">Ask anything about your portfolio</div>
+              <div className="min-w-0">
+                <div className="text-[13px] font-semibold text-[#111827] truncate">Brand Broker AI</div>
+                <div className="text-[11px] text-[#6B7280] truncate">{activeSession.title}</div>
               </div>
             </div>
-            <button
-              onClick={() => setOpen(false)}
-              className="text-gray-400 hover:text-gray-700 transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => {
+                  newSession()
+                  setShowSessions(false)
+                }}
+                className="text-gray-500 hover:text-gray-900 transition-colors p-1 rounded hover:bg-gray-100"
+                title="New chat"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setOpen(false)}
+                className="text-gray-400 hover:text-gray-700 transition-colors p-1"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
+
+          {showSessions && (
+            <div className="border-b border-gray-200 bg-gray-50/70 max-h-56 overflow-y-auto">
+              <div className="px-3 py-2 text-[10.5px] font-semibold uppercase tracking-wide text-gray-500">
+                Chat history
+              </div>
+              <div className="pb-2">
+                {sessions.map((s) => (
+                  <div
+                    key={s.id}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-2 text-[12px] cursor-pointer hover:bg-white",
+                      s.id === activeSessionId && "bg-white",
+                    )}
+                    onClick={() => {
+                      switchSession(s.id)
+                      setShowSessions(false)
+                    }}
+                  >
+                    <MessageSquare className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                    <span
+                      className={cn(
+                        "flex-1 truncate",
+                        s.id === activeSessionId ? "text-gray-900 font-medium" : "text-gray-700",
+                      )}
+                    >
+                      {s.title}
+                    </span>
+                    <span className="text-[10.5px] text-gray-400 flex-shrink-0">
+                      {s.turns.length > 0 && `${s.turns.length} turn${s.turns.length === 1 ? "" : "s"}`}
+                    </span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        deleteSession(s.id)
+                      }}
+                      className="text-gray-300 hover:text-red-500 transition-colors flex-shrink-0"
+                      title="Delete chat"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
             {turns.length === 0 && (
@@ -179,9 +478,9 @@ export default function AskAiPanel() {
                 <div className="w-12 h-12 rounded-2xl bg-[#EEF2FF] flex items-center justify-center mx-auto">
                   <MessageSquare className="w-5 h-5 text-[#4F46E5]" />
                 </div>
-                <div className="text-[13px] text-[#374151] font-medium">Start a conversation</div>
+                <div className="text-[13px] text-[#374151] font-medium">Ask anything</div>
                 <div className="text-[12px] text-[#6B7280] px-4">
-                  Claude can analyse your portfolio, count customers, and chart distributions.
+                  Ask a question, request a chart, or describe a customer segment — I'll generate what fits.
                 </div>
                 <div className="space-y-1.5 px-2">
                   {STARTERS.map((s) => (
@@ -214,19 +513,24 @@ export default function AskAiPanel() {
                 {t.answer && (
                   <div className="text-[13px] text-[#111827] whitespace-pre-wrap leading-relaxed">{t.answer}</div>
                 )}
-                {t.chart && <ChartView chart={t.chart} />}
-                {t.followUps && t.followUps.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 pt-1">
-                    {t.followUps.map((f) => (
-                      <button
-                        key={f}
-                        onClick={() => ask(f)}
-                        className="text-[11.5px] px-2 py-1 rounded-full border border-gray-200 text-[#374151] hover:bg-gray-50"
-                      >
-                        {f}
-                      </button>
-                    ))}
-                  </div>
+                {t.artefact?.kind === "chart" && (
+                  <ChartArtefactCard
+                    chart={t.artefact.chart}
+                    committed={isArtefactCommitted(t.id, "chart")}
+                    onPin={() => handlePinChart(t.id, t.artefact!.kind === "chart" ? t.artefact!.chart : (null as never))}
+                  />
+                )}
+                {t.artefact?.kind === "smartList" && (
+                  <SmartListArtefactCard
+                    payload={t.artefact.payload}
+                    committed={isArtefactCommitted(t.id, "smartList")}
+                    onSave={() =>
+                      handleSaveSmartList(
+                        t.id,
+                        t.artefact!.kind === "smartList" ? t.artefact!.payload : (null as never),
+                      )
+                    }
+                  />
                 )}
               </div>
             ))}
@@ -236,7 +540,7 @@ export default function AskAiPanel() {
             <div className="relative">
               <Textarea
                 rows={2}
-                placeholder="Ask about your portfolio…"
+                placeholder="Ask a question, request a chart, or describe a segment…"
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 onKeyDown={(e) => {
