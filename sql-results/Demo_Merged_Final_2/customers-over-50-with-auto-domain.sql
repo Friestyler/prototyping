@@ -1,77 +1,13 @@
--- SQL result for business requirement: Customers over 50 with an Auto-domain policy
+-- Business requirement: Customers over 50 with an Auto-domain policy
 -- Database: Demo_Merged_Final_2
--- Source CSV: databases/Demo_Merged_Final_2/csv-content/Demo_Merged_Final_2.csv
--- Linked requirement file: databases/Demo_Merged_Final_2/business-requirements/customers-over-50-with-auto-domain.md
--- Mapping report: sql-results/Demo_Merged_Final_2/customers-over-50-with-auto-domain.report.md
--- Execution: DuckDB (see databases/Demo_Merged_Final_2/qollabi-view.sql for the canonical translation layer).
--- Update this file as the business requirement evolves.
+-- Linked requirement:  databases/Demo_Merged_Final_2/business-requirements/customers-over-50-with-auto-domain.md
+-- Mapping report:      sql-results/Demo_Merged_Final_2/customers-over-50-with-auto-domain.report.md
+-- Translation layer:   databases/Demo_Merged_Final_2/qollabi-view.sql  (run first in the same DuckDB connection)
+--
+-- This file contains **only Qollabi-shaped SQL** — no CSV column names, no translation-layer CTEs.
+-- Strip nothing and it runs unchanged against a real Qollabi Postgres database where
+-- `customers`, `products`, and `categories` are actual tables instead of DuckDB views.
 
--- ────────────────────────────────────────────────────────────────────────────
--- Translation layer — CSV → Qollabi-shaped tables
--- (Paste of databases/Demo_Merged_Final_2/qollabi-view.sql. Keep in sync.)
--- ────────────────────────────────────────────────────────────────────────────
-WITH raw AS (
-  SELECT *
-  FROM read_csv_auto(
-    'databases/Demo_Merged_Final_2/csv-content/Demo_Merged_Final_2.csv',
-    delim=';',
-    header=true,
-    dateformat='%d/%m/%Y'
-  )
-),
-customers AS (
-  SELECT DISTINCT ON ("Dossier")
-    "Dossier"                                                   AS "externalId",
-    "Naam"                                                      AS "name",
-    "Naam"                                                      AS "lastName",
-    "Voornaam"                                                  AS "firstName",
-    TRY_CAST("Geboortedatum" AS DATE)                           AS "dateOfBirth",
-    TRY_CAST("Overlijdensdatum" AS DATE)                        AS "dateOfDeath",
-    CASE "Natuurlijk/Rechtsp - Omschrijving"
-      WHEN 'Natuurlijk persoon' THEN 'naturalPerson'
-      WHEN 'Rechtspersoon'      THEN 'legalEntity'
-      ELSE NULL
-    END                                                         AS "customerType",
-    "E-mail"                                                    AS "email"
-  FROM raw
-  WHERE "Dossier" IS NOT NULL
-),
-categories AS (
-  SELECT DISTINCT
-    COALESCE("Polistype - Omschrijving", '') || COALESCE("Domein - Omschrijving", '') AS "externalId",
-    "Polistype - Omschrijving"                                                        AS "name",
-    "Domein - Omschrijving"                                                           AS "parentId"
-  FROM raw
-  WHERE "Polistype - Omschrijving" IS NOT NULL
-     OR "Domein - Omschrijving"    IS NOT NULL
-),
-product_templates AS (
-  SELECT DISTINCT
-    "Product Template ID"   AS "externalId",
-    "Product Template Name" AS "name"
-  FROM raw
-  WHERE "Product Template ID" IS NOT NULL
-),
-products AS (
-  SELECT DISTINCT ON ("Polis")
-    "Polis"                                                                           AS "externalId",
-    "Dossier"                                                                         AS "customerExternalId",
-    "Maatschappij"                                                                    AS "insurerId",
-    COALESCE("Polistype - Omschrijving", '') || COALESCE("Domein - Omschrijving", '') AS "categoryExternalId",
-    "Product Template ID"                                                             AS "productTemplateExternalId",
-    TRIM(
-      COALESCE("Domein - Omschrijving", '')      || ' ' ||
-      COALESCE("Polistype - Omschrijving", '')   || ' ' ||
-      COALESCE("Maatschappij", '')
-    )                                                                                 AS "name"
-  FROM raw
-  WHERE "Polis" IS NOT NULL
-)
-
--- ────────────────────────────────────────────────────────────────────────────
--- Business logic — customers aged 50 or older holding at least one Auto-domain policy.
--- Output columns use Qollabi attribute names; `age` is derived (not a schema column).
--- ────────────────────────────────────────────────────────────────────────────
 SELECT
   c."externalId",
   c."firstName",

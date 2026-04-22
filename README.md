@@ -31,11 +31,11 @@ Each database folder contains:
 
 1. `csv-content/` — the original uploaded CSV, stored **unchanged** as a `.csv` file.
 2. `business-requirements/` — one Markdown file per business requirement for that dataset.
-3. `qollabi-view.sql` — the canonical CSV → Qollabi translation layer (DuckDB CTEs) used by every SQL query for this database.
+3. `qollabi-view.sql` — the canonical CSV → Qollabi translation layer as `CREATE OR REPLACE VIEW` statements. The only file where CSV column names appear. Run first in a DuckDB connection so the requirement SQL can be pure Qollabi.
 
 The matching `sql-results/<database-name>/` folder contains, for each business requirement, **three** files sharing the same name:
 
-- `<name>.sql` — the generated SQL.
+- `<name>.sql` — the business-logic SELECT against the Qollabi-shaped views. No CSV column names, no translation-layer paste.
 - `<name>.csv` — the query's result applied to the source CSV.
 - `<name>.report.md` — a short report on how the mapping was made, what assumptions were taken, and any open doubts.
 
