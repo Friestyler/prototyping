@@ -40,14 +40,12 @@ const ICON_MAP: Record<SmartListIcon, React.ComponentType<{ className?: string }
   brain: Brain,
 }
 
-type Period = "7d" | "30d" | "60d" | "90d"
 
 interface PriorityRecommendationsProps {
   onCreateCampaignFor?: (useCaseId: string) => void
 }
 
 export default function PriorityRecommendations({ onCreateCampaignFor }: PriorityRecommendationsProps) {
-  const [period, setPeriod] = useState<Period>("30d")
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [savingFor, setSavingFor] = useState<SmartListUseCase | null>(null)
   const { requestNavigation } = useAiInsights()
@@ -107,10 +105,6 @@ export default function PriorityRecommendations({ onCreateCampaignFor }: Priorit
   return (
     <>
       <div className="max-w-6xl mx-auto space-y-8">
-        <div className="flex justify-end">
-          <PeriodPills value={period} onChange={setPeriod} />
-        </div>
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <ScoreCard
             kind="growth"
@@ -190,28 +184,6 @@ function SectionHeader({
         <p className="text-sm text-gray-500 mt-0.5">{subtitle}</p>
       </div>
       {children}
-    </div>
-  )
-}
-
-function PeriodPills({ value, onChange }: { value: Period; onChange: (v: Period) => void }) {
-  const periods: Period[] = ["7d", "30d", "60d", "90d"]
-  return (
-    <div className="inline-flex items-center rounded-lg border border-gray-200 bg-white p-0.5">
-      {periods.map((p) => (
-        <button
-          key={p}
-          onClick={() => onChange(p)}
-          className={cn(
-            "px-3 py-1 text-xs font-medium rounded-md transition-colors",
-            value === p
-              ? "bg-primary text-primary-foreground"
-              : "text-gray-600 hover:text-gray-900",
-          )}
-        >
-          {p}
-        </button>
-      ))}
     </div>
   )
 }
