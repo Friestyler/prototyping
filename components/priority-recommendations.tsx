@@ -15,6 +15,7 @@ import {
   ShieldAlert,
   Rocket,
   Lock,
+  Bot,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -472,10 +473,16 @@ function SmartListCard({
                 </div>
               </div>
             </div>
-            <Button variant="outline" size="sm" onClick={onSave} className="flex-shrink-0">
-              <Bookmark className="w-3.5 h-3.5" />
-              Save list
-            </Button>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <Button variant="outline" size="sm" onClick={onSave}>
+                <Bookmark className="w-3.5 h-3.5" />
+                Save list
+              </Button>
+              <Button variant="outline" size="sm" onClick={(e) => e.stopPropagation()}>
+                <Bot className="w-3.5 h-3.5" />
+                Agent
+              </Button>
+            </div>
           </div>
 
           {/* Preview table */}
