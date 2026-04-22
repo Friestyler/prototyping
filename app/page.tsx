@@ -9,6 +9,7 @@ import PortfolioIntelligence from "@/components/portfolio-intelligence"
 import LeadsPage from "@/components/leads-campaigns/leads-page"
 import CampaignsPage from "@/components/leads-campaigns/campaigns-page"
 import MCPSetupPage from "@/components/mcp-setup-page"
+import BrokerHubPage from "@/components/broker-hub-page"
 // `Partner` is a legacy type name in okr-data.ts — it's the customer record shape.
 import { type Partner as CustomerRecord } from "@/lib/okr-data"
 import { MASTER_CUSTOMERS_AS_RECORDS } from "@/lib/customer-database"
@@ -115,6 +116,7 @@ export default function OKRDashboard() {
                   onCreateCampaignFor={handleCreateCampaignForUseCase}
                 />
               )}
+              {activeMenu === "broker-hub" && <BrokerHubPage />}
               {activeMenu === "leads" && <LeadsPage />}
               {activeMenu === "mcp-setup" && <MCPSetupPage />}
               {activeMenu === "campaigns" && (
