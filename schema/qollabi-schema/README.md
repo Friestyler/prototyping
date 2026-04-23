@@ -29,9 +29,11 @@ Add the Qollabi schema artifacts into this folder as they become available. Typi
 
 ## Model notes (Qollabi behavior the schema dump doesn't spell out)
 
-- **Categories form an arbitrary-depth tree.** `categories.parentId` → `categories.id`, and the tree can go any number of levels deep. A product's `productCategoryId` can point to a category at the root, a direct child, a grand-child, or any deeper descendant. Any business requirement expressed against a "top-level domain" (e.g. "customers with an Auto product") must resolve the product's category up to its root ancestor — **never** hard-code a fixed number of levels in the join.
+- **Categories form an arbitrary-depth tree.** `categories.parentId` → `categories.id`, and the tree can go any number of levels deep. A product's `productCategoryId` can point to a category at the root, a direct child, a grand-child, or any deeper descendant. Any business requirement expressed against a "top-level domain" must resolve the product's category up to its root ancestor — **never** hard-code a fixed number of levels in the join.
 
-  The canonical way is a `WITH RECURSIVE` CTE **in the business-logic SQL** that collects the subtree rooted at the target category, then joins products against it. Keep the recursion in the requirement `.sql`, not in the translation layer — the translation layer is strictly CSV → Qollabi shape, with no query-specific helpers. Reference pattern:
+- **"Domein" = the root of the category tree.** When a business requirement (typically phrased in Dutch/Flemish insurance terms) names a *domein* — `Auto`, `Brand`, `Leven en belegging`, `Rechtsbijstand`, `Bijstand`, etc. — it is always referring to the top-level category, the one with `parentId IS NULL`. Sub-level names like `Polistype - Omschrijving` are children of a domein, not the domein itself.
+
+  The canonical way to query by domein is a `WITH RECURSIVE <domein>_tree` CTE **in the business-logic SQL** that collects the subtree rooted at that domein, then joins products against it. Keep the recursion in the requirement `.sql`, not in the translation layer — the translation layer is strictly CSV → Qollabi shape, with no query-specific helpers. Reference pattern:
 
   ```sql
   WITH RECURSIVE auto_tree AS (
@@ -42,4 +44,4 @@ Add the Qollabi schema artifacts into this folder as they become available. Typi
   SELECT ... FROM products p JOIN auto_tree a ON a."id" = p."productCategoryId" ...;
   ```
 
-  See `sql-results/Demo_Merged_Final_2/alive-customers-over-50-with-auto.sql` for the full requirement query.
+  Substitute the domein name and the top-level entity into the template for any other domein-scoped query. See `sql-results/Demo_Merged_Final_2/alive-customers-over-50-with-auto.sql` for the full example.

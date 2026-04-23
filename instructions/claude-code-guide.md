@@ -52,7 +52,28 @@ There is no UI, no app, no backend, no database. Everything here is files and fo
 
 12. **"Find customers who …" means one row per customer.** Whatever shape the query takes (JOIN + `SELECT DISTINCT`, or `EXISTS`, or `IN (SELECT …)`), the output must be one row per the entity named in the requirement — never one row per customer-product pair, never duplicated by fan-out. The Qollabi engineer's reference pattern for this codebase uses `SELECT DISTINCT` with JOINs (see `sql-results/Demo_Merged_Final_2/alive-customers-over-50-with-auto.sql`); follow that idiom unless the requirement or the user explicitly asks otherwise. Don't rewrite it to `EXISTS` on your own initiative — both shapes yield the same result and the team's preferred style wins.
 
-13. **Time-relative filters compute from `CURRENT_DATE`, never from a hardcoded date.** Every query in this repo is designed to run on a schedule (often daily), so any filter based on "today" — age boundaries, "in the last 30 days", "active as of today", etc. — must be expressed relative to the run date:
+13. **"Domein" = the root of the category tree. Always query it with a `WITH RECURSIVE <domein>_tree` CTE.** When a business requirement names a specific domein (e.g. "Auto domein", "Brand", "Leven en belegging", "Rechtsbijstand"), it is always referring to the **top-level** category — the one where `categories."parentId" IS NULL`. Customers/products can be attached to that root directly or anywhere below it in the tree. The canonical query shape:
+
+    ```sql
+    WITH RECURSIVE <domein>_tree AS (
+      SELECT "id"
+      FROM categories
+      WHERE "name" = '<Domein Name>' AND "parentId" IS NULL
+      UNION ALL
+      SELECT c."id"
+      FROM categories c
+      JOIN <domein>_tree d ON c."parentId" = d."id"
+    )
+    SELECT DISTINCT <entity columns>
+    FROM <entity> e
+    JOIN products p        ON p."<entity>Id" = e."id"
+    JOIN <domein>_tree d   ON d."id" = p."productCategoryId"
+    WHERE <other filters>;
+    ```
+
+    Substitute the domein name and the top-level entity (customers, dossiers, etc.) into the template. Do **not** try to filter on `Polistype - Omschrijving` or any subcategory name when the user asked about the domein — the domein is the parent, and sub-matches happen via the recursive walk. Reference query: [`sql-results/Demo_Merged_Final_2/alive-customers-over-50-with-auto.sql`](../sql-results/Demo_Merged_Final_2/alive-customers-over-50-with-auto.sql).
+
+14. **Time-relative filters compute from `CURRENT_DATE`, never from a hardcoded date.** Every query in this repo is designed to run on a schedule (often daily), so any filter based on "today" — age boundaries, "in the last 30 days", "active as of today", etc. — must be expressed relative to the run date:
 
     ```sql
     c."dateOfBirth" <= CURRENT_DATE - INTERVAL '50 years'         -- yes: boundary slides with the run date
@@ -63,7 +84,7 @@ There is no UI, no app, no backend, no database. Everything here is files and fo
 
     DuckDB and Postgres both understand `CURRENT_DATE - INTERVAL '<n> years'`, `CURRENT_DATE - INTERVAL '<n> days'`, etc. — standard SQL, portable.
 
-14. **Business-logic joins use `id`, not `externalId`.** Every Qollabi entity has an internal `id` (UUID in production, assigned by the system) and an `externalId` (user-facing, present in the CSV, used during import to identify records as unique). Production foreign keys reference `id` — `products.customerId → customers.id`, `products.productCategoryId → categories.id`, `categories.parentId → categories.id`. Business-logic SQL in this repo **must** join via those production FK columns, not via external IDs.
+15. **Business-logic joins use `id`, not `externalId`.** Every Qollabi entity has an internal `id` (UUID in production, assigned by the system) and an `externalId` (user-facing, present in the CSV, used during import to identify records as unique). Production foreign keys reference `id` — `products.customerId → customers.id`, `products.productCategoryId → categories.id`, `categories.parentId → categories.id`. Business-logic SQL in this repo **must** join via those production FK columns, not via external IDs.
 
     The CSV carries only externalIds, so the translation-layer views populate `id` with the same value as `externalId` for each entity (a stable string surrogate for the UUID production would assign). Do **not** create synthetic `customerExternalId` / `categoryExternalId` join columns in the views; the column names on each view are exactly the production column names (`id`, `customerId`, `productCategoryId`, `parentId`, `externalId` — the last kept for user-facing SELECT output only).
 
