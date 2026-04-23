@@ -27,5 +27,5 @@ FROM customers c
 JOIN products p   ON p."customerId" = c."id"
 JOIN auto_tree a  ON a."id" = p."productCategoryId"
 WHERE c."dateOfDeath" IS NULL
-  AND c."dateOfBirth" <= DATE '1976-04-23'
+  AND c."dateOfBirth" <= CURRENT_DATE - INTERVAL '50 years'
 ORDER BY c."externalId";

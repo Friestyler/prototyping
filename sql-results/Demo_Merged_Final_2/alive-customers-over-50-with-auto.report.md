@@ -29,7 +29,7 @@ schema/qollabi-schema/mappings/brio.csv
 | Product Template Name, Product Template ID, E-mail | — | — | Not in the Brio mapping; confirmed ignorable by the user. |
 
 ## Assumptions made
-- "Over 50 years" read as **at least 50** as of today (2026-04-23), i.e. `dateOfBirth <= 1976-04-23`. Inclusive reading (Dutch "50-plus"), confirmed by the Qollabi engineer's reference SQL.
+- "Over 50 years" read as **at least 50** on the run date (Dutch "50-plus"). Implemented as `dateOfBirth <= CURRENT_DATE - INTERVAL '50 years'`, so the query is correct every day it runs — someone who hits 50 tomorrow is included tomorrow, not today. **Do not** replace this with a hardcoded date like `DATE '1976-04-23'`; that would silently drift stale.
 - "Alive" = `dateOfDeath IS NULL`. No row in the CSV had a future-dated death, so no additional clause was needed.
 - **"Auto domein" = the product's category is `Auto` itself or any descendant of `Auto` in the category tree.** Categories in Qollabi form an arbitrary-depth tree; products can attach at any node. The query uses a `WITH RECURSIVE auto_tree` CTE that starts from the root named `Auto` with no parent and expands downward, then joins products against that set. For this CSV the tree is 2 levels deep (Brio's `Domein → Polistype`) so the empirical count matches what a fixed 2-level join would produce; the pattern stays correct for deeper trees.
 - Output = one row per customer. Implemented the Qollabi engineer's idiomatic pattern: `SELECT DISTINCT` over `JOIN products`/`JOIN auto_tree`. A customer with ten Auto policies collapses to one result row. `ORDER BY externalId` for stable reproduction.

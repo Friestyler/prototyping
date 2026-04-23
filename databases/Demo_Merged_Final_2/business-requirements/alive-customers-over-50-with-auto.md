@@ -16,10 +16,10 @@ sql-results/Demo_Merged_Final_2/alive-customers-over-50-with-auto.sql
 I want all customers that are over 50 years and alive with Auto domein.
 
 ## Latest business requirement
-All customers aged 50 or over as of today (2026-04-23), still alive (no date of death), who hold at least one product whose category sits anywhere in the `Auto` subtree.
+All customers aged 50 or over **as of the day the query runs**, still alive (no date of death), who hold at least one product whose category sits anywhere in the `Auto` subtree. This query is run daily; the age boundary must always reflect the current date, never a snapshot.
 
 ## Business rules
-- "Over 50 years" = age **at least 50** today (inclusive reading — Dutch "50-plus") → `dateOfBirth <= 1976-04-23`.
+- "Over 50 years" = age **at least 50** on the run date (inclusive reading — Dutch "50-plus"). Implemented as `dateOfBirth <= CURRENT_DATE - INTERVAL '50 years'` — the boundary slides forward every day so someone who turns 50 tomorrow is included tomorrow (not today).
 - "Alive" = `dateOfDeath` is `NULL`.
 - "Auto domein" = at least one linked product whose category is the `Auto` root itself or any descendant of it, at any depth in the category tree.
 - **One row per customer** — the answer is a customer list, not a customer-product list. A customer with ten Auto policies appears exactly once.
@@ -29,3 +29,4 @@ All customers aged 50 or over as of today (2026-04-23), still alive (no date of 
 - Switched the category match to a general-purpose `category_roots` view in the translation layer.
 - Adopted the Qollabi engineer's pattern: moved the tree traversal **into the business-logic SQL** as a `WITH RECURSIVE auto_tree` CTE scoped to the Auto subtree, and removed the `category_roots` view from the translation layer (translation layer stays purely CSV→Qollabi shape, no query helpers). Flipped the age boundary to inclusive (`<= 1976-04-23`, "50-plus"). Empirical count unchanged (168) — the Brio tree is 2 levels deep and no customer in this export was born exactly on 1976-04-23.
 - Briefly reshaped to `EXISTS`, then reverted to the engineer's `SELECT DISTINCT` + JOIN pattern on user direction — both give the same 168 rows, and the engineer's pattern is the team idiom.
+- Replaced the hardcoded age boundary `DATE '1976-04-23'` with `CURRENT_DATE - INTERVAL '50 years'` so the query stays correct across daily runs. Someone who turns 50 tomorrow is correctly excluded today and correctly included tomorrow; someone who turns 50 in three months is excluded on every run until that date. Today's count is unchanged (168) because the boundary on 2026-04-23 resolves to the same value.
