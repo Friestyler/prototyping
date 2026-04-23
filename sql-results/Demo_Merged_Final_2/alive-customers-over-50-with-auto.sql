@@ -7,10 +7,6 @@
 -- This file contains **only Qollabi-shaped SQL** — no CSV column names, no translation-layer CTEs.
 -- Joins use production FK columns (customerId → customers.id, productCategoryId → categories.id,
 -- parentId → categories.id). externalId appears only in the SELECT output.
---
--- Query shape: one row per customer by construction. The SELECT iterates customers;
--- product membership in the Auto subtree is checked with EXISTS rather than a JOIN,
--- so a customer with ten Auto policies still appears exactly once.
 
 WITH RECURSIVE auto_tree AS (
   SELECT "id"
@@ -21,19 +17,15 @@ WITH RECURSIVE auto_tree AS (
   FROM categories c
   JOIN auto_tree a ON c."parentId" = a."id"
 )
-SELECT
+SELECT DISTINCT
   c."externalId",
   c."firstName",
   c."lastName",
   c."dateOfBirth",
   c."customerType"
 FROM customers c
+JOIN products p   ON p."customerId" = c."id"
+JOIN auto_tree a  ON a."id" = p."productCategoryId"
 WHERE c."dateOfDeath" IS NULL
   AND c."dateOfBirth" <= DATE '1976-04-23'
-  AND EXISTS (
-    SELECT 1
-    FROM products p
-    JOIN auto_tree a ON a."id" = p."productCategoryId"
-    WHERE p."customerId" = c."id"
-  )
 ORDER BY c."externalId";

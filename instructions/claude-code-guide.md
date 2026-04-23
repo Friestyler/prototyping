@@ -50,28 +50,7 @@ There is no UI, no app, no backend, no database. Everything here is files and fo
 
 11. **Never filter on `products."lifecycleStage"` unless the user asks for it explicitly.** User preference: `lifecycleStage` is not a business dimension they query on. Do not add it to any `WHERE` clause, any `EXISTS` subquery, or any sanity-metric breakdown on your own initiative. If a business requirement genuinely needs lifecycle scoping, surface it as an *Open doubt* in the report first and wait for confirmation — don't assume.
 
-12. **"Find customers who …" means one row per customer — by construction, not by `SELECT DISTINCT`.** When the business requirement is "return customers that …", the outermost query shape is:
-
-    ```sql
-    SELECT <customer columns>
-    FROM customers c
-    WHERE <customer-level filters>
-      AND EXISTS (SELECT 1 FROM products p JOIN … WHERE p."customerId" = c."id" AND …);
-    ```
-
-    Not:
-
-    ```sql
-    SELECT DISTINCT <customer columns>
-    FROM customers c
-    JOIN products p ON p."customerId" = c."id"
-    JOIN … 
-    WHERE …;   -- multiplies rows then dedupes
-    ```
-
-    `EXISTS` (or `IN (SELECT …)`) expresses the real intent: the customer qualifies iff at least one related product/row satisfies the condition. The JOIN-then-DISTINCT pattern can accidentally produce the same rowcount, but it's semantically "every customer-product pair, then dedupe" — fragile against nulls, slower, and misleading to readers. Use `EXISTS` whenever the top-level entity is a customer (or any entity) and the related condition is "has at least one …".
-
-    Apply the same rule one level up: when the requirement is "find products that …", the shape starts `FROM products` and uses `EXISTS` for related checks. Substitute the entity accordingly.
+12. **"Find customers who …" means one row per customer.** Whatever shape the query takes (JOIN + `SELECT DISTINCT`, or `EXISTS`, or `IN (SELECT …)`), the output must be one row per the entity named in the requirement — never one row per customer-product pair, never duplicated by fan-out. The Qollabi engineer's reference pattern for this codebase uses `SELECT DISTINCT` with JOINs (see `sql-results/Demo_Merged_Final_2/alive-customers-over-50-with-auto.sql`); follow that idiom unless the requirement or the user explicitly asks otherwise. Don't rewrite it to `EXISTS` on your own initiative — both shapes yield the same result and the team's preferred style wins.
 
 13. **Business-logic joins use `id`, not `externalId`.** Every Qollabi entity has an internal `id` (UUID in production, assigned by the system) and an `externalId` (user-facing, present in the CSV, used during import to identify records as unique). Production foreign keys reference `id` — `products.customerId → customers.id`, `products.productCategoryId → categories.id`, `categories.parentId → categories.id`. Business-logic SQL in this repo **must** join via those production FK columns, not via external IDs.
 
