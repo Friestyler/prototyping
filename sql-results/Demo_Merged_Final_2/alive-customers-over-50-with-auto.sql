@@ -5,9 +5,18 @@
 -- Translation layer:  databases/Demo_Merged_Final_2/qollabi-view.sql  (run first in the same DuckDB connection)
 --
 -- This file contains **only Qollabi-shaped SQL** — no CSV column names, no translation-layer CTEs.
--- Joins use the production FK columns (customerId → customers.id, productCategoryId → categories.id,
--- parentId → categories.id). externalId is only used as the user-facing identifier in the SELECT output.
+-- Joins use production FK columns (customerId → customers.id, productCategoryId → categories.id,
+-- parentId → categories.id). externalId appears only in the SELECT output.
 
+WITH RECURSIVE auto_tree AS (
+  SELECT "id"
+  FROM categories
+  WHERE "name" = 'Auto' AND "parentId" IS NULL
+  UNION ALL
+  SELECT c."id"
+  FROM categories c
+  JOIN auto_tree a ON c."parentId" = a."id"
+)
 SELECT DISTINCT
   c."externalId",
   c."firstName",
@@ -15,11 +24,8 @@ SELECT DISTINCT
   c."dateOfBirth",
   c."customerType"
 FROM customers c
-JOIN products p
-  ON p."customerId" = c."id"
-JOIN category_roots cr
-  ON cr."id" = p."productCategoryId"
+JOIN products p   ON p."customerId" = c."id"
+JOIN auto_tree a  ON a."id" = p."productCategoryId"
 WHERE c."dateOfDeath" IS NULL
-  AND c."dateOfBirth" <= DATE '1976-04-22'
-  AND cr."rootName" = 'Auto'
+  AND c."dateOfBirth" <= DATE '1976-04-23'
 ORDER BY c."externalId";

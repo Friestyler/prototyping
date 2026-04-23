@@ -16,14 +16,15 @@ sql-results/Demo_Merged_Final_2/alive-customers-over-50-with-auto.sql
 I want all customers that are over 50 years and alive with Auto domein.
 
 ## Latest business requirement
-All customers who are strictly older than 50 years as of today (2026-04-23), are still alive (no date of death), and hold at least one product in the `Auto` domain category.
+All customers aged 50 or over as of today (2026-04-23), still alive (no date of death), who hold at least one product whose category sits anywhere in the `Auto` subtree.
 
 ## Business rules
-- "Over 50 years" = age strictly greater than 50 today → `dateOfBirth <= 1976-04-22`.
+- "Over 50 years" = age **at least 50** today (inclusive reading — Dutch "50-plus") → `dateOfBirth <= 1976-04-23`.
 - "Alive" = `dateOfDeath` is `NULL`.
-- "Auto domein" = at least one linked product whose category's **root ancestor** (top of the category tree, at any depth) has name `Auto`. Qualifying products can sit at the root itself or anywhere below it; the query must handle arbitrary-depth subtrees.
+- "Auto domein" = at least one linked product whose category is the `Auto` root itself or any descendant of it, at any depth in the category tree.
 - One row per customer (distinct), not one row per Auto policy.
 
 ## Iteration notes
-- Initial version: direct translation — age, alive, and Auto-product-existence filter on a single query.
-- Switched the category match from a fixed two-level `sub → top` join to the `category_roots` view so any depth below `Auto` counts. Empirical result unchanged (168 rows) because the Brio CSV's category tree is only 2 levels deep, but the SQL is now structurally correct for deeper trees.
+- Initial version: fixed two-level `sub → top` JOIN; read "over 50" as strictly > 50 (`dateOfBirth <= 1976-04-22`).
+- Switched the category match to a general-purpose `category_roots` view in the translation layer.
+- Adopted the Qollabi engineer's pattern: moved the tree traversal **into the business-logic SQL** as a `WITH RECURSIVE auto_tree` CTE scoped to the Auto subtree, and removed the `category_roots` view from the translation layer (translation layer stays purely CSV→Qollabi shape, no query helpers). Flipped the age boundary to inclusive (`<= 1976-04-23`, "50-plus"). Empirical count unchanged (168) — the Brio tree is 2 levels deep and no customer in this export was born exactly on 1976-04-23.

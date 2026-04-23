@@ -29,4 +29,17 @@ Add the Qollabi schema artifacts into this folder as they become available. Typi
 
 ## Model notes (Qollabi behavior the schema dump doesn't spell out)
 
-- **Categories form an arbitrary-depth tree.** `categories.parentId` → `categories.id`, and the tree can go any number of levels deep. A product's `productCategoryId` can point to a category at the root, a direct child, a grand-child, or any deeper descendant. Any business requirement expressed against a "top-level domain" (e.g. "customers with an Auto product") must resolve the product's category up to its root ancestor — **never** hard-code a fixed number of levels in the join. The canonical way to do this in a translation layer is a `category_roots` view defined with `WITH RECURSIVE` that emits `(id, rootId, rootName)` per category, so business-logic SQL can simply `JOIN category_roots cr ON cr.id = p.productCategoryId` and filter on `cr.rootName`. See `databases/Demo_Merged_Final_2/qollabi-view.sql` for the reference implementation.
+- **Categories form an arbitrary-depth tree.** `categories.parentId` → `categories.id`, and the tree can go any number of levels deep. A product's `productCategoryId` can point to a category at the root, a direct child, a grand-child, or any deeper descendant. Any business requirement expressed against a "top-level domain" (e.g. "customers with an Auto product") must resolve the product's category up to its root ancestor — **never** hard-code a fixed number of levels in the join.
+
+  The canonical way is a `WITH RECURSIVE` CTE **in the business-logic SQL** that collects the subtree rooted at the target category, then joins products against it. Keep the recursion in the requirement `.sql`, not in the translation layer — the translation layer is strictly CSV → Qollabi shape, with no query-specific helpers. Reference pattern:
+
+  ```sql
+  WITH RECURSIVE auto_tree AS (
+    SELECT "id" FROM categories WHERE "name" = 'Auto' AND "parentId" IS NULL
+    UNION ALL
+    SELECT c."id" FROM categories c JOIN auto_tree a ON c."parentId" = a."id"
+  )
+  SELECT ... FROM products p JOIN auto_tree a ON a."id" = p."productCategoryId" ...;
+  ```
+
+  See `sql-results/Demo_Merged_Final_2/alive-customers-over-50-with-auto.sql` for the full requirement query.

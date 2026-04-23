@@ -29,13 +29,13 @@ schema/qollabi-schema/mappings/brio.csv
 | Product Template Name, Product Template ID, E-mail | — | — | Not in the Brio mapping; confirmed ignorable by the user. |
 
 ## Assumptions made
-- "Over 50 years" read as **strictly greater than 50** as of today (2026-04-23), i.e. `dateOfBirth <= 1976-04-22`. If the user means ≥ 50, shift the boundary to `<= 1976-04-23`.
+- "Over 50 years" read as **at least 50** as of today (2026-04-23), i.e. `dateOfBirth <= 1976-04-23`. Inclusive reading (Dutch "50-plus"), confirmed by the Qollabi engineer's reference SQL.
 - "Alive" = `dateOfDeath IS NULL`. No row in the CSV had a future-dated death, so no additional clause was needed.
-- **"Auto domein" = the product's category has a root ancestor named `Auto`, at any depth.** Categories in Qollabi form an arbitrary-depth tree; a product may be attached at the root or at any descendant node. The query uses the `category_roots` view (a recursive walker in the translation layer) so a product qualifies whether its category is `Auto` itself, a direct child, a grand-child, etc. For this CSV the tree is 2 levels deep (Brio's `Domein → Polistype`), so the result (168) matches what a fixed 2-level join would have returned — but the SQL is now structurally correct for deeper trees.
-- Output = one row per distinct customer; no `ORDER BY` beyond `externalId` for stable reproduction.
+- **"Auto domein" = the product's category is `Auto` itself or any descendant of `Auto` in the category tree.** Categories in Qollabi form an arbitrary-depth tree; products can attach at any node. The query uses a `WITH RECURSIVE auto_tree` CTE that starts from the root named `Auto` with no parent and expands downward, then joins products against that set. For this CSV the tree is 2 levels deep (Brio's `Domein → Polistype`) so the empirical count matches what a fixed 2-level join would produce; the pattern stays correct for deeper trees.
+- Output = one row per distinct customer; `ORDER BY externalId` for stable reproduction.
 
 ## Open doubts / things to confirm
-- Age boundary: strictly > 50 vs ≥ 50.
+- None outstanding.
 
 (Note: `products."lifecycleStage"` is intentionally not part of the query. Per user direction, `lifecycleStage` is never a filter dimension in this repo — see `instructions/claude-code-guide.md` rule 11.)
 
@@ -51,9 +51,9 @@ schema/qollabi-schema/mappings/brio.csv
 - Source CSV rows: 1413
 - Distinct customers (`Dossier`): 374
 - Alive customers: 371
-- Alive customers over 50: 288
+- Alive customers aged ≥ 50: 288
 - Customers with at least one `Auto` product: 205
 - Result rows: 168
-- Rows filtered out: 206 customers (374 − 168): 3 deceased, 83 alive but ≤ 50, 120 alive and over 50 but no Auto product.
+- Rows filtered out: 206 customers (374 − 168): 3 deceased, 83 alive but under 50, 120 alive and ≥ 50 but no Auto product.
 - Unrecognized `customerType` values: 0
 - CSV dialect preserved: `;` delimiter, CRLF line endings, UTF-8 (no BOM), `dd/MM/yyyy` date format — matches source.
