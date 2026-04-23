@@ -6,14 +6,18 @@ import {
   ReactNodeViewRenderer,
   type NodeViewProps,
 } from "@tiptap/react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
+  AlertCircle,
   Building2,
   Car,
+  ChevronDown,
   FileText,
   Layers,
+  Loader2,
   Package,
   Plane,
+  Play,
   Shield,
   Sparkles,
   User,
@@ -43,10 +47,17 @@ import {
 import { cn } from "@/lib/utils";
 import {
   AI_ASSETS,
-  AI_CATEGORIES,
-  AI_PRODUCTS,
+  AI_CATEGORY_TREE,
   AI_RISK_OBJECTS,
-} from "@/lib/ai-prompt-context-data";
+  AI_SAMPLE_CUSTOMER_PRODUCTS,
+  expandSelectionToTemplateIds,
+  getTemplate,
+  templatePath,
+  type AiCategory,
+  type AiSubcategory,
+  type AiTemplate,
+} from "@/lib/ai-prompt-context";
+import { generateAiPromptText } from "@/lib/ai-prompt-client";
 
 // ────────────────────────────────────────────────────────────────────────────
 // Types
@@ -70,11 +81,7 @@ export type SourceKey =
   | "risk-objects"
   | "contacts";
 
-export type ScopeKey =
-  | "single-product"
-  | "multiple-products"
-  | "category"
-  | "entire-portfolio";
+export type ScopeKey = "entire-portfolio" | "filtered";
 
 export type GenerationMode = "per-product" | "per-category" | "aggregated";
 
@@ -96,8 +103,12 @@ export interface AiPromptAttrs {
 
   sources: SourceKey[];
   scope: ScopeKey;
-  selectedProductIds: string[];
-  selectedCategoryIds: string[];
+  /**
+   * Mixed ids from the category tree — can be `cat-…`, `sub-…`, or `tpl-…`.
+   * A picked category expands to all its subcategories and templates; a
+   * picked subcategory expands to all its templates.
+   */
+  selectedFilterIds: string[];
   selectedAssetIds: string[];
   selectedRiskObjectIds: string[];
 
@@ -160,11 +171,17 @@ const SOURCE_OPTIONS: { key: SourceKey; label: string; icon: React.ReactNode }[]
   { key: "contacts", label: "Contacts", icon: <Users className="w-3.5 h-3.5" /> },
 ];
 
-const SCOPE_OPTIONS: { key: ScopeKey; label: string }[] = [
-  { key: "single-product", label: "Single product" },
-  { key: "multiple-products", label: "Multiple products" },
-  { key: "category", label: "By category" },
-  { key: "entire-portfolio", label: "Entire portfolio" },
+const SCOPE_OPTIONS: { key: ScopeKey; label: string; hint: string }[] = [
+  {
+    key: "entire-portfolio",
+    label: "All products",
+    hint: "Every product this recipient has.",
+  },
+  {
+    key: "filtered",
+    label: "Specific products",
+    hint: "Only products in the categories, subcategories, or templates you pick.",
+  },
 ];
 
 const MODE_OPTIONS: { key: GenerationMode; label: string; hint: string }[] = [
@@ -229,9 +246,8 @@ const defaultAttrs = (overrides?: Partial<AiPromptAttrs>): AiPromptAttrs => ({
   tone: overrides?.tone ?? "professional",
   length: overrides?.length ?? "paragraph",
   sources: overrides?.sources ?? ["customer", "products"],
-  scope: overrides?.scope ?? "multiple-products",
-  selectedProductIds: overrides?.selectedProductIds ?? [],
-  selectedCategoryIds: overrides?.selectedCategoryIds ?? [],
+  scope: overrides?.scope ?? "entire-portfolio",
+  selectedFilterIds: overrides?.selectedFilterIds ?? [],
   selectedAssetIds: overrides?.selectedAssetIds ?? [],
   selectedRiskObjectIds: overrides?.selectedRiskObjectIds ?? [],
   generationMode: overrides?.generationMode ?? "aggregated",
@@ -260,8 +276,7 @@ export const AiPromptNode = Node.create({
       length: { default: d.length },
       sources: { default: d.sources },
       scope: { default: d.scope },
-      selectedProductIds: { default: d.selectedProductIds },
-      selectedCategoryIds: { default: d.selectedCategoryIds },
+      selectedFilterIds: { default: d.selectedFilterIds },
       selectedAssetIds: { default: d.selectedAssetIds },
       selectedRiskObjectIds: { default: d.selectedRiskObjectIds },
       generationMode: { default: d.generationMode },
@@ -307,6 +322,21 @@ function AiPromptChip({ node, updateAttributes, deleteNode, editor }: NodeViewPr
   const attrs = node.attrs as AiPromptAttrs;
   const [open, setOpen] = useState(false);
   const editable = editor?.isEditable ?? true;
+
+  // Freeze the editor while the configurator is open so the bubble / floating
+  // toolbar doesn't bleed through the dialog.
+  useEffect(() => {
+    if (!editor) return;
+    if (open) {
+      const was = editor.isEditable;
+      editor.setEditable(false);
+      document.body.setAttribute("data-ai-prompt-dialog", "open");
+      return () => {
+        editor.setEditable(was);
+        document.body.removeAttribute("data-ai-prompt-dialog");
+      };
+    }
+  }, [open, editor]);
 
   const summary = buildChipSummary(attrs);
 
@@ -419,26 +449,40 @@ function AiPromptConfigurator({
   };
 
   // Resolve which products will be in scope — drives the preview pane + mode logic
+  // Resolve the filter against the sample customer portfolio so the preview
+  // shows exactly what the LLM will see for a matched recipient.
   const productsInScope = useMemo(() => {
-    switch (draft.scope) {
-      case "entire-portfolio":
-        return AI_PRODUCTS;
-      case "category":
-        return AI_PRODUCTS.filter((p) => draft.selectedCategoryIds.includes(p.category));
-      case "multiple-products":
-      case "single-product":
-        return AI_PRODUCTS.filter((p) => draft.selectedProductIds.includes(p.id));
+    const expanded =
+      draft.scope === "entire-portfolio"
+        ? null
+        : expandSelectionToTemplateIds(draft.selectedFilterIds);
+    return AI_SAMPLE_CUSTOMER_PRODUCTS.map((p) => ({
+      ...p,
+      entry: getTemplate(p.productTemplateId),
+    })).filter((p) => {
+      if (!p.entry) return false;
+      if (!expanded) return true;
+      return expanded.has(p.entry.template.id);
+    });
+  }, [draft.scope, draft.selectedFilterIds]);
+
+  const categoriesInScope = useMemo(() => {
+    const names = new Set<string>();
+    for (const p of productsInScope) {
+      if (p.entry) names.add(`${p.entry.category.name} › ${p.entry.subcategory.name}`);
     }
-  }, [draft.scope, draft.selectedCategoryIds, draft.selectedProductIds]);
+    return Array.from(names);
+  }, [productsInScope]);
 
-  const categoriesInScope = useMemo(
-    () => Array.from(new Set(productsInScope.map((p) => p.category))),
-    [productsInScope],
-  );
+  const toggleFilter = (id: string) => {
+    patch({
+      selectedFilterIds: draft.selectedFilterIds.includes(id)
+        ? draft.selectedFilterIds.filter((x) => x !== id)
+        : [...draft.selectedFilterIds, id],
+    });
+  };
 
-  const showProductPicker =
-    draft.scope === "single-product" || draft.scope === "multiple-products";
-  const showCategoryPicker = draft.scope === "category";
+  const showFilters = draft.scope === "filtered";
   const showAssetPicker = draft.sources.includes("assets");
   const showRiskPicker = draft.sources.includes("risk-objects");
 
@@ -458,31 +502,19 @@ function AiPromptConfigurator({
 
         <div className="grid grid-cols-[1fr_360px] max-h-[70vh]">
           {/* LEFT — configuration */}
-          <div className="overflow-y-auto px-6 py-5 space-y-6">
+          <div className="overflow-y-auto px-6 py-5 space-y-5">
             {/* What to generate */}
             <Section title="What should the AI generate?">
-              <div className="grid grid-cols-5 gap-2 mb-3">
-                {(Object.keys(INSTRUCTION_PRESETS) as InstructionType[]).map((k) => {
-                  const preset = INSTRUCTION_PRESETS[k];
-                  const active = draft.instructionType === k;
-                  return (
-                    <button
-                      key={k}
-                      onClick={() => onInstructionChange(k)}
-                      className={cn(
-                        "rounded-md border px-2.5 py-2 text-left transition-colors",
-                        active
-                          ? "border-indigo-300 bg-indigo-50 text-indigo-700"
-                          : "border-border bg-white hover:border-indigo-200 hover:bg-indigo-50/40",
-                      )}
-                    >
-                      <div className="text-[12.5px] font-medium">{preset.label}</div>
-                      <div className="text-[10.5px] text-muted-foreground mt-0.5 leading-tight">
-                        {preset.description}
-                      </div>
-                    </button>
-                  );
-                })}
+              <ChipSelect
+                options={(Object.keys(INSTRUCTION_PRESETS) as InstructionType[]).map((k) => ({
+                  key: k,
+                  label: INSTRUCTION_PRESETS[k].label,
+                }))}
+                value={draft.instructionType}
+                onChange={(v) => onInstructionChange(v)}
+              />
+              <div className="text-[11px] text-muted-foreground mt-1.5">
+                {INSTRUCTION_PRESETS[draft.instructionType].description}
               </div>
               <Textarea
                 value={draft.prompt}
@@ -490,13 +522,16 @@ function AiPromptConfigurator({
                   patch({ prompt: e.target.value, instructionType: "custom" })
                 }
                 placeholder="Describe what the AI should write, per recipient. Reference fields with {{customer.name}}, {{product.name}}, etc."
-                className="min-h-[90px] text-[13px]"
+                className="min-h-[90px] text-[13px] mt-2"
               />
             </Section>
 
             {/* Data sources */}
-            <Section title="Data sources">
-              <div className="flex flex-wrap gap-2">
+            <Section
+              title="Data sources"
+              hint="Where the AI gets its information for each recipient"
+            >
+              <div className="flex flex-wrap gap-1.5">
                 {SOURCE_OPTIONS.map((opt) => {
                   const active = draft.sources.includes(opt.key);
                   return (
@@ -504,7 +539,7 @@ function AiPromptConfigurator({
                       key={opt.key}
                       onClick={() => toggleSource(opt.key)}
                       className={cn(
-                        "inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border text-[12.5px] transition-colors",
+                        "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[12px] transition-colors",
                         active
                           ? "border-indigo-300 bg-indigo-50 text-indigo-700"
                           : "border-border bg-white text-muted-foreground hover:border-indigo-200 hover:bg-indigo-50/40",
@@ -516,141 +551,61 @@ function AiPromptConfigurator({
                   );
                 })}
               </div>
+              {draft.sources.includes("assets") && (
+                <div className="mt-2 text-[11px] text-muted-foreground">
+                  The AI will scan PDFs attached to in-scope products. Filtering by document type
+                  (contracts, policy descriptions, claim reports) is coming later.
+                </div>
+              )}
             </Section>
 
             {/* Scope */}
             <Section title="Scope">
-              <div className="grid grid-cols-4 gap-2 mb-3">
-                {SCOPE_OPTIONS.map((opt) => {
-                  const active = draft.scope === opt.key;
-                  return (
-                    <button
-                      key={opt.key}
-                      onClick={() =>
-                        patch({
-                          scope: opt.key,
-                          // reset selections that don't apply to the new scope
-                          selectedProductIds:
-                            opt.key === "single-product" || opt.key === "multiple-products"
-                              ? draft.selectedProductIds
-                              : [],
-                          selectedCategoryIds:
-                            opt.key === "category" ? draft.selectedCategoryIds : [],
-                        })
-                      }
-                      className={cn(
-                        "rounded-md border px-2 py-2 text-center text-[12.5px] font-medium transition-colors",
-                        active
-                          ? "border-indigo-300 bg-indigo-50 text-indigo-700"
-                          : "border-border bg-white text-muted-foreground hover:border-indigo-200",
-                      )}
-                    >
-                      {opt.label}
-                    </button>
-                  );
-                })}
+              <ChipSelect
+                options={SCOPE_OPTIONS.map((s) => ({ key: s.key, label: s.label }))}
+                value={draft.scope}
+                onChange={(v) => patch({ scope: v })}
+              />
+              <div className="text-[11px] text-muted-foreground mt-1.5">
+                {SCOPE_OPTIONS.find((s) => s.key === draft.scope)?.hint}
               </div>
 
-              {showProductPicker && (
-                <MultiSelectList
-                  title="Products"
-                  items={AI_PRODUCTS.map((p) => ({
-                    id: p.id,
-                    label: p.name,
-                    sub: `${p.category} · ${p.policyNumber}`,
-                  }))}
-                  selected={draft.selectedProductIds}
-                  onToggle={(id) => toggleArray("selectedProductIds", id)}
-                  singleSelect={draft.scope === "single-product"}
-                  onSingleSelect={(id) => patch({ selectedProductIds: [id] })}
-                  emptyLabel="Select one or more products"
-                />
+              {showFilters && (
+                <div className="mt-2.5">
+                  <CategoryTreePicker
+                    selectedIds={draft.selectedFilterIds}
+                    onToggle={toggleFilter}
+                    onSelectAll={() =>
+                      patch({ selectedFilterIds: AI_CATEGORY_TREE.map((c) => c.id) })
+                    }
+                    onClear={() => patch({ selectedFilterIds: [] })}
+                  />
+                </div>
               )}
 
-              {showCategoryPicker && (
-                <MultiSelectList
-                  title="Categories"
-                  items={AI_CATEGORIES.map((c) => ({
-                    id: c,
-                    label: c,
-                    sub: `${AI_PRODUCTS.filter((p) => p.category === c).length} products`,
-                  }))}
-                  selected={draft.selectedCategoryIds}
-                  onToggle={(id) => toggleArray("selectedCategoryIds", id)}
-                  emptyLabel="Select one or more categories"
-                />
+              {showFilters && draft.selectedFilterIds.length === 0 && (
+                <div className="mt-2 text-[11.5px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2.5 py-1.5">
+                  No filters selected — the AI will see zero products for each recipient. Pick at
+                  least one category, subcategory, or product template.
+                </div>
               )}
             </Section>
 
             {/* Generation mode */}
             <Section title="Generation mode">
-              <div className="grid grid-cols-3 gap-2">
-                {MODE_OPTIONS.map((m) => {
-                  const active = draft.generationMode === m.key;
-                  return (
-                    <button
-                      key={m.key}
-                      onClick={() => patch({ generationMode: m.key })}
-                      className={cn(
-                        "rounded-md border px-3 py-2.5 text-left transition-colors",
-                        active
-                          ? "border-indigo-300 bg-indigo-50 text-indigo-700"
-                          : "border-border bg-white hover:border-indigo-200",
-                      )}
-                    >
-                      <div className="text-[12.5px] font-medium">{m.label}</div>
-                      <div className="text-[10.5px] text-muted-foreground mt-0.5 leading-tight">
-                        {m.hint}
-                      </div>
-                    </button>
-                  );
-                })}
+              <ChipSelect
+                options={MODE_OPTIONS.map((m) => ({ key: m.key, label: m.label }))}
+                value={draft.generationMode}
+                onChange={(v) => patch({ generationMode: v })}
+              />
+              <div className="text-[11px] text-muted-foreground mt-1.5">
+                {MODE_OPTIONS.find((m) => m.key === draft.generationMode)?.hint}
               </div>
             </Section>
 
-            {/* Documents */}
-            {showAssetPicker && (
-              <Section title="Documents to include" icon={<FileText className="w-3.5 h-3.5" />}>
-                <MultiSelectList
-                  items={AI_ASSETS.map((a) => ({
-                    id: a.id,
-                    label: a.name,
-                    sub: `${a.kind} · ${a.linkedTo}`,
-                  }))}
-                  selected={draft.selectedAssetIds}
-                  onToggle={(id) => toggleArray("selectedAssetIds", id)}
-                  emptyLabel="No documents selected — AI will not see any PDFs"
-                />
-              </Section>
-            )}
-
-            {/* Risk objects */}
-            {showRiskPicker && (
-              <Section title="Risk objects to include" icon={<Shield className="w-3.5 h-3.5" />}>
-                <MultiSelectList
-                  items={AI_RISK_OBJECTS.map((r) => ({
-                    id: r.id,
-                    label: r.label,
-                    sub: `${r.kind} · attached to ${r.attachedProduct}`,
-                    icon:
-                      r.kind === "Vehicle" ? (
-                        <Car className="w-3.5 h-3.5" />
-                      ) : r.kind === "Building" ? (
-                        <Building2 className="w-3.5 h-3.5" />
-                      ) : (
-                        <Plane className="w-3.5 h-3.5" />
-                      ),
-                  }))}
-                  selected={draft.selectedRiskObjectIds}
-                  onToggle={(id) => toggleArray("selectedRiskObjectIds", id)}
-                  emptyLabel="No risk objects selected"
-                />
-              </Section>
-            )}
-
             {/* Tone & length */}
             <Section title="Voice">
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <Label className="text-[12px] font-medium">Tone</Label>
                   <Select
@@ -683,79 +638,13 @@ function AiPromptConfigurator({
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-[12px] font-medium">Chip label</Label>
-                  <Input
-                    value={draft.label}
-                    onChange={(e) => patch({ label: e.target.value })}
-                    className="h-9 text-[13px]"
-                  />
-                </div>
               </div>
             </Section>
 
-            {/* Guardrails */}
-            <Section
-              title="Guardrails"
-              action={
-                <button
-                  type="button"
-                  onClick={() => setGuardrailsOpen((o) => !o)}
-                  className="text-[12px] text-brand hover:underline"
-                >
-                  {guardrailsOpen ? "Collapse" : `Review (${draft.guardrails.length} active)`}
-                </button>
-              }
-            >
-              {guardrailsOpen ? (
-                <div className="space-y-2">
-                  {GUARDRAILS.map((g) => {
-                    const active = draft.guardrails.includes(g.key);
-                    return (
-                      <label
-                        key={g.key}
-                        className={cn(
-                          "flex gap-2.5 rounded-md border p-2.5 cursor-pointer",
-                          active ? "border-indigo-200 bg-indigo-50/40" : "border-border bg-white",
-                        )}
-                      >
-                        <Checkbox
-                          checked={active}
-                          onCheckedChange={() => toggleGuardrail(g.key)}
-                          className="mt-0.5"
-                        />
-                        <div>
-                          <div className="text-[12.5px] font-medium">{g.label}</div>
-                          <div className="text-[11px] text-muted-foreground leading-snug mt-0.5">
-                            {g.description}
-                          </div>
-                        </div>
-                      </label>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="flex flex-wrap gap-1.5">
-                  {draft.guardrails.map((k) => {
-                    const g = GUARDRAILS.find((x) => x.key === k);
-                    if (!g) return null;
-                    return (
-                      <span
-                        key={k}
-                        className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200"
-                      >
-                        ✓ {g.label}
-                      </span>
-                    );
-                  })}
-                  {draft.guardrails.length === 0 && (
-                    <span className="text-[11.5px] text-muted-foreground italic">
-                      No guardrails active — AI output is unconstrained.
-                    </span>
-                  )}
-                </div>
-              )}
-            </Section>
+            {/*
+             * Guardrails are enforced server-side from the defaults; no UI for
+             * the broker. `draft.guardrails` still flows to the API route.
+             */}
           </div>
 
           {/* RIGHT — preview / scope readout */}
@@ -785,7 +674,8 @@ function AiPromptConfigurator({
                   <ul className="pl-5 text-[11.5px] text-muted-foreground space-y-0.5">
                     {productsInScope.slice(0, 6).map((p) => (
                       <li key={p.id} className="list-disc">
-                        {p.name}
+                        {p.entry?.template.name ?? "—"}{" "}
+                        <span className="text-light">· {p.policyNumber}</span>
                       </li>
                     ))}
                     {productsInScope.length > 6 && (
@@ -798,9 +688,7 @@ function AiPromptConfigurator({
                   label="Documents"
                   value={
                     draft.sources.includes("assets")
-                      ? draft.selectedAssetIds.length
-                        ? `${draft.selectedAssetIds.length} PDF${draft.selectedAssetIds.length === 1 ? "" : "s"}`
-                        : "None selected"
+                      ? "PDFs attached to in-scope products"
                       : "Not in sources"
                   }
                 />
@@ -809,9 +697,7 @@ function AiPromptConfigurator({
                   label="Risk objects"
                   value={
                     draft.sources.includes("risk-objects")
-                      ? draft.selectedRiskObjectIds.length
-                        ? `${draft.selectedRiskObjectIds.length} linked`
-                        : "None selected"
+                      ? "Risk objects attached to in-scope products"
                       : "Not in sources"
                   }
                 />
@@ -827,17 +713,10 @@ function AiPromptConfigurator({
               </div>
             </div>
 
-            <div>
-              <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium mb-2">
-                Sample preview
-              </div>
-              <div className="rounded-md border border-border bg-white p-3 text-[12.5px] leading-relaxed text-foreground whitespace-pre-wrap">
-                {mockPreview(draft, productsInScope, categoriesInScope)}
-              </div>
-              <div className="text-[10.5px] text-muted-foreground mt-1.5">
-                Mocked for illustration — real copy is generated per recipient at send time.
-              </div>
-            </div>
+            <LivePreview
+              attrs={draft}
+              fallbackText={mockPreview(draft, productsInScope, categoriesInScope)}
+            />
           </div>
         </div>
 
@@ -860,24 +739,62 @@ function Section({
   title,
   icon,
   action,
+  hint,
   children,
 }: {
   title: string;
   icon?: React.ReactNode;
   action?: React.ReactNode;
+  hint?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <section>
-      <div className="flex items-center justify-between mb-2.5">
+      <div className="flex items-center justify-between mb-1.5">
         <div className="flex items-center gap-1.5 text-[12.5px] font-semibold text-foreground">
           {icon}
           {title}
+          {hint ? (
+            <span className="font-normal text-muted-foreground text-[11px]">— {hint}</span>
+          ) : null}
         </div>
         {action}
       </div>
       {children}
     </section>
+  );
+}
+
+function ChipSelect<T extends string>({
+  options,
+  value,
+  onChange,
+}: {
+  options: { key: T; label: string }[];
+  value: T;
+  onChange: (value: T) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {options.map((opt) => {
+        const active = value === opt.key;
+        return (
+          <button
+            key={opt.key}
+            type="button"
+            onClick={() => onChange(opt.key)}
+            className={cn(
+              "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[12px] transition-colors",
+              active
+                ? "border-indigo-300 bg-indigo-50 text-indigo-700"
+                : "border-border bg-white text-muted-foreground hover:border-indigo-200 hover:bg-indigo-50/40",
+            )}
+          >
+            {opt.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
@@ -942,6 +859,188 @@ function MultiSelectList({
   );
 }
 
+function CategoryTreePicker({
+  selectedIds,
+  onToggle,
+  onSelectAll,
+  onClear,
+}: {
+  selectedIds: string[];
+  onToggle: (id: string) => void;
+  onSelectAll: () => void;
+  onClear: () => void;
+}) {
+  const [openCats, setOpenCats] = useState<Set<string>>(() => new Set());
+  const [openSubs, setOpenSubs] = useState<Set<string>>(() => new Set());
+  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const allSelected = AI_CATEGORY_TREE.every((c) => selectedSet.has(c.id));
+
+  const toggleCat = (id: string) =>
+    setOpenCats((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  const toggleSub = (id: string) =>
+    setOpenSubs((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+
+  const isUnderSelected = (cat: AiCategory, sub?: AiSubcategory): boolean => {
+    if (selectedSet.has(cat.id)) return true;
+    if (sub && selectedSet.has(sub.id)) return true;
+    return false;
+  };
+
+  return (
+    <div className="rounded-md border border-border bg-white max-h-[420px] overflow-y-auto">
+      <div className="flex items-center justify-between px-3 py-1.5 sticky top-0 bg-white border-b border-border z-[1]">
+        <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+          Categories · subcategories · product templates
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={allSelected ? onClear : onSelectAll}
+            className="text-[11.5px] text-brand hover:underline"
+          >
+            {allSelected ? "Clear all" : "Select all"}
+          </button>
+          {!allSelected && selectedIds.length > 0 && (
+            <>
+              <span className="text-muted-foreground text-[11px]">·</span>
+              <button
+                type="button"
+                onClick={onClear}
+                className="text-[11.5px] text-muted-foreground hover:text-foreground"
+              >
+                Clear ({selectedIds.length})
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+      {AI_CATEGORY_TREE.map((cat) => {
+        const catActive = selectedSet.has(cat.id);
+        const catOpen = openCats.has(cat.id);
+        const subCount = cat.subcategories.length;
+        const tplCount = cat.subcategories.reduce((n, s) => n + s.templates.length, 0);
+        return (
+          <div key={cat.id}>
+            <div
+              className={cn(
+                "flex items-center gap-2 px-3 py-1.5 border-b border-gray-50",
+                catActive ? "bg-indigo-50/60" : "hover:bg-gray-50",
+              )}
+            >
+              <button
+                type="button"
+                onClick={() => toggleCat(cat.id)}
+                className="w-4 h-4 flex items-center justify-center text-muted-foreground flex-shrink-0"
+                aria-label={catOpen ? "Collapse category" : "Expand category"}
+              >
+                <ChevronDown
+                  className={cn("w-3.5 h-3.5 transition-transform", !catOpen && "-rotate-90")}
+                />
+              </button>
+              <Checkbox checked={catActive} onCheckedChange={() => onToggle(cat.id)} />
+              <button
+                type="button"
+                onClick={() => toggleCat(cat.id)}
+                className="flex-1 min-w-0 text-left"
+              >
+                <div className="text-[12.5px] font-medium truncate">{cat.name}</div>
+                <div className="text-[10.5px] text-muted-foreground">
+                  {subCount} subcategor{subCount === 1 ? "y" : "ies"} · {tplCount} template
+                  {tplCount === 1 ? "" : "s"}
+                </div>
+              </button>
+            </div>
+
+            {catOpen &&
+              cat.subcategories.map((sub) => {
+                const subActive = selectedSet.has(sub.id);
+                const subOpen = openSubs.has(sub.id);
+                const effectivelyActive = catActive || subActive;
+                return (
+                  <div key={sub.id}>
+                    <div
+                      className={cn(
+                        "flex items-center gap-2 pr-3 py-1.5 border-b border-gray-50",
+                        subActive ? "bg-indigo-50/60" : catActive ? "bg-indigo-50/25" : "hover:bg-gray-50",
+                      )}
+                      style={{ paddingLeft: 34 }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => toggleSub(sub.id)}
+                        className="w-4 h-4 flex items-center justify-center text-muted-foreground flex-shrink-0"
+                        aria-label={subOpen ? "Collapse subcategory" : "Expand subcategory"}
+                      >
+                        <ChevronDown
+                          className={cn("w-3.5 h-3.5 transition-transform", !subOpen && "-rotate-90")}
+                        />
+                      </button>
+                      <Checkbox
+                        checked={subActive}
+                        disabled={catActive}
+                        onCheckedChange={() => onToggle(sub.id)}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => toggleSub(sub.id)}
+                        className="flex-1 min-w-0 text-left"
+                      >
+                        <div className="text-[12.5px] truncate">{sub.name}</div>
+                        <div className="text-[10.5px] text-muted-foreground">
+                          {sub.templates.length} template{sub.templates.length === 1 ? "" : "s"}
+                        </div>
+                      </button>
+                    </div>
+
+                    {subOpen &&
+                      sub.templates.map((tpl) => {
+                        const tplActive = selectedSet.has(tpl.id);
+                        const covered = isUnderSelected(cat, sub);
+                        return (
+                          <label
+                            key={tpl.id}
+                            className={cn(
+                              "flex items-center gap-2 pr-3 py-1.5 cursor-pointer border-b border-gray-50",
+                              tplActive
+                                ? "bg-indigo-50/60"
+                                : covered
+                                  ? "bg-indigo-50/25"
+                                  : "hover:bg-gray-50",
+                            )}
+                            style={{ paddingLeft: 60 }}
+                          >
+                            <Checkbox
+                              checked={tplActive}
+                              disabled={covered}
+                              onCheckedChange={() => onToggle(tpl.id)}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="text-[12.5px] font-medium truncate">{tpl.name}</div>
+                              <div className="text-[10.5px] text-muted-foreground truncate">
+                                {tpl.insurer}
+                              </div>
+                            </div>
+                          </label>
+                        );
+                      })}
+                  </div>
+                );
+              })}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function ReadoutRow({
   icon,
   label,
@@ -959,6 +1058,81 @@ function ReadoutRow({
           {label}
         </div>
         <div className="text-[12.5px] text-foreground">{value}</div>
+      </div>
+    </div>
+  );
+}
+
+function LivePreview({ attrs, fallbackText }: { attrs: AiPromptAttrs; fallbackText: string }) {
+  const [state, setState] = useState<
+    | { status: "idle" }
+    | { status: "loading" }
+    | { status: "ready"; text: string }
+    | { status: "error"; message: string }
+  >({ status: "idle" });
+
+  const run = async () => {
+    setState({ status: "loading" });
+    try {
+      const text = await generateAiPromptText(attrs, {
+        firstName: "Sophie",
+        lastName: "Janssens",
+        company: "Artex Group",
+      });
+      setState({ status: "ready", text });
+    } catch (err) {
+      setState({
+        status: "error",
+        message: err instanceof Error ? err.message : String(err),
+      });
+    }
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">
+          Sample preview
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={run}
+          disabled={state.status === "loading"}
+          className="h-7 px-2 text-[11.5px]"
+        >
+          {state.status === "loading" ? (
+            <>
+              <Loader2 className="w-3 h-3 animate-spin" />
+              Generating…
+            </>
+          ) : (
+            <>
+              <Play className="w-3 h-3" />
+              {state.status === "ready" ? "Regenerate" : "Run for sample"}
+            </>
+          )}
+        </Button>
+      </div>
+
+      <div className="rounded-md border border-border bg-white p-3 text-[12.5px] leading-relaxed text-foreground whitespace-pre-wrap min-h-[80px]">
+        {state.status === "ready" ? (
+          state.text
+        ) : state.status === "error" ? (
+          <span className="inline-flex items-start gap-1.5 text-rose-700">
+            <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+            <span>{state.message}</span>
+          </span>
+        ) : (
+          <span className="text-muted-foreground italic">{fallbackText}</span>
+        )}
+      </div>
+      <div className="text-[10.5px] text-muted-foreground mt-1.5">
+        {state.status === "ready"
+          ? "Generated with Claude for a sample recipient (Sophie Janssens · Artex Group)."
+          : state.status === "error"
+            ? "Real generation failed. Check ANTHROPIC_API_KEY or the server logs."
+            : "Shown below is a mock preview. Click Run for sample to call the real model."}
       </div>
     </div>
   );
@@ -984,9 +1158,17 @@ function describeOutputShape(
   }
 }
 
+type ScopeProduct = {
+  id: string;
+  productTemplateId: string;
+  policyNumber: string;
+  premium: string;
+  entry?: ReturnType<typeof getTemplate>;
+};
+
 function mockPreview(
   attrs: AiPromptAttrs,
-  products: typeof AI_PRODUCTS,
+  products: ScopeProduct[],
   categories: string[],
 ): string {
   if (attrs.instructionType === "validation" && attrs.generationMode === "per-product") {
@@ -997,7 +1179,7 @@ function mockPreview(
       .slice(0, 3)
       .map(
         (p) =>
-          `• ${p.name} (${p.policyNumber}) — premium ${p.premium}. Still correct?`,
+          `• ${p.entry?.template.name ?? "Product"} (${p.policyNumber}) — premium ${p.premium}. Still correct?`,
       )
       .join("\n");
   }
@@ -1005,7 +1187,12 @@ function mockPreview(
     const cats = categories.length ? categories : ["Auto", "Home"];
     return cats
       .slice(0, 3)
-      .map((c) => `• ${c}: ${products.filter((p) => p.category === c).length} products in place.`)
+      .map((c) => {
+        const count = products.filter((p) =>
+          p.entry ? `${p.entry.category.name} › ${p.entry.subcategory.name}`.includes(c) : false,
+        ).length;
+        return `• ${c}: ${count} product${count === 1 ? "" : "s"} in place.`;
+      })
       .join("\n");
   }
   if (attrs.instructionType === "summary" || attrs.generationMode === "aggregated") {

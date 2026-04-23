@@ -31,3 +31,11 @@
 .qollabi-email-editor .ProseMirror:focus {
   outline: none;
 }
+
+/* Suppress maily's floating/bubble menus while the AI-prompt configurator
+   dialog is open — they otherwise paint on top of the modal overlay. */
+body[data-ai-prompt-dialog="open"] [data-tippy-root],
+body[data-ai-prompt-dialog="open"] .tippy-box,
+body[data-ai-prompt-dialog="open"] [role="tooltip"]:not([data-radix-popper-content-wrapper] *) {
+  display: none !important;
+}

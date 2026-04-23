@@ -6,6 +6,7 @@ import type {
   PromptLength,
   PromptTone,
 } from "@/components/maily-editor/ai-prompt-extension";
+import { AiGenerated } from "@/components/maily-editor/ai-generated";
 
 export interface RecipientContext {
   firstName?: string;
@@ -126,7 +127,7 @@ function renderNode(
 ): ReactNode {
   if (node.type === "aiPrompt") {
     const attrs = node.attrs as AiPromptAttrs;
-    return <span key={key}>{mockGenerate(attrs, ctx)}</span>;
+    return <AiGenerated key={key} attrs={attrs} ctx={ctx} />;
   }
   if (node.type === "text") {
     return resolveMergeTags(node.text ?? "", ctx, options.sender, options.attachmentLink);
