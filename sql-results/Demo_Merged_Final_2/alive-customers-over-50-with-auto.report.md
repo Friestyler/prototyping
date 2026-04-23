@@ -45,7 +45,7 @@ schema/qollabi-schema/mappings/brio.csv
 ## Dialect caveats
 - `dateformat` in `read_csv_auto` is DuckDB-specific; on real Qollabi Postgres `dateOfBirth` / `dateOfDeath` are already `timestamp` columns, so the cast vanishes.
 - `products.insurerId` holds the insurer **name** (Brio CSV doesn't supply an ID). On real Postgres a filter on insurer would become a join to the insurers table on `name`. Not used by this query.
-- **External-ID join keys.** The business-logic SQL joins on `customerExternalId` / `categoryExternalId`, which exist only in the translation-layer views. Real Qollabi Postgres joins `products.customerId → customers.id` and `products.productCategoryId → categories.id` using internal UUIDs (external IDs are the user-facing identifier, not the FK). Porting this query to production requires rewriting the join keys; the business logic itself is unchanged.
+- **Join keys use production FK names (`customerId`, `productCategoryId`, `parentId`), not `externalId`.** The translation-layer views populate `id` on each entity with the same value as `externalId` (a string surrogate for the production UUID), so joins like `p."customerId" = c."id"` work under DuckDB and read identically to production Qollabi SQL. When this data loads into real Qollabi the `id` columns become the system-assigned UUIDs and the FK values are updated accordingly during import — the query itself stays the same.
 
 ## Sanity metrics
 - Source CSV rows: 1413

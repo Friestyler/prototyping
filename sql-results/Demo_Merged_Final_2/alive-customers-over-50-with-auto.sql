@@ -5,6 +5,8 @@
 -- Translation layer:  databases/Demo_Merged_Final_2/qollabi-view.sql  (run first in the same DuckDB connection)
 --
 -- This file contains **only Qollabi-shaped SQL** — no CSV column names, no translation-layer CTEs.
+-- Joins use the production FK columns (customerId → customers.id, productCategoryId → categories.id,
+-- parentId → categories.id). externalId is only used as the user-facing identifier in the SELECT output.
 
 SELECT DISTINCT
   c."externalId",
@@ -14,11 +16,11 @@ SELECT DISTINCT
   c."customerType"
 FROM customers c
 JOIN products p
-  ON p."customerExternalId" = c."externalId"
+  ON p."customerId" = c."id"
 JOIN categories sub
-  ON sub."externalId" = p."categoryExternalId"
+  ON sub."id" = p."productCategoryId"
 JOIN categories top
-  ON top."externalId" = sub."parentId"
+  ON top."id" = sub."parentId"
 WHERE c."dateOfDeath" IS NULL
   AND c."dateOfBirth" <= DATE '1976-04-22'
   AND top."name" = 'Auto'

@@ -42,7 +42,7 @@ There is no UI, no app, no backend, no database. Everything here is files and fo
 8. **SQL executes against a Qollabi-shaped view layer, not the raw CSV. Translation layer and business logic live in separate files.**
    - **Translation layer** lives in `databases/<database-name>/qollabi-view.sql` as a file of `CREATE OR REPLACE VIEW` statements (`raw`, `customers`, `products`, `categories`, `product_templates`, `product_risk_objects`, `product_coverages`, etc.). Derived mechanically from `schema/qollabi-schema/mappings/<source>.csv`. This is the **only** place CSV column names appear.
    - **Business logic** lives in `sql-results/<database-name>/<same-name>.sql` and contains nothing but the Qollabi-shaped query. No CSV column references, no translation-layer paste, no CTE clutter.
-   - **Together they execute** in a single DuckDB connection: run `qollabi-view.sql` first to materialize the views, then run the requirement's `.sql`. The business-logic SQL reads like Qollabi SQL at the **external-ID abstraction layer** (`customerExternalId = externalId`, etc.) — see rule 12: it is not a literal production-runnable statement, it is a specification of the business logic against the user-facing entity shape.
+   - **Together they execute** in a single DuckDB connection: run `qollabi-view.sql` first to materialize the views, then run the requirement's `.sql`. Each view exposes the production column names (`id`, `externalId`, `customerId`, `productCategoryId`, `parentId`, …) so the business-logic SQL reads exactly as it would against a real Qollabi Postgres database — see rule 12 for why joins use `id` and not `externalId`.
 
 9. **Execute SQL via DuckDB to produce the result CSV.** Do not hand-simulate the query. In a single DuckDB connection, execute `databases/<database-name>/qollabi-view.sql` first, then `sql-results/<database-name>/<same-name>.sql`, and write the final SELECT's output to `<same-name>.csv`. This guarantees the `.sql` and `.csv` can't silently disagree. If the business logic uses DuckDB-specific syntax that wouldn't survive a port to Postgres, note it in the mapping report's *Dialect caveats* section.
 
@@ -50,7 +50,11 @@ There is no UI, no app, no backend, no database. Everything here is files and fo
 
 11. **Never filter on `products."lifecycleStage"` unless the user asks for it explicitly.** User preference: `lifecycleStage` is not a business dimension they query on. Do not add it to any `WHERE` clause, any `EXISTS` subquery, or any sanity-metric breakdown on your own initiative. If a business requirement genuinely needs lifecycle scoping, surface it as an *Open doubt* in the report first and wait for confirmation — don't assume.
 
-12. **`externalId` vs `id`, and what "portable to Qollabi" actually means.** Every Qollabi entity has an internal `id` (system-assigned, never in the CSV) and an `externalId` (user-facing, used during import to identify records as unique). The CSV only carries external IDs. The translation-layer views expose external IDs as the join bridge (`customerExternalId`, `categoryExternalId`, …) because that's the semantic level users and business requirements reason at. A requirement `.sql` written against external-id-keyed views **cannot literally run** on real Qollabi Postgres — production joins use internal `id` FKs. Porting is always a translation step, not a strip-and-run. Keep the business logic expressed at the external-ID layer (it's the right layer of abstraction for this repo) and note in each report's *Dialect caveats* that real-Qollabi execution requires swapping external-id join keys for internal-id ones.
+12. **Business-logic joins use `id`, not `externalId`.** Every Qollabi entity has an internal `id` (UUID in production, assigned by the system) and an `externalId` (user-facing, present in the CSV, used during import to identify records as unique). Production foreign keys reference `id` — `products.customerId → customers.id`, `products.productCategoryId → categories.id`, `categories.parentId → categories.id`. Business-logic SQL in this repo **must** join via those production FK columns, not via external IDs.
+
+    The CSV carries only externalIds, so the translation-layer views populate `id` with the same value as `externalId` for each entity (a stable string surrogate for the UUID production would assign). Do **not** create synthetic `customerExternalId` / `categoryExternalId` join columns in the views; the column names on each view are exactly the production column names (`id`, `customerId`, `productCategoryId`, `parentId`, `externalId` — the last kept for user-facing SELECT output only).
+
+    Result: the business-logic `.sql` reads identically to SQL you would run against a real Qollabi Postgres database. `externalId` appears only in the SELECT list (the user-facing identifier) and in `WHERE` clauses when the business rule is expressly about external identifiers; it never appears in a `JOIN ... ON` condition.
 
 ---
 
@@ -140,21 +144,36 @@ sql-results/<database-name>/<same-name>.sql
 --
 -- Execute this file first in a DuckDB connection; afterwards, every
 -- sql-results/<database-name>/*.sql runs as if querying real Qollabi Postgres tables.
+--
+-- Each view exposes the production column names: `id`, `externalId`, plus FK columns
+-- named exactly as in real Qollabi (`customerId`, `productCategoryId`, `parentId`, …).
+-- For CSV-backed entities the `id` column is populated with the same value as
+-- `externalId` (a stable string surrogate for the UUID production would assign) so
+-- business-logic SQL can join via `customerId = id` etc. without a detour through
+-- external-id bridges.
 
 CREATE OR REPLACE VIEW raw AS
 SELECT * FROM read_csv_auto('databases/<database-name>/csv-content/<file>.csv', delim='…', header=true, dateformat='…');
 
 CREATE OR REPLACE VIEW customers AS
 SELECT
+  "<csv-col>" AS "id",           -- id := externalId value for CSV-backed DBs
   "<csv-col>" AS "externalId",
   ...
 FROM raw
 WHERE "<csv-col>" IS NOT NULL;
 
 CREATE OR REPLACE VIEW products AS
-SELECT ... FROM raw WHERE ...;
+SELECT
+  "<polis-col>" AS "id",
+  "<polis-col>" AS "externalId",
+  "<dossier-col>" AS "customerId",           -- FK → customers.id
+  "<composite>"   AS "productCategoryId",    -- FK → categories.id
+  ...
+FROM raw WHERE ...;
 
--- etc. for categories, product_templates, product_risk_objects, product_coverages, …
+-- etc. for categories (with `parentId` FK → categories.id), product_templates,
+-- product_risk_objects, product_coverages, …
 ```
 
 **`sql-results/<database-name>/<same-name>.sql`** — business-logic SELECT. Pure Qollabi, no CSV references.
@@ -167,6 +186,9 @@ SELECT ... FROM raw WHERE ...;
 -- Translation layer:  databases/<database-name>/qollabi-view.sql  (run first in the same DuckDB connection)
 --
 -- This file contains **only Qollabi-shaped SQL** — no CSV column names, no translation-layer CTEs.
+-- Joins use production FK columns (customerId → customers.id, productCategoryId →
+-- categories.id, parentId → categories.id). externalId appears only in the SELECT list
+-- as the user-facing identifier — never in a JOIN ... ON condition.
 
 SELECT
   c."externalId",
