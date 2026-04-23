@@ -17,11 +17,9 @@ SELECT DISTINCT
 FROM customers c
 JOIN products p
   ON p."customerId" = c."id"
-JOIN categories sub
-  ON sub."id" = p."productCategoryId"
-JOIN categories top
-  ON top."id" = sub."parentId"
+JOIN category_roots cr
+  ON cr."id" = p."productCategoryId"
 WHERE c."dateOfDeath" IS NULL
   AND c."dateOfBirth" <= DATE '1976-04-22'
-  AND top."name" = 'Auto'
+  AND cr."rootName" = 'Auto'
 ORDER BY c."externalId";

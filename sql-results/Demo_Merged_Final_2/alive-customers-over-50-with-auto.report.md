@@ -24,14 +24,14 @@ schema/qollabi-schema/mappings/brio.csv
 | Natuurlijk/Rechtsp - Omschrijving | customers | customerType | Code-list translation per `code-lists.md`. |
 | Polis | products | externalId | |
 | Domein - Omschrijving | categories | externalId / name (top-level) + part of `products.categoryExternalId` + part of `products.name` / `product_templates.name|externalId` | Top-level category; `"Auto"` is the filter target. |
-| Polistype - Omschrijving | categories | name (child); composite `externalId` = `Polistype` + `Domein` with no separator | Child category; its `parentId` is the Domein externalId. |
+| Polistype - Omschrijving | categories | name (child); composite `externalId` = `Polistype` + `Domein` with no separator | Child category; its `parentId` is the Domein `id`. |
 | Maatschappij | products | insurerId (CSV supplies insurer name per README §2) + part of `products.name` / `product_templates.name|externalId` | Not used by this query. |
 | Product Template Name, Product Template ID, E-mail | — | — | Not in the Brio mapping; confirmed ignorable by the user. |
 
 ## Assumptions made
 - "Over 50 years" read as **strictly greater than 50** as of today (2026-04-23), i.e. `dateOfBirth <= 1976-04-22`. If the user means ≥ 50, shift the boundary to `<= 1976-04-23`.
 - "Alive" = `dateOfDeath IS NULL`. No row in the CSV had a future-dated death, so no additional clause was needed.
-- "Auto domein" = the **top-level** category name `Auto` (i.e. `Domein - Omschrijving = 'Auto'`). A customer qualifies if they hold **any** Polis whose category rolls up to that domain — one row per customer, not per policy.
+- **"Auto domein" = the product's category has a root ancestor named `Auto`, at any depth.** Categories in Qollabi form an arbitrary-depth tree; a product may be attached at the root or at any descendant node. The query uses the `category_roots` view (a recursive walker in the translation layer) so a product qualifies whether its category is `Auto` itself, a direct child, a grand-child, etc. For this CSV the tree is 2 levels deep (Brio's `Domein → Polistype`), so the result (168) matches what a fixed 2-level join would have returned — but the SQL is now structurally correct for deeper trees.
 - Output = one row per distinct customer; no `ORDER BY` beyond `externalId` for stable reproduction.
 
 ## Open doubts / things to confirm

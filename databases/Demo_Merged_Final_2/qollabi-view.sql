@@ -84,6 +84,24 @@ SELECT DISTINCT
 FROM raw
 WHERE "Polis" IS NOT NULL;
 
+-- category_roots: walks the categories tree from each root downward, emitting one
+-- row per category carrying the root's id and name. Lets business-logic SQL filter
+-- a product by the top-level domain it belongs to regardless of how many levels
+-- the category sits below the root. Categories in Qollabi form an arbitrary-depth
+-- tree — this CSV happens to be 2 levels (Domein → Polistype) but the query must
+-- work for deeper trees too.
+CREATE OR REPLACE VIEW category_roots AS
+WITH RECURSIVE walker(id, "rootId", "rootName", depth) AS (
+  SELECT "id", "id" AS "rootId", "name" AS "rootName", 0
+  FROM categories
+  WHERE "parentId" IS NULL
+  UNION ALL
+  SELECT c."id", w."rootId", w."rootName", w.depth + 1
+  FROM walker w
+  JOIN categories c ON c."parentId" = w."id"
+)
+SELECT "id", "rootId", "rootName", "depth" FROM walker;
+
 -- product_templates: one template per (Domein + Polistype + Maatschappij) combination.
 CREATE OR REPLACE VIEW product_templates AS
 SELECT DISTINCT
