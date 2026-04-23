@@ -1,52 +1,11 @@
-# Alive customers over 50 with an Auto policy
-
-## Status
-Active
+# Mapping report: Alive customers over 50 with an Auto policy
 
 ## Linked files
-- SQL:        sql-results/Demo_Merged_Final_2/alive-customers-over-50-with-auto.sql
-- Result CSV: sql-results/Demo_Merged_Final_2/alive-customers-over-50-with-auto.csv
-- Source CSV: databases/Demo_Merged_Final_2/csv-content/Demo_Merged_Final_2.csv
-- View layer: databases/Demo_Merged_Final_2/qollabi-view.sql
-
-## Original business requirement
-I want all customers that are over 50 years and alive with Auto domein.
-
-## Latest business requirement
-All customers who are strictly older than 50 years as of today (2026-04-23), are still alive (no date of death), and hold at least one product in the `Auto` domain category.
-
-## Business rules
-- "Over 50 years" = age strictly greater than 50 today → `dateOfBirth <= 1976-04-22`.
-- "Alive" = `dateOfDeath` is `NULL`.
-- "Auto domein" = at least one linked product whose top-level category name is `Auto`.
-- One row per customer (distinct), not one row per Auto policy.
-
-## Iteration notes
-- Initial version: direct translation — age, alive, and Auto-product-existence filter on a single query.
-
-## SQL
-
-Same content as the adjacent `.sql` file. Embedded here so readers without a SQL editor can still read the query.
-
-```sql
-SELECT DISTINCT
-  c."externalId",
-  c."firstName",
-  c."lastName",
-  c."dateOfBirth",
-  c."customerType"
-FROM customers c
-JOIN products p
-  ON p."customerExternalId" = c."externalId"
-JOIN categories sub
-  ON sub."externalId" = p."categoryExternalId"
-JOIN categories top
-  ON top."externalId" = sub."parentId"
-WHERE c."dateOfDeath" IS NULL
-  AND c."dateOfBirth" <= DATE '1976-04-22'
-  AND top."name" = 'Auto'
-ORDER BY c."externalId";
-```
+- Requirement: databases/Demo_Merged_Final_2/business-requirements/alive-customers-over-50-with-auto.md
+- SQL:         sql-results/Demo_Merged_Final_2/alive-customers-over-50-with-auto.sql
+- Result CSV:  sql-results/Demo_Merged_Final_2/alive-customers-over-50-with-auto.csv
+- Source CSV:  databases/Demo_Merged_Final_2/csv-content/Demo_Merged_Final_2.csv
+- View layer:  databases/Demo_Merged_Final_2/qollabi-view.sql
 
 ## Source system
 Brio (confirmed by user). `Maatschappij` replaces Brio's canonical `Naam maatschappij`; extra CSV columns `Product Template Name`, `Product Template ID`, `E-mail` have no target and are ignored.

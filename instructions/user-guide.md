@@ -21,35 +21,37 @@ This guide is for **non-technical users**. You do not need to know SQL or the Qo
 
 You don't have to manage files by hand, but it helps to know the layout.
 
-Each uploaded CSV gets its own folder under `databases/` (plumbing — created once per CSV):
+Each uploaded CSV gets its own folder under `databases/`:
 
 ```
 databases/
   <your-csv-name>/
-    csv-content/        ← your original CSV lives here, unchanged
-    qollabi-view.sql    ← translation from your CSV to Qollabi's shape (Claude manages this)
+    csv-content/            ← your original CSV lives here, unchanged
+    business-requirements/  ← one Markdown file per business question you ask
+    qollabi-view.sql        ← translation from your CSV to Qollabi's shape (Claude manages this)
 ```
 
 When Claude sets up a new database, it'll ask which source system the CSV came from (Brio, Brokercloud, etc.) so it can build `qollabi-view.sql` from the matching mapping. You don't need to touch that file — it's there so the SQL stays correct and portable.
 
-The answers to your business questions live in a matching folder under `sql-results/`. **Exactly three files per question**, all sharing the same name:
+The answers to your business questions live in a matching folder under `sql-results/`. **Exactly three files per question**, all sharing the same name as the requirement `.md`:
 
 ```
 sql-results/
   <your-csv-name>/
     <your-business-requirement>.sql         ← the generated SQL (engineering ports this to production)
     <your-business-requirement>.csv         ← the answer — open this in Excel
-    <your-business-requirement>.report.md   ← the requirement, the mapping, assumptions, doubts — and the SQL embedded inside, so you can read it without any SQL editor
+    <your-business-requirement>.report.md   ← how the mapping was made, what assumptions were taken, and any open doubts
 ```
 
 So if you upload `sales-export.csv`, a single business question gives you:
 
 - `databases/sales-export/csv-content/sales-export.csv`
+- `databases/sales-export/business-requirements/<your-requirement>.md`
 - `sql-results/sales-export/<your-requirement>.sql`
 - `sql-results/sales-export/<your-requirement>.csv`
 - `sql-results/sales-export/<your-requirement>.report.md`
 
-If you only open one file, open the result `.csv` — that's the answer. If the answer looks wrong or you want to understand **why** the SQL is written the way it is, open the `.report.md`: it's a normal Markdown file, so it renders in Preview, Notes, GitHub, or any editor, and the SQL is embedded inside it as a code block you can read directly.
+If you only open one file, open the result `.csv` — that's the answer. If you want to check what was asked and how the rules were interpreted, open the requirement `.md` under `business-requirements/`. If the answer looks wrong and you want to know **why** the mapping was made that way, open the `.report.md`. The actual SQL lives in the `.sql` file — a plain text file you can open in any text editor.
 
 ---
 
@@ -57,11 +59,12 @@ If you only open one file, open the result `.csv` — that's the answer. If the 
 
 You can refine the same business requirement as many times as you need to. When you come back and say "this isn't right, narrow it down", Claude will:
 
+- Update the **same** `.md` file under `business-requirements/` (adding your latest phrasing and a note about what changed).
 - Update the **same** `.sql` file under `sql-results/`.
 - Regenerate the **same** result `.csv` so it reflects the new logic.
-- Update the **same** `.report.md` — both the requirement text at the top (adding your new phrasing and a note about what changed) and the assumptions / doubts / SQL embed further down.
+- Update the **same** `.report.md` so the mapping, assumptions, and metrics match the new SQL.
 
-You will **not** end up with `v1`, `v2`, `final-final` files. One requirement = one `.sql` + one `.csv` + one `.report.md`, all kept up to date.
+You will **not** end up with `v1`, `v2`, `final-final` files. One requirement = one `.md` + one `.sql` + one `.csv` + one `.report.md`, all kept up to date.
 
 ---
 

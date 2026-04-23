@@ -1,6 +1,7 @@
 -- Business requirement: Alive customers over 50 with an Auto policy
 -- Database: Demo_Merged_Final_2
--- Report:             sql-results/Demo_Merged_Final_2/alive-customers-over-50-with-auto.report.md  (requirement + mapping + assumptions + SQL embed)
+-- Requirement:        databases/Demo_Merged_Final_2/business-requirements/alive-customers-over-50-with-auto.md  (business question, rules, iteration notes)
+-- Mapping report:     sql-results/Demo_Merged_Final_2/alive-customers-over-50-with-auto.report.md  (column mapping, assumptions, metrics)
 -- Translation layer:  databases/Demo_Merged_Final_2/qollabi-view.sql  (run first in the same DuckDB connection)
 --
 -- This file contains **only Qollabi-shaped SQL** — no CSV column names, no translation-layer CTEs.
