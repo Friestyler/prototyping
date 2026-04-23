@@ -18,7 +18,7 @@ CHECK constraint in the schema: value must be `'naturalPerson'`, `'legalEntity'`
 
 CHECK constraint in the schema: value must be `'bought'`, `'opportunity'`, or `'archived'` (see [`qollabi-schema.sql:2055`](qollabi-schema.sql)).
 
-*No CSV translations defined yet — add entries as needed.*
+**Not used for filtering in this repo.** User has confirmed that `lifecycleStage` is not a business dimension they query on, and business-logic SQL must never add a `lifecycleStage` filter unless the user asks for it explicitly. Kept here for schema reference only — no CSV translations will be recorded.
 
 ---
 

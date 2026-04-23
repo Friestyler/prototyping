@@ -36,7 +36,8 @@ schema/qollabi-schema/mappings/brio.csv
 
 ## Open doubts / things to confirm
 - Age boundary: strictly > 50 vs ≥ 50.
-- Whether customers who held an Auto product in the past but no longer do should still count. This CSV has no product-lifecycle column (`lifecycleStage`, `contractEndDate`, …), so the query currently treats every row as active.
+
+(Note: `products."lifecycleStage"` is intentionally not part of the query. Per user direction, `lifecycleStage` is never a filter dimension in this repo — see `instructions/claude-code-guide.md` rule 11.)
 
 ## Schema gaps
 - None used by this query. Risk objects / coverages are not touched.
@@ -44,6 +45,7 @@ schema/qollabi-schema/mappings/brio.csv
 ## Dialect caveats
 - `dateformat` in `read_csv_auto` is DuckDB-specific; on real Qollabi Postgres `dateOfBirth` / `dateOfDeath` are already `timestamp` columns, so the cast vanishes.
 - `products.insurerId` holds the insurer **name** (Brio CSV doesn't supply an ID). On real Postgres a filter on insurer would become a join to the insurers table on `name`. Not used by this query.
+- **External-ID join keys.** The business-logic SQL joins on `customerExternalId` / `categoryExternalId`, which exist only in the translation-layer views. Real Qollabi Postgres joins `products.customerId → customers.id` and `products.productCategoryId → categories.id` using internal UUIDs (external IDs are the user-facing identifier, not the FK). Porting this query to production requires rewriting the join keys; the business logic itself is unchanged.
 
 ## Sanity metrics
 - Source CSV rows: 1413
