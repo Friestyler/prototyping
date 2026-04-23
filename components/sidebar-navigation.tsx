@@ -55,6 +55,44 @@ const SendIcon = () => (
   </svg>
 )
 
+const SmartListIcon = () => (
+  <svg
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    {/* bulleted list rows */}
+    <line x1="9" y1="6" x2="20" y2="6" />
+    <line x1="9" y1="12" x2="20" y2="12" />
+    <line x1="9" y1="18" x2="20" y2="18" />
+    <circle cx="4.5" cy="6" r="1.2" fill="currentColor" />
+    <circle cx="4.5" cy="12" r="1.2" fill="currentColor" />
+    <circle cx="4.5" cy="18" r="1.2" fill="currentColor" />
+  </svg>
+)
+
+const MoreIcon = () => (
+  <svg
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <circle cx="12" cy="5" r="1.4" />
+    <circle cx="12" cy="12" r="1.4" />
+    <circle cx="12" cy="19" r="1.4" />
+  </svg>
+)
+
 interface SidebarNavigationProps {
   activeMenu: string
   onMenuChange: (menu: string) => void
@@ -63,6 +101,9 @@ interface SidebarNavigationProps {
 
 export default function SidebarNavigation({ activeMenu, onMenuChange }: SidebarNavigationProps) {
   const [isDataOpen, setIsDataOpen] = useState(true)
+  const [isOtherOpen, setIsOtherOpen] = useState(
+    activeMenu === "forms" || activeMenu === "assets",
+  )
 
   return (
     <div className="flex flex-col h-screen bg-[#F8F9FA] w-[240px] font-sans">
@@ -138,7 +179,7 @@ export default function SidebarNavigation({ activeMenu, onMenuChange }: SidebarN
                 variant="ghost"
                 className="w-full h-[38px] justify-start text-[#1F2937] hover:bg-gray-200/50 font-normal text-[15px] px-2.5 rounded-lg"
               >
-                <SendIcon />
+                <SmartListIcon />
                 <span className="ml-2.5 flex-1 text-left">Smart Lists</span>
                 <ChevronDown
                   className={cn("h-4 w-4 text-gray-600 transition-transform duration-200", isDataOpen && "rotate-180")}
@@ -200,6 +241,49 @@ export default function SidebarNavigation({ activeMenu, onMenuChange }: SidebarN
             <SendIcon />
             <span className="ml-2.5">Campaigns</span>
           </Button>
+
+          {/* Other section */}
+          <Collapsible open={isOtherOpen} onOpenChange={setIsOtherOpen}>
+            <CollapsibleTrigger asChild>
+              <Button
+                variant="ghost"
+                className="w-full h-[38px] justify-start text-[#1F2937] hover:bg-gray-200/50 font-normal text-[15px] px-2.5 rounded-lg"
+              >
+                <MoreIcon />
+                <span className="ml-2.5 flex-1 text-left">Other</span>
+                <ChevronDown
+                  className={cn("h-4 w-4 text-gray-600 transition-transform duration-200", isOtherOpen && "rotate-180")}
+                />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-0.5">
+              <div className="relative pl-[30px] space-y-0.5">
+                <div className="absolute left-[11px] top-0 bottom-0 w-[1px] bg-gray-300" />
+                <button
+                  className={cn(
+                    "relative w-full h-[34px] text-left px-3 text-[15px] font-normal rounded-md transition-colors",
+                    activeMenu === "forms"
+                      ? "bg-[#E0E7FF] text-[#4F46E5] font-medium"
+                      : "text-[#1F2937] hover:bg-gray-200/50",
+                  )}
+                  onClick={() => onMenuChange("forms")}
+                >
+                  Forms
+                </button>
+                <button
+                  className={cn(
+                    "relative w-full h-[34px] text-left px-3 text-[15px] font-normal rounded-md transition-colors",
+                    activeMenu === "assets"
+                      ? "bg-[#E0E7FF] text-[#4F46E5] font-medium"
+                      : "text-[#1F2937] hover:bg-gray-200/50",
+                  )}
+                  onClick={() => onMenuChange("assets")}
+                >
+                  Asset Library
+                </button>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
         </nav>
       </div>
 

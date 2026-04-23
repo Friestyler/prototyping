@@ -4,6 +4,12 @@ import { useState } from "react";
 import { Search, Send, CheckCircle, AlertCircle, Inbox } from "lucide-react";
 import { Lead } from "@/lib/lc-types";
 import { getOwnerMeta } from "@/lib/lc-data/users";
+import type { FlowStep, EmailStep } from "@/lib/flow-types";
+import {
+  leadToContext,
+  renderEmailForRecipient,
+  resolveMergeTags,
+} from "@/lib/resolve-email";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -15,6 +21,7 @@ interface StepDraftSendProps {
   autoSend: boolean;
   emailHasMergeTags: boolean;
   recipients: Lead[];
+  flowSteps?: FlowStep[];
   onPrev: () => void;
   onGoToRecipients: () => void;
 }
@@ -25,9 +32,12 @@ export default function StepDraftSend({
   autoSend,
   emailHasMergeTags,
   recipients,
+  flowSteps,
   onPrev,
   onGoToRecipients,
 }: StepDraftSendProps) {
+  const firstEmailStep = flowSteps?.find((s): s is EmailStep => s.kind === "email") ?? null;
+  const hasAuthoredBody = !!firstEmailStep?.body?.content?.length;
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [activeFilter, setActiveFilter] = useState<DraftFilter>("All");
   const [searchQuery, setSearchQuery] = useState("");
@@ -264,87 +274,100 @@ export default function StepDraftSend({
               </div>
             </div>
 
-            {/* Email fields */}
-            {[
-              { label: "From:", body: <>Kevin Kools (via Brand Broker)</> },
-              {
-                label: "Subject:",
-                body: (
-                  <>
-                    <span className="inline-flex items-center gap-1 text-[11.5px] text-brand cursor-pointer hover:underline mb-1">
-                      ✎ Customize
-                    </span>
-                    <div>Your AON Cybersecurity offer is ready</div>
-                  </>
-                ),
-              },
-              {
-                label: "Content:",
-                body: (
-                  <>
-                    <span className="inline-flex items-center gap-1 text-[11.5px] text-brand cursor-pointer hover:underline mb-1">
-                      ✎ Customize
-                    </span>
-                    {emailHasMergeTags ? (
-                      <div className="mt-1 leading-[1.9]">
-                        Dear{" "}
-                        <code className="font-mono text-[11.5px] px-1 py-px rounded bg-brand-light text-brand">
-                          {"{{lead.firstName}}"}
-                        </code>{" "}
-                        <code className="font-mono text-[11.5px] px-1 py-px rounded bg-brand-light text-brand">
-                          {"{{lead.lastName}}"}
-                        </code>{" "}
-                        —{" "}
-                        <code className="font-mono text-[11.5px] px-1 py-px rounded bg-brand-light text-brand">
-                          {"{{lead.company}}"}
-                        </code>
-                        ,
-                        <br />
-                        <br />
-                        Your personalised offer is ready:
-                        <br />
-                        <code className="font-mono text-[11.5px] px-1 py-px rounded bg-green-50 text-green-600">
-                          {"{{lead.attachmentLink}}"}
-                        </code>
-                        <br />
-                        <br />
-                        Kind regards,
-                        <br />
-                        <code className="font-mono text-[11.5px] px-1 py-px rounded bg-brand-light text-brand">
-                          {"{{sender.name}}"}
-                        </code>
-                        <br />
-                        <code className="font-mono text-[11.5px] px-1 py-px rounded bg-brand-light text-brand">
-                          {"{{sender.signature}}"}
-                        </code>
-                      </div>
-                    ) : (
-                      <div className="mt-1 leading-[1.9]">
-                        Dear ,
-                        <br />
-                        <br />
-                        Your personalised offer is ready:
-                        <br />
-                        <br />
-                        Kind regards,
-                      </div>
-                    )}
-                  </>
-                ),
-              },
-            ].map((row, i, arr) => (
-              <div
-                key={row.label}
-                className={cn("flex", i < arr.length - 1 && "border-b border-gray-50")}
-              >
-                <div className="text-[12.5px] text-muted-foreground p-2.5 px-[13px] min-w-[85px] border-r border-gray-50 bg-gray-50/50 flex-shrink-0">
-                  {row.label}
+            {/* Email fields — fully resolved for the selected recipient */}
+            {(() => {
+              const ctx = leadToContext(selected);
+              const sender = {
+                name: "Kevin Kools",
+                signature: "Brand Broker Insurance · +32 2 123 4567",
+              };
+              const attachmentLink =
+                selected.attachmentLink ?? "https://portal.brandbroker.com/offer/abc123";
+              const resolveStr = (s: string) =>
+                resolveMergeTags(s, ctx, sender, attachmentLink);
+
+              const resolvedSubject = firstEmailStep?.subject
+                ? resolveStr(firstEmailStep.subject)
+                : "Your AON Cybersecurity offer is ready";
+
+              const rows = [
+                { label: "From:", body: <>{sender.name} (via Brand Broker)</> },
+                {
+                  label: "Subject:",
+                  body: (
+                    <>
+                      <span className="inline-flex items-center gap-1 text-[11.5px] text-brand cursor-pointer hover:underline mb-1">
+                        ✎ Customize
+                      </span>
+                      <div>{resolvedSubject}</div>
+                    </>
+                  ),
+                },
+                {
+                  label: "Content:",
+                  body: (
+                    <>
+                      <span className="inline-flex items-center gap-1 text-[11.5px] text-brand cursor-pointer hover:underline mb-1">
+                        ✎ Customize
+                      </span>
+                      {hasAuthoredBody ? (
+                        <div className="mt-1 leading-[1.6]">
+                          {renderEmailForRecipient(firstEmailStep!.body, ctx, {
+                            sender,
+                            attachmentLink,
+                          })}
+                        </div>
+                      ) : emailHasMergeTags ? (
+                        <div className="mt-1 leading-[1.9]">
+                          Dear {resolveStr("{{lead.firstName}} {{lead.lastName}}")} —{" "}
+                          {resolveStr("{{lead.company}}")},
+                          <br />
+                          <br />
+                          Your personalised offer is ready:
+                          <br />
+                          <a
+                            href={attachmentLink}
+                            className="text-brand underline break-all"
+                          >
+                            {attachmentLink}
+                          </a>
+                          <br />
+                          <br />
+                          Kind regards,
+                          <br />
+                          {sender.name}
+                          <br />
+                          {sender.signature}
+                        </div>
+                      ) : (
+                        <div className="mt-1 leading-[1.9]">
+                          Dear ,
+                          <br />
+                          <br />
+                          Your personalised offer is ready:
+                          <br />
+                          <br />
+                          Kind regards,
+                        </div>
+                      )}
+                    </>
+                  ),
+                },
+              ];
+              return rows.map((row, i, arr) => (
+                <div
+                  key={row.label}
+                  className={cn("flex", i < arr.length - 1 && "border-b border-gray-50")}
+                >
+                  <div className="text-[12.5px] text-muted-foreground p-2.5 px-[13px] min-w-[85px] border-r border-gray-50 bg-gray-50/50 flex-shrink-0">
+                    {row.label}
+                  </div>
+                  <div className="text-[12.5px] text-foreground p-2.5 px-[13px] flex-1">
+                    {row.body}
+                  </div>
                 </div>
-                <div className="text-[12.5px] text-foreground p-2.5 px-[13px] flex-1">
-                  {row.body}
-                </div>
-              </div>
-            ))}
+              ));
+            })()}
           </div>
         </Card>
       </div>

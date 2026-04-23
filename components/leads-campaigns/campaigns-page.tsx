@@ -73,6 +73,7 @@ interface WizardState {
   templateId?: string;
   campaignId?: string;
   initialName?: string;
+  initialCampaign?: import("@/components/leads-campaigns/campaign-wizard").WizardInitialCampaign;
 }
 
 interface CampaignsPageProps {
@@ -133,6 +134,22 @@ export default function CampaignsPage({ initialCampaignName, onInitialConsumed }
       onInitialConsumed?.();
     }
   }, [initialCampaignName, onInitialConsumed]);
+
+  const openEditWizard = useCallback(
+    (c: DisplayedCampaign) => {
+      setWizard({
+        campaignId: c.id,
+        initialCampaign: {
+          id: c.id,
+          name: c.name,
+          description: c.description ?? "",
+          targetGroup: c.targetGroup,
+          sentCount: c.emailsSent,
+        },
+      });
+    },
+    [],
+  );
 
   const handleWizardClose = useCallback(() => {
     setWizard(null);
@@ -217,6 +234,7 @@ export default function CampaignsPage({ initialCampaignName, onInitialConsumed }
       <CampaignWizard
         templateId={wizard.templateId}
         campaignId={wizard.campaignId}
+        initialCampaign={wizard.initialCampaign}
         initialName={wizard.initialName}
         onBack={handleWizardClose}
       />
@@ -388,33 +406,18 @@ export default function CampaignsPage({ initialCampaignName, onInitialConsumed }
                   return (
                     <TableRow key={c.id} className="cursor-pointer">
                       <TableCell className="pl-5">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() =>
-                              c.isUserCreated
-                                ? toast({
-                                    title: "Edit via Claude or recreate",
-                                    description:
-                                      "Editing user-created campaigns isn't wired into the wizard yet — use MCP `update_campaign`.",
-                                  })
-                                : setWizard({ campaignId: c.id })
-                            }
-                            className="flex items-center gap-2.5 text-foreground text-left"
+                        <button
+                          onClick={() => openEditWizard(c)}
+                          className="flex items-center gap-2.5 text-foreground text-left"
+                        >
+                          <div
+                            className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0"
+                            style={{ backgroundColor: c.iconBg, color: c.iconColor }}
                           >
-                            <div
-                              className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0"
-                              style={{ backgroundColor: c.iconBg, color: c.iconColor }}
-                            >
-                              <Icon className="h-3.5 w-3.5" />
-                            </div>
-                            {c.name}
-                          </button>
-                          {c.isUserCreated && (
-                            <Badge variant="secondary" className="text-[10px]">
-                              Yours
-                            </Badge>
-                          )}
-                        </div>
+                            <Icon className="h-3.5 w-3.5" />
+                          </div>
+                          {c.name}
+                        </button>
                       </TableCell>
                       <TableCell>
                         <Badge variant={c.targetGroup === "Leads" ? "default" : "secondary"}>
@@ -440,12 +443,10 @@ export default function CampaignsPage({ initialCampaignName, onInitialConsumed }
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            {!c.isUserCreated && (
-                              <DropdownMenuItem onClick={() => setWizard({ campaignId: c.id })}>
-                                <Pencil className="h-3.5 w-3.5" />
-                                Edit
-                              </DropdownMenuItem>
-                            )}
+                            <DropdownMenuItem onClick={() => openEditWizard(c)}>
+                              <Pencil className="h-3.5 w-3.5" />
+                              Edit
+                            </DropdownMenuItem>
                             <DropdownMenuItem
                               disabled={c.status !== "Active"}
                               onClick={() => {
@@ -455,15 +456,17 @@ export default function CampaignsPage({ initialCampaignName, onInitialConsumed }
                               <BarChart3 className="h-3.5 w-3.5" />
                               View analytics
                             </DropdownMenuItem>
-                            {c.isUserCreated && <DropdownMenuSeparator />}
                             {c.isUserCreated && (
-                              <DropdownMenuItem
-                                className="text-red-600 focus:text-red-600"
-                                onClick={() => handleDeleteCampaign(c)}
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                                Delete
-                              </DropdownMenuItem>
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  className="text-red-600 focus:text-red-600"
+                                  onClick={() => handleDeleteCampaign(c)}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </>
                             )}
                           </DropdownMenuContent>
                         </DropdownMenu>

@@ -8,6 +8,8 @@ import StepFlowBuilder from "@/components/leads-campaigns/step-flow-builder";
 import StepSettings from "@/components/leads-campaigns/step-settings";
 import StepDraftSend from "@/components/leads-campaigns/step-draft-send";
 import { TargetGroup, WizardStep } from "@/lib/lc-types";
+import type { FlowStep } from "@/lib/flow-types";
+import { newEmailStep } from "@/lib/flow-types";
 import { templates } from "@/lib/lc-data/templates";
 import { campaigns } from "@/lib/lc-data/campaigns";
 import { leads } from "@/lib/lc-data/leads";
@@ -23,17 +25,33 @@ const steps = [
   { num: 5 as WizardStep, label: "Draft & Send", desc: "Review and send your campaign" },
 ];
 
+export interface WizardInitialCampaign {
+  id: string;
+  name: string;
+  description?: string;
+  targetGroup: TargetGroup;
+  sentCount?: number;
+}
+
 interface CampaignWizardProps {
   templateId?: string;
   campaignId?: string;
+  initialCampaign?: WizardInitialCampaign;
   initialName?: string;
   onBack: () => void;
 }
 
-export default function CampaignWizard({ templateId, campaignId, initialName, onBack }: CampaignWizardProps) {
-  const loadedCampaign = campaignId
-    ? campaigns.find((c) => c.id === campaignId)
-    : null;
+export default function CampaignWizard({
+  templateId,
+  campaignId,
+  initialCampaign,
+  initialName,
+  onBack,
+}: CampaignWizardProps) {
+  // Prefer an explicitly-passed campaign (user-created), fall back to seed lookup.
+  const loadedCampaign =
+    initialCampaign ??
+    (campaignId ? campaigns.find((c) => c.id === campaignId) ?? null : null);
 
   const initialTargetGroup: TargetGroup =
     loadedCampaign?.targetGroup ||
@@ -60,6 +78,7 @@ export default function CampaignWizard({ templateId, campaignId, initialName, on
   );
 
   const [emailHasMergeTags, setEmailHasMergeTags] = useState(true);
+  const [flowSteps, setFlowSteps] = useState<FlowStep[]>(() => [newEmailStep()]);
   const [saving, setSaving] = useState(false);
 
   const handleSaveDraft = async () => {
@@ -110,7 +129,7 @@ export default function CampaignWizard({ templateId, campaignId, initialName, on
       : leads.filter((l) => includedLeadIds.has(l.id));
 
   return (
-    <div className="px-8 py-7 overflow-y-auto h-full">
+    <div className="bg-white min-h-full px-8 py-7 overflow-y-auto h-full">
       <div className="flex items-center gap-3 mb-7">
         <button
           onClick={onBack}
@@ -202,6 +221,8 @@ export default function CampaignWizard({ templateId, campaignId, initialName, on
       {currentStep === 3 && (
         <StepFlowBuilder
           targetGroup={targetGroup}
+          steps={flowSteps}
+          onStepsChange={setFlowSteps}
           onPrev={() => goTo(2)}
           onNext={() => goTo(4)}
         />
@@ -220,6 +241,7 @@ export default function CampaignWizard({ templateId, campaignId, initialName, on
           autoSend={autoSend}
           emailHasMergeTags={emailHasMergeTags}
           recipients={recipientLeads}
+          flowSteps={flowSteps}
           onPrev={() => goTo(4)}
           onGoToRecipients={() => goTo(2)}
         />

@@ -12,6 +12,8 @@ import MCPSetupPage from "@/components/mcp-setup-page"
 import BrokerHubPage from "@/components/broker-hub-page"
 import ProductsPage from "@/components/products-page"
 import ContactsPage from "@/components/contacts-page"
+import FormsPage from "@/components/forms-page"
+import AssetsPage from "@/components/assets-page"
 // `Partner` is a legacy type name in okr-data.ts — it's the customer record shape.
 import { type Partner as CustomerRecord } from "@/lib/okr-data"
 import { MASTER_CUSTOMERS_AS_RECORDS } from "@/lib/customer-database"
@@ -121,6 +123,8 @@ export default function OKRDashboard() {
               {activeMenu === "broker-hub" && <BrokerHubPage />}
               {activeMenu === "products" && <ProductsPage />}
               {activeMenu === "contacts" && <ContactsPage />}
+              {activeMenu === "forms" && <FormsPage />}
+              {activeMenu === "assets" && <AssetsPage />}
               {activeMenu === "leads" && <LeadsPage />}
               {activeMenu === "mcp-setup" && <MCPSetupPage />}
               {activeMenu === "campaigns" && (

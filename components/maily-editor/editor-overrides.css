@@ -1,0 +1,33 @@
+/* Scope maily editor to fit the flow-builder email card.
+   Maily ships its own max-w container + backdrop; we strip those
+   so it blends into the parent card like a plain textarea. */
+
+.qollabi-email-editor .qollabi-editor-wrap {
+  max-width: none !important;
+  width: 100% !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.qollabi-email-editor .qollabi-editor-body {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  max-width: none !important;
+  padding: 12px 14px !important;
+}
+
+.qollabi-email-editor .qollabi-editor-content {
+  min-height: 180px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.qollabi-email-editor .qollabi-editor-content p {
+  margin: 0 0 8px 0;
+}
+
+.qollabi-email-editor .ProseMirror:focus {
+  outline: none;
+}
