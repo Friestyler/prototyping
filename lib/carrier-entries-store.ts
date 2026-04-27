@@ -54,8 +54,11 @@ function write(all: Map) {
 }
 
 /**
- * Merge a batch of entries into the store. Idempotent — `(insurer, policyNumber)`
- * pairs that already exist for a recordId are not duplicated.
+ * Merge a batch of entries into the store. For each `(insurer, policyNumber)`
+ * pair we keep one entry per customer; re-uploads overwrite the prior entry
+ * so the latest carrier truth (status, action date) wins. This is what fixes
+ * stale data: an earlier upload with a missing or garbled `status` is
+ * replaced when the file is uploaded again with corrected extraction.
  */
 export function appendCarrierEntries(
   batch: Array<{ recordId: number | string; entry: CarrierEntry }>,
@@ -65,10 +68,16 @@ export function appendCarrierEntries(
   for (const { recordId, entry } of batch) {
     const key = String(recordId)
     const existing = all[key] ?? []
-    if (existing.some((e) => e.insurer === entry.insurer && e.policyNumber === entry.policyNumber)) {
-      continue
+    const idx = existing.findIndex(
+      (e) => e.insurer === entry.insurer && e.policyNumber === entry.policyNumber,
+    )
+    if (idx === -1) {
+      all[key] = [...existing, entry]
+    } else {
+      const merged = [...existing]
+      merged[idx] = entry
+      all[key] = merged
     }
-    all[key] = [...existing, entry]
   }
   write(all)
 }
