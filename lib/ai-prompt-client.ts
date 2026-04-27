@@ -46,10 +46,12 @@ export function buildScopePayload(attrs: AiPromptAttrs) {
   );
 
   // Documents + risk objects are attached to products in production. In the
-  // prototype we surface ALL known samples when the source is enabled, as
+  // prototype we surface ALL known samples when the relevant source is on, as
   // a stand-in for "whatever happens to be attached to the in-scope items".
+  // Risk objects ride with the products source — they're always attached to
+  // products, so toggling them separately would just be noise.
   const assets = attrs.sources.includes("assets") ? AI_ASSETS : [];
-  const riskObjects = attrs.sources.includes("risk-objects") ? AI_RISK_OBJECTS : [];
+  const riskObjects = attrs.sources.includes("products") ? AI_RISK_OBJECTS : [];
 
   return {
     products: matched.map((p) => ({
@@ -78,7 +80,6 @@ function cacheKey(attrs: AiPromptAttrs, recipient: RecipientContext): string {
     p: attrs.prompt,
     t: attrs.tone,
     l: attrs.length,
-    m: attrs.generationMode,
     g: [...attrs.guardrails].sort(),
     s: attrs.scope,
     scope,

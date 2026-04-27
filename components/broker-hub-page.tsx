@@ -11,6 +11,8 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { useAiInsights } from "@/components/ai-insights-context"
+import { PaymentRemindersUpload } from "@/components/payment-reminders-upload"
 
 type Tab = "getting-started" | "data-upload"
 
@@ -162,6 +164,8 @@ function GettingStarted() {
 }
 
 function DataUpload() {
+  const { requestNavigation } = useAiInsights()
+
   return (
     <div className="p-7">
       <div className="flex items-center gap-3 mb-1">
@@ -219,6 +223,14 @@ function DataUpload() {
           </div>
           <Button className="w-full bg-teal-700 hover:bg-teal-800">Or Browse Files</Button>
         </div>
+      </div>
+
+      <div className="mt-8">
+        <PaymentRemindersUpload
+          onOpenSavedList={(listId) =>
+            requestNavigation({ menu: "customers", listId })
+          }
+        />
       </div>
     </div>
   )

@@ -19,13 +19,32 @@ export interface SmartListWireCustomer {
   customerType: string
   dossierNumber: string
   products: string[]
+  dateOfBirth?: string | null
+  email?: string | null
+  annualPremium?: number | null
+  address?: string | null
 }
+
+/**
+ * Columns the list card renders alongside the always-visible name.
+ * The agent picks these from the user's prompt; if unspecified it leaves
+ * this empty and asks a clarifying question in the chat text.
+ */
+export type SmartListColumn =
+  | "products"
+  | "age"
+  | "email"
+  | "premium"
+  | "address"
+  | "dossierNumber"
+  | "customerType"
 
 export interface SmartListProposal {
   name: string
   description: string
   type: "dynamic" | "static"
   filter: Record<string, unknown>
+  columns?: SmartListColumn[]
 }
 
 export interface SmartListPayload {

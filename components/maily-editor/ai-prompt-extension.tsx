@@ -20,8 +20,6 @@ import {
   Play,
   Shield,
   Sparkles,
-  User,
-  Users,
   X,
 } from "lucide-react";
 
@@ -73,17 +71,9 @@ export type InstructionType =
 export type PromptTone = "professional" | "friendly" | "casual";
 export type PromptLength = "sentence" | "paragraph" | "long";
 
-export type SourceKey =
-  | "customer"
-  | "products"
-  | "contracts"
-  | "assets"
-  | "risk-objects"
-  | "contacts";
+export type SourceKey = "products" | "contracts" | "assets";
 
 export type ScopeKey = "entire-portfolio" | "filtered";
-
-export type GenerationMode = "per-product" | "per-category" | "aggregated";
 
 export type GuardrailKey =
   | "no-fabrication"
@@ -112,7 +102,6 @@ export interface AiPromptAttrs {
   selectedAssetIds: string[];
   selectedRiskObjectIds: string[];
 
-  generationMode: GenerationMode;
   guardrails: GuardrailKey[];
 }
 
@@ -164,30 +153,21 @@ const INSTRUCTION_PRESETS: Record<
 };
 
 const SOURCE_OPTIONS: { key: SourceKey; label: string; icon: React.ReactNode }[] = [
-  { key: "customer", label: "Customer attributes", icon: <User className="w-3.5 h-3.5" /> },
   { key: "products", label: "Products / contracts", icon: <Package className="w-3.5 h-3.5" /> },
   { key: "assets", label: "Documents (PDFs)", icon: <FileText className="w-3.5 h-3.5" /> },
-  { key: "risk-objects", label: "Risk objects", icon: <Shield className="w-3.5 h-3.5" /> },
-  { key: "contacts", label: "Contacts", icon: <Users className="w-3.5 h-3.5" /> },
 ];
 
 const SCOPE_OPTIONS: { key: ScopeKey; label: string; hint: string }[] = [
   {
     key: "entire-portfolio",
-    label: "All products",
+    label: "Full portfolio",
     hint: "Every product this recipient has.",
   },
   {
     key: "filtered",
-    label: "Specific products",
+    label: "Selected products",
     hint: "Only products in the categories, subcategories, or templates you pick.",
   },
-];
-
-const MODE_OPTIONS: { key: GenerationMode; label: string; hint: string }[] = [
-  { key: "per-product", label: "Per product", hint: "One block of content for each product in scope" },
-  { key: "per-category", label: "Per category", hint: "One block of content grouped by category" },
-  { key: "aggregated", label: "One aggregated summary", hint: "A single block covering everything in scope" },
 ];
 
 const GUARDRAILS: { key: GuardrailKey; label: string; description: string; defaultOn: boolean }[] = [
@@ -245,12 +225,11 @@ const defaultAttrs = (overrides?: Partial<AiPromptAttrs>): AiPromptAttrs => ({
   instructionType: overrides?.instructionType ?? "summary",
   tone: overrides?.tone ?? "professional",
   length: overrides?.length ?? "paragraph",
-  sources: overrides?.sources ?? ["customer", "products"],
+  sources: overrides?.sources ?? ["products"],
   scope: overrides?.scope ?? "entire-portfolio",
   selectedFilterIds: overrides?.selectedFilterIds ?? [],
   selectedAssetIds: overrides?.selectedAssetIds ?? [],
   selectedRiskObjectIds: overrides?.selectedRiskObjectIds ?? [],
-  generationMode: overrides?.generationMode ?? "aggregated",
   guardrails: overrides?.guardrails ?? GUARDRAILS.filter((g) => g.defaultOn).map((g) => g.key),
 });
 
@@ -279,7 +258,6 @@ export const AiPromptNode = Node.create({
       selectedFilterIds: { default: d.selectedFilterIds },
       selectedAssetIds: { default: d.selectedAssetIds },
       selectedRiskObjectIds: { default: d.selectedRiskObjectIds },
-      generationMode: { default: d.generationMode },
       guardrails: { default: d.guardrails },
     };
   },
@@ -395,8 +373,7 @@ function AiPromptChip({ node, updateAttributes, deleteNode, editor }: NodeViewPr
 function buildChipSummary(attrs: AiPromptAttrs): string {
   const instr = INSTRUCTION_PRESETS[attrs.instructionType]?.label ?? "Custom";
   const scope = SCOPE_OPTIONS.find((s) => s.key === attrs.scope)?.label.toLowerCase() ?? "";
-  const mode = MODE_OPTIONS.find((m) => m.key === attrs.generationMode)?.label.toLowerCase() ?? "";
-  return `${instr} · ${scope} · ${mode}`;
+  return `${instr} · ${scope}`;
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -483,8 +460,6 @@ function AiPromptConfigurator({
   };
 
   const showFilters = draft.scope === "filtered";
-  const showAssetPicker = draft.sources.includes("assets");
-  const showRiskPicker = draft.sources.includes("risk-objects");
 
   return (
     <Dialog open onOpenChange={(v) => !v && onCancel()}>
@@ -591,18 +566,6 @@ function AiPromptConfigurator({
               )}
             </Section>
 
-            {/* Generation mode */}
-            <Section title="Generation mode">
-              <ChipSelect
-                options={MODE_OPTIONS.map((m) => ({ key: m.key, label: m.label }))}
-                value={draft.generationMode}
-                onChange={(v) => patch({ generationMode: v })}
-              />
-              <div className="text-[11px] text-muted-foreground mt-1.5">
-                {MODE_OPTIONS.find((m) => m.key === draft.generationMode)?.hint}
-              </div>
-            </Section>
-
             {/* Tone & length */}
             <Section title="Voice">
               <div className="grid grid-cols-2 gap-3">
@@ -696,20 +659,11 @@ function AiPromptConfigurator({
                   icon={<Shield className="w-3.5 h-3.5" />}
                   label="Risk objects"
                   value={
-                    draft.sources.includes("risk-objects")
-                      ? "Risk objects attached to in-scope products"
-                      : "Not in sources"
+                    draft.sources.includes("products")
+                      ? "Attached to in-scope products"
+                      : "—"
                   }
                 />
-              </div>
-            </div>
-
-            <div>
-              <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium mb-2">
-                Output shape
-              </div>
-              <div className="rounded-md border border-border bg-white p-3 text-[12px] leading-relaxed">
-                {describeOutputShape(draft, productsInScope.length, categoriesInScope.length)}
               </div>
             </div>
 
@@ -1138,26 +1092,6 @@ function LivePreview({ attrs, fallbackText }: { attrs: AiPromptAttrs; fallbackTe
   );
 }
 
-function describeOutputShape(
-  attrs: AiPromptAttrs,
-  productCount: number,
-  categoryCount: number,
-): string {
-  switch (attrs.generationMode) {
-    case "per-product":
-      return productCount > 0
-        ? `${productCount} block${productCount === 1 ? "" : "s"} — one per product.`
-        : "One block per product in scope (none selected yet).";
-    case "per-category":
-      return categoryCount > 0
-        ? `${categoryCount} block${categoryCount === 1 ? "" : "s"} — one per category.`
-        : "One block per category (none in scope yet).";
-    case "aggregated":
-    default:
-      return "A single aggregated block covering everything in scope.";
-  }
-}
-
 type ScopeProduct = {
   id: string;
   productTemplateId: string;
@@ -1171,7 +1105,7 @@ function mockPreview(
   products: ScopeProduct[],
   categories: string[],
 ): string {
-  if (attrs.instructionType === "validation" && attrs.generationMode === "per-product") {
+  if (attrs.instructionType === "validation") {
     if (products.length === 0) {
       return "Here are your products — please confirm the details or flag anything that changed.";
     }
@@ -1183,19 +1117,7 @@ function mockPreview(
       )
       .join("\n");
   }
-  if (attrs.instructionType === "summary" && attrs.generationMode === "per-category") {
-    const cats = categories.length ? categories : ["Auto", "Home"];
-    return cats
-      .slice(0, 3)
-      .map((c) => {
-        const count = products.filter((p) =>
-          p.entry ? `${p.entry.category.name} › ${p.entry.subcategory.name}`.includes(c) : false,
-        ).length;
-        return `• ${c}: ${count} product${count === 1 ? "" : "s"} in place.`;
-      })
-      .join("\n");
-  }
-  if (attrs.instructionType === "summary" || attrs.generationMode === "aggregated") {
+  if (attrs.instructionType === "summary") {
     return `Overview: ${products.length || "several"} products across ${categories.length || "multiple"} categor${categories.length === 1 ? "y" : "ies"}. ${products.length ? "Coverage looks consistent with the latest attached documents." : ""}`;
   }
   if (attrs.instructionType === "insights") {

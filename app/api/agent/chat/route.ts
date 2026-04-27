@@ -46,6 +46,16 @@ const chartToolParams = z.object({
     .max(20),
 })
 
+const SMART_LIST_COLUMNS = [
+  "products",
+  "age",
+  "email",
+  "premium",
+  "address",
+  "dossierNumber",
+  "customerType",
+] as const
+
 const smartListToolParams = z.object({
   name: z.string().min(1).max(120),
   description: z.string().max(500),
@@ -61,6 +71,13 @@ const smartListToolParams = z.object({
     bornAfter: z.string().optional(),
     bornBefore: z.string().optional(),
   }),
+  /**
+   * Columns to show alongside the customer's name. Only include values the
+   * user explicitly asked for. If they didn't specify, leave this empty and
+   * append a one-sentence question to your text answer (e.g.
+   * "Which columns would you like to see — age, email, products, premium?").
+   */
+  columns: z.array(z.enum(SMART_LIST_COLUMNS)).optional(),
 })
 
 const productCatalog = Array.from(
@@ -128,6 +145,11 @@ export async function POST(request: Request) {
         "- minPremium / maxPremium: annual premium EUR bounds.",
         "- bornAfter / bornBefore: DOB bounds (YYYY-MM-DD).",
         "",
+        "Smart-list columns:",
+        `- Available: ${SMART_LIST_COLUMNS.join(", ")}. Customer name is always shown — don't request it.`,
+        "- If the user's prompt explicitly mentions which columns to show (e.g. 'include age and email', 'with premium'), set `columns` to exactly those.",
+        "- If the user did NOT specify columns, leave `columns` empty AND end your text answer with a single clarifying question like: \"Which columns would you like to see? e.g. age, email, premium, products.\" Suggest 3–4 columns that are relevant to the filter (e.g. age when the filter uses DOB bounds, premium when it uses premium bounds, products when it filters by product).",
+        "",
         "Portfolio summary (source of truth for factual answers):",
         JSON.stringify(facts, null, 2),
         historyTranscript ? `\nConversation so far:\n${historyTranscript}` : "",
@@ -171,6 +193,7 @@ export async function POST(request: Request) {
           description: smartListPayload.description,
           type: smartListPayload.type,
           filter,
+          columns: smartListPayload.columns ?? [],
         },
         matchCount: matches.length,
         sample: matches.slice(0, 5).map(customerToWire),

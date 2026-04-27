@@ -89,7 +89,7 @@ export default function SmartListCard({
       )}
       onClick={onClick}
     >
-      <CardContent className="p-6 flex flex-col flex-1">
+      <CardContent className="px-6 pt-4 pb-4 flex flex-col flex-1">
         {(onRefine || badge) && (
           <div className="absolute top-3 right-3 flex items-center gap-1.5">
             {onRefine && (
@@ -144,7 +144,7 @@ export default function SmartListCard({
         {/* Title + description */}
         <h3 className="font-semibold text-base mb-2 line-clamp-2 leading-tight text-gray-900">{name}</h3>
         {description && (
-          <p className="text-sm text-gray-600 mb-3 line-clamp-2 leading-snug">{description}</p>
+          <p className="text-sm text-gray-600 mb-3 line-clamp-3 leading-snug">{description}</p>
         )}
 
         {byLabel && (

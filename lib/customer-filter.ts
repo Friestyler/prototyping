@@ -46,7 +46,9 @@ export function filterCustomers(filter: CustomerFilter): MasterCustomer[] {
 
 export function customerToWire(c: MasterCustomer) {
   return {
+    id: String(c.recordId),
     customerId: c.dossierNumber,
+    dossierNumber: c.dossierNumber,
     recordId: String(c.recordId),
     customerType: c.customerType,
     firstName: c.firstName,

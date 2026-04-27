@@ -37,8 +37,10 @@ import {
   useAiInsights,
   type Artefact,
   type ChartData,
+  type SmartListColumn,
   type SmartListPayload,
 } from "@/components/ai-insights-context"
+import { SmartListPreviewTable } from "@/components/smart-list-preview-table"
 import { saveUserSavedList, type UserSavedListType } from "@/lib/user-saved-lists"
 import { toast } from "@/hooks/use-toast"
 
@@ -181,21 +183,13 @@ function SmartListArtefactCard({
       </div>
 
       {payload.sample.length > 0 && (
-        <ul className="bg-gray-50 rounded-lg border border-gray-100 divide-y divide-gray-100">
-          {payload.sample.slice(0, 3).map((c) => (
-            <li key={c.id} className="px-2.5 py-1.5 text-[11px] flex items-center justify-between gap-2">
-              <span className="truncate text-gray-700">
-                {c.firstName} {c.lastName ?? ""}
-              </span>
-              <span className="text-gray-400 text-[10px] truncate">{c.products.join(", ")}</span>
-            </li>
-          ))}
-          {payload.matchCount > 3 && (
-            <li className="px-2.5 py-1 text-[10px] text-gray-400">
-              + {payload.matchCount - 3} more
-            </li>
-          )}
-        </ul>
+        <SmartListPreviewTable
+          sample={payload.sample}
+          columns={(payload.proposal.columns ?? []) as SmartListColumn[]}
+          matchCount={payload.matchCount}
+          density="compact"
+          maxRows={3}
+        />
       )}
     </div>
   )

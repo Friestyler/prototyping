@@ -49,7 +49,6 @@ interface AttrsIn {
   tone: "professional" | "friendly" | "casual";
   length: "sentence" | "paragraph" | "long";
   scope: "single-product" | "multiple-products" | "category" | "entire-portfolio";
-  generationMode: "per-product" | "per-category" | "aggregated";
   sources: string[];
   guardrails: string[];
 }
@@ -86,14 +85,6 @@ const TONE_HINTS: Record<AttrsIn["tone"], string> = {
   professional: "Use a professional, business tone suitable for a Belgian insurance broker.",
   friendly: "Use a warm, approachable tone while staying professional.",
   casual: "Use a light, conversational tone.",
-};
-
-const MODE_HINTS: Record<AttrsIn["generationMode"], string> = {
-  "per-product":
-    "Output one block per product in scope. Use a short bulleted list, one bullet per product.",
-  "per-category":
-    "Output one block per category in scope. Use a short bulleted list, one bullet per category.",
-  aggregated: "Output a single cohesive paragraph covering all items in scope.",
 };
 
 const GUARDRAIL_RULES: Record<string, string> = {
@@ -139,7 +130,15 @@ export async function POST(request: Request) {
     .filter(Boolean);
 
   const systemLines: string[] = [
-    "You generate a single piece of email copy that will be rendered inline in a broker-to-customer email at send time. Return plain text only — no markdown formatting, no preamble, no trailing sign-off. The output will be injected in the middle of an already-written paragraph or list.",
+    "You generate a section of copy that will be injected into a broker-to-customer email. Write it the way a professional broker or account manager would write that section themselves — polished, readable, correctly formatted for an email body.",
+    "",
+    "FORMATTING RULES:",
+    "- Do NOT include a greeting (no \"Dear …\", \"Hi …\") or a sign-off (no \"Kind regards\", \"Best\", signature). The surrounding email already has those.",
+    "- Use short paragraphs separated by a blank line. No walls of text.",
+    "- When listing multiple items (policies, vehicles, documents), use a bulleted list with `- ` prefixes, one item per line.",
+    "- Bold key terms with Markdown `**…**` when it aids scanning (e.g. product names or policy numbers in a validation list). Use it sparingly.",
+    "- Do not include headings (`#`), code fences, tables, or HTML. Keep it to paragraphs and bullet lists.",
+    "- Write in the customer's language if preferredLanguage is set; otherwise match the language of the recipient's data context.",
     "",
     "HARD RULES:",
     ...activeGuardrails.map((r) => `- ${r}`),
@@ -148,7 +147,6 @@ export async function POST(request: Request) {
     "STYLE:",
     `- ${TONE_HINTS[attrs.tone]}`,
     `- ${LENGTH_HINTS[attrs.length]}`,
-    `- ${MODE_HINTS[attrs.generationMode]}`,
     attrs.instructionType !== "custom" ? `- ${INSTRUCTION_HINTS[attrs.instructionType]}` : "",
     "",
     "DATA FOR THIS RECIPIENT:",

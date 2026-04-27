@@ -17,6 +17,10 @@ import AssetsPage from "@/components/assets-page"
 // `Partner` is a legacy type name in okr-data.ts — it's the customer record shape.
 import { type Partner as CustomerRecord } from "@/lib/okr-data"
 import { MASTER_CUSTOMERS_AS_RECORDS } from "@/lib/customer-database"
+import {
+  IMPORTED_CUSTOMERS_CHANGE_EVENT,
+  getImportedCustomerRecords,
+} from "@/lib/imported-customers-store"
 import { findSmartListUseCase } from "@/lib/smart-list-use-cases"
 import { AiInsightsProvider, useAiInsights, type PendingNavigation } from "@/components/ai-insights-context"
 import AskAiPanel from "@/components/ask-ai-panel"
@@ -36,6 +40,23 @@ const ALL_CUSTOMERS: CustomerRecord[] = MASTER_CUSTOMERS_AS_RECORDS
 
 export default function OKRDashboard() {
   const [customers, setCustomers] = useState<CustomerRecord[]>(ALL_CUSTOMERS)
+
+  // Merge in customers that were added via Broker Hub file uploads (e.g. AXA
+  // Chutes). Re-sync whenever the store broadcasts a change.
+  useEffect(() => {
+    const sync = () => {
+      const imported = getImportedCustomerRecords()
+      if (imported.length === 0) return
+      setCustomers((prev) => {
+        const existing = new Set(prev.map((p) => p.id))
+        const additions = imported.filter((i) => !existing.has(i.id))
+        return additions.length > 0 ? [...prev, ...additions] : prev
+      })
+    }
+    sync()
+    window.addEventListener(IMPORTED_CUSTOMERS_CHANGE_EVENT, sync)
+    return () => window.removeEventListener(IMPORTED_CUSTOMERS_CHANGE_EVENT, sync)
+  }, [])
   const [activeMenu, setActiveMenu] = useState("partners")
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [showCampaignFlow, setShowCampaignFlow] = useState(false)

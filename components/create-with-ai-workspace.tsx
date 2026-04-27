@@ -36,8 +36,10 @@ import {
   type Artefact,
   type ChartData,
   type ChatTurn,
+  type SmartListColumn,
   type SmartListPayload,
 } from "@/components/ai-insights-context"
+import { SmartListPreviewTable } from "@/components/smart-list-preview-table"
 import { saveUserSavedList, type UserSavedListType } from "@/lib/user-saved-lists"
 import { toast } from "@/hooks/use-toast"
 
@@ -422,26 +424,11 @@ export default function CreateWithAiWorkspace({
                     </div>
 
                     {t.artefact.payload.sample.length > 0 && (
-                      <ul className="bg-gray-50 rounded-lg border border-gray-100 divide-y divide-gray-100">
-                        {t.artefact.payload.sample.slice(0, 4).map((c) => (
-                          <li
-                            key={c.id}
-                            className="px-3 py-2 text-xs flex items-center justify-between gap-2"
-                          >
-                            <span className="truncate text-gray-700">
-                              {c.firstName} {c.lastName ?? ""}
-                            </span>
-                            <span className="text-gray-400 truncate">
-                              {c.products.join(", ")}
-                            </span>
-                          </li>
-                        ))}
-                        {t.artefact.payload.matchCount > 4 && (
-                          <li className="px-3 py-1.5 text-[11px] text-gray-400">
-                            + {t.artefact.payload.matchCount - 4} more
-                          </li>
-                        )}
-                      </ul>
+                      <SmartListPreviewTable
+                        sample={t.artefact.payload.sample}
+                        columns={(t.artefact.payload.proposal.columns ?? []) as SmartListColumn[]}
+                        matchCount={t.artefact.payload.matchCount}
+                      />
                     )}
                   </div>
                 )}

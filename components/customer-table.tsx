@@ -28,6 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import type { MasterCustomer } from "@/lib/customer-database"
+import { getCarrierEntries, type CarrierEntry } from "@/lib/carrier-entries-store"
 
 type SortKey =
   | "dossierNumber"
@@ -37,9 +38,16 @@ type SortKey =
   | "dateOfBirth"
   | "address"
   | "products"
+  | "insurer"
+  | "policy"
 type SortDir = "asc" | "desc"
 
-const COLUMNS: { key: SortKey; label: string }[] = [
+interface ColumnDef {
+  key: SortKey
+  label: string
+}
+
+const DEFAULT_COLUMNS: ColumnDef[] = [
   { key: "dossierNumber", label: "Customer ID" },
   { key: "customerType", label: "Customer Type" },
   { key: "firstName", label: "First Name" },
@@ -48,6 +56,23 @@ const COLUMNS: { key: SortKey; label: string }[] = [
   { key: "address", label: "Address" },
   { key: "products", label: "Products" },
 ]
+
+/**
+ * Compact column set used by the shared "Payment reminders & churn" list, so
+ * the broker sees the carrier signal (insurer + policy number) at a glance
+ * instead of scrolling past portfolio columns that aren't relevant for this
+ * cohort. The Customer ID column is dropped because synthesized rows have
+ * generated IDs that aren't useful here.
+ */
+const PAYMENT_REMINDER_COLUMNS: ColumnDef[] = [
+  { key: "firstName", label: "First Name" },
+  { key: "lastName", label: "Last Name" },
+  { key: "insurer", label: "Insurer" },
+  { key: "policy", label: "Policy" },
+  { key: "address", label: "Address" },
+]
+
+export type CustomerTableVariant = "default" | "payment-reminders"
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
 const PREVIEW_VISIBLE_ROWS = 12
@@ -61,16 +86,60 @@ interface CustomerTableProps {
   previewMode?: boolean
   /** Retained for backward compatibility; no longer rendered inside the table. */
   onSave?: () => void
+  /**
+   * Switches to the payment-reminders column set (Insurer + Policy w/ "+N"
+   * suffix). Driven by the carrier-entries sidecar — each customer can carry
+   * any number of `(insurer, policy)` pairs.
+   */
+  variant?: CustomerTableVariant
 }
 
-export function CustomerTable({ customers, previewMode = false }: CustomerTableProps) {
-  if (previewMode) return <PreviewTable customers={customers} />
-  return <FullTable customers={customers} />
+export function CustomerTable({
+  customers,
+  previewMode = false,
+  variant = "default",
+}: CustomerTableProps) {
+  if (previewMode) return <PreviewTable customers={customers} variant={variant} />
+  return <FullTable customers={customers} variant={variant} />
 }
 
-function PreviewTable({ customers }: { customers: MasterCustomer[] }) {
+function pickColumns(variant: CustomerTableVariant): ColumnDef[] {
+  return variant === "payment-reminders" ? PAYMENT_REMINDER_COLUMNS : DEFAULT_COLUMNS
+}
+
+function carrierEntriesFor(c: MasterCustomer): CarrierEntry[] {
+  return getCarrierEntries(c.recordId)
+}
+
+function uniqueInsurers(entries: CarrierEntry[]): string {
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const e of entries) {
+    if (!seen.has(e.insurer)) {
+      seen.add(e.insurer)
+      out.push(e.insurer)
+    }
+  }
+  return out.join(", ") || "—"
+}
+
+/** Format the policy column: first policy number, plus "+N" if there are more. */
+function formatPolicies(entries: CarrierEntry[]): string {
+  if (entries.length === 0) return "—"
+  if (entries.length === 1) return entries[0].policyNumber
+  return `${entries[0].policyNumber} +${entries.length - 1}`
+}
+
+function PreviewTable({
+  customers,
+  variant,
+}: {
+  customers: MasterCustomer[]
+  variant: CustomerTableVariant
+}) {
   const visible = customers.slice(0, PREVIEW_VISIBLE_ROWS)
   const hidden = Math.max(0, customers.length - visible.length)
+  const columns = pickColumns(variant)
 
   return (
     <div>
@@ -81,7 +150,7 @@ function PreviewTable({ customers }: { customers: MasterCustomer[] }) {
               <TableHead className="pl-5 w-10">
                 <Checkbox disabled />
               </TableHead>
-              {COLUMNS.map((col) => (
+              {columns.map((col) => (
                 <TableHead key={col.key} className="select-none">
                   {col.label}
                 </TableHead>
@@ -89,22 +158,21 @@ function PreviewTable({ customers }: { customers: MasterCustomer[] }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {visible.map((c) => (
-              <TableRow key={c.id}>
-                <TableCell className="pl-5">
-                  <Checkbox disabled />
-                </TableCell>
-                <TableCell className="font-medium text-gray-900 tabular-nums">{c.dossierNumber}</TableCell>
-                <TableCell className="text-gray-600">{c.customerType}</TableCell>
-                <TableCell className="text-gray-900">{c.firstName}</TableCell>
-                <TableCell className="text-gray-900">
-                  {c.lastName || <span className="text-gray-400">—</span>}
-                </TableCell>
-                <TableCell className="text-gray-600 tabular-nums">{c.dateOfBirth}</TableCell>
-                <TableCell className="text-gray-600">{c.address}</TableCell>
-                <TableCell className="text-gray-600">{c.products.join(", ")}</TableCell>
-              </TableRow>
-            ))}
+            {visible.map((c) => {
+              const entries = carrierEntriesFor(c)
+              return (
+                <TableRow key={c.id}>
+                  <TableCell className="pl-5">
+                    <Checkbox disabled />
+                  </TableCell>
+                  {columns.map((col) => (
+                    <TableCell key={col.key} className={cellClass(col.key)}>
+                      {renderCell(c, col.key, entries)}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              )
+            })}
           </TableBody>
         </Table>
         {hidden > 0 && (
@@ -115,16 +183,74 @@ function PreviewTable({ customers }: { customers: MasterCustomer[] }) {
   )
 }
 
-function FullTable({ customers }: { customers: MasterCustomer[] }) {
-  const [sortKey, setSortKey] = useState<SortKey>("dossierNumber")
+function cellClass(key: SortKey): string {
+  switch (key) {
+    case "dossierNumber":
+      return "font-medium text-gray-900 tabular-nums"
+    case "firstName":
+    case "lastName":
+      return "text-gray-900"
+    case "dateOfBirth":
+    case "policy":
+      return "text-gray-600 tabular-nums"
+    default:
+      return "text-gray-600"
+  }
+}
+
+function sortValue(c: MasterCustomer, key: SortKey): string {
+  switch (key) {
+    case "products":
+      return c.products.join(", ")
+    case "insurer":
+      return uniqueInsurers(carrierEntriesFor(c))
+    case "policy":
+      return formatPolicies(carrierEntriesFor(c))
+    default:
+      return String(c[key as keyof MasterCustomer] ?? "")
+  }
+}
+
+function renderCell(c: MasterCustomer, key: SortKey, entries: CarrierEntry[]) {
+  switch (key) {
+    case "dossierNumber":
+      return c.dossierNumber
+    case "customerType":
+      return c.customerType
+    case "firstName":
+      return c.firstName
+    case "lastName":
+      return c.lastName || <span className="text-gray-400">—</span>
+    case "dateOfBirth":
+      return c.dateOfBirth || <span className="text-gray-400">—</span>
+    case "address":
+      return c.address || <span className="text-gray-400">—</span>
+    case "products":
+      return c.products.join(", ") || <span className="text-gray-400">—</span>
+    case "insurer":
+      return uniqueInsurers(entries)
+    case "policy":
+      return formatPolicies(entries)
+  }
+}
+
+function FullTable({
+  customers,
+  variant,
+}: {
+  customers: MasterCustomer[]
+  variant: CustomerTableVariant
+}) {
+  const columns = pickColumns(variant)
+  const [sortKey, setSortKey] = useState<SortKey>(columns[0].key)
   const [sortDir, setSortDir] = useState<SortDir>("asc")
   const [pageSize, setPageSize] = useState(50)
   const [page, setPage] = useState(1)
   const [selected, setSelected] = useState<Set<string>>(new Set())
 
   const sorted = [...customers].sort((a, b) => {
-    const av = sortKey === "products" ? a.products.join(", ") : (a[sortKey] ?? "")
-    const bv = sortKey === "products" ? b.products.join(", ") : (b[sortKey] ?? "")
+    const av = sortValue(a, sortKey)
+    const bv = sortValue(b, sortKey)
     const cmp = String(av).localeCompare(String(bv), undefined, { numeric: true, sensitivity: "base" })
     return sortDir === "asc" ? cmp : -cmp
   })
@@ -185,7 +311,7 @@ function FullTable({ customers }: { customers: MasterCustomer[] }) {
                 aria-label="Select all"
               />
             </TableHead>
-            {COLUMNS.map((col) => (
+            {columns.map((col) => (
               <TableHead
                 key={col.key}
                 className="cursor-pointer select-none"
@@ -202,6 +328,7 @@ function FullTable({ customers }: { customers: MasterCustomer[] }) {
         <TableBody>
           {rows.map((c) => {
             const isSelected = selected.has(c.id)
+            const entries = carrierEntriesFor(c)
             return (
               <TableRow key={c.id} data-state={isSelected ? "selected" : undefined}>
                 <TableCell className="pl-5">
@@ -211,15 +338,11 @@ function FullTable({ customers }: { customers: MasterCustomer[] }) {
                     aria-label={`Select ${c.firstName} ${c.lastName}`}
                   />
                 </TableCell>
-                <TableCell className="font-medium text-gray-900 tabular-nums">{c.dossierNumber}</TableCell>
-                <TableCell className="text-gray-600">{c.customerType}</TableCell>
-                <TableCell className="text-gray-900">{c.firstName}</TableCell>
-                <TableCell className="text-gray-900">
-                  {c.lastName || <span className="text-gray-400">—</span>}
-                </TableCell>
-                <TableCell className="text-gray-600 tabular-nums">{c.dateOfBirth}</TableCell>
-                <TableCell className="text-gray-600">{c.address}</TableCell>
-                <TableCell className="text-gray-600">{c.products.join(", ")}</TableCell>
+                {columns.map((col) => (
+                  <TableCell key={col.key} className={cellClass(col.key)}>
+                    {renderCell(c, col.key, entries)}
+                  </TableCell>
+                ))}
               </TableRow>
             )
           })}

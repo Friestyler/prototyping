@@ -44,6 +44,7 @@ import {
   Zap,
   ZapOff,
   Filter,
+  Bell,
   Bookmark,
   Columns3,
   CheckIcon,
@@ -72,6 +73,26 @@ import { Loader2 } from "lucide-react"
 // </CHANGE>
 import { initialPartners as initialCustomers, type Partner as Customer } from "@/lib/okr-data"
 import { customerRecordToMasterCustomer } from "@/lib/customer-database"
+import {
+  PAYMENT_REMINDER_LISTS,
+  computeListCustomerIds,
+  isPaymentReminderListId,
+} from "@/lib/payment-reminder-lists"
+import { CARRIER_ENTRIES_CHANGE_EVENT } from "@/lib/carrier-entries-store"
+
+/**
+ * Legacy `sourceUseCaseId` values from earlier prototype iterations where
+ * each upload spawned its own static smart list ("AXA Chutes · Churned
+ * policies", "Vivium · Payment reminders", "Payment reminders & churn"). The
+ * dynamic preset lists replace all of these — we sweep them out of the DB on
+ * mount so brokers don't see stale entries in My Lists.
+ */
+const LEGACY_PAYMENT_REMINDER_KEYS = new Set([
+  "axa-chutes",
+  "carrier-payment-reminders",
+  "payment-reminder-vivium",
+  "payment-reminder-axa",
+])
 import { CustomerTable } from "@/components/customer-table"
 import CreateWithAiWorkspace from "@/components/create-with-ai-workspace"
 console.log("[v0] initialCustomers loaded, first customer:", initialCustomers[0])
@@ -772,20 +793,34 @@ export default function Lists2View({
   const [savedLists, setSavedLists] = useState<SavedList[]>(mockSavedLists)
   const [smartListSuggestions, setSmartListSuggestions] = useState<SmartListSuggestion[]>(smartListSuggestionsWithSignals)
 
-  // Merge user-saved lists (from Priority Recommendations) into savedLists
+  // Merge user-saved lists (from Priority Recommendations) into savedLists.
+  // Also runs a one-time cleanup of legacy per-upload payment-reminder lists
+  // ("AXA Chutes · Churned policies", "Vivium · Payment reminders" etc.) that
+  // were created before the dynamic preset lists replaced them.
   useEffect(() => {
     const merge = async () => {
-      const { loadUserSavedLists } = await import("@/lib/user-saved-lists")
+      const { loadUserSavedLists, deleteUserSavedList } = await import(
+        "@/lib/user-saved-lists"
+      )
       const { findSmartListUseCase } = await import("@/lib/smart-list-use-cases")
-      const userLists = await loadUserSavedLists()
-      if (userLists.length === 0) return
+      const allUserLists = await loadUserSavedLists()
+
+      const legacy = allUserLists.filter((u) =>
+        LEGACY_PAYMENT_REMINDER_KEYS.has(u.sourceUseCaseId ?? ""),
+      )
+      if (legacy.length > 0) {
+        await Promise.all(legacy.map((u) => deleteUserSavedList(u.id)))
+      }
+      const userLists = allUserLists.filter(
+        (u) => !LEGACY_PAYMENT_REMINDER_KEYS.has(u.sourceUseCaseId ?? ""),
+      )
+
+      const presetIds = new Set(PAYMENT_REMINDER_LISTS.map((l) => l.id))
       setSavedLists((prev) => {
         const existingIds = new Set(prev.map((l) => l.id))
         const toAdd = userLists
           .filter((u) => !existingIds.has(u.id))
           .map((u): SavedList => {
-            // Backfill customerIds for entries saved before the field existed
-            // by deriving them from the source use case.
             let customerIds = u.customerIds
             if (!customerIds || customerIds.length === 0) {
               const uc = findSmartListUseCase(u.sourceUseCaseId)
@@ -804,13 +839,58 @@ export default function Lists2View({
               originalSmartListId: u.sourceUseCaseId,
             }
           })
-        return toAdd.length ? [...toAdd, ...prev] : prev
+        // Drop any legacy entries already in `prev` so the cleanup is reflected
+        // in-state immediately (not just in the DB).
+        const cleaned = prev.filter(
+          (l) =>
+            !LEGACY_PAYMENT_REMINDER_KEYS.has(l.originalSmartListId ?? ""),
+        )
+        const presets = cleaned.filter((l) => presetIds.has(l.id))
+        const nonPresets = cleaned.filter((l) => !presetIds.has(l.id))
+        // Presets first, then any newly-added user lists, then the rest.
+        return [...presets, ...toAdd, ...nonPresets]
       })
     }
     merge()
     const handler = () => merge()
     window.addEventListener("qollabi:user-saved-lists-changed", handler)
     return () => window.removeEventListener("qollabi:user-saved-lists-changed", handler)
+  }, [])
+
+  // Three preset *dynamic* lists fed by carrier-entries (Payment Reminder 1/2,
+  // Mise en demeure). Membership is recomputed every time a Vivium or AXA file
+  // is uploaded — customers slot in/out automatically based on their status.
+  useEffect(() => {
+    const syncPresets = () => {
+      setSavedLists((prev) => {
+        const byPresetId = new Map<string, SavedList>()
+        for (const spec of PAYMENT_REMINDER_LISTS) {
+          const customerIds = computeListCustomerIds(spec)
+          byPresetId.set(spec.id, {
+            id: spec.id,
+            name: spec.name,
+            type: "dynamic",
+            customerCount: customerIds.length,
+            customerIds,
+            createdAt: new Date().toISOString(),
+            isFromSmartList: true,
+            smartListColor: spec.iconColor,
+            smartListDescription: spec.description,
+            originalSmartListId: spec.id,
+          } as SavedList)
+        }
+        const others = prev.filter((l) => !byPresetId.has(l.id))
+        // Render presets first so they're easy to find in My Lists.
+        return [...byPresetId.values(), ...others]
+      })
+    }
+    syncPresets()
+    window.addEventListener(CARRIER_ENTRIES_CHANGE_EVENT, syncPresets)
+    window.addEventListener("qollabi:imported-customers-changed", syncPresets)
+    return () => {
+      window.removeEventListener(CARRIER_ENTRIES_CHANGE_EVENT, syncPresets)
+      window.removeEventListener("qollabi:imported-customers-changed", syncPresets)
+    }
   }, [])
 
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards") // Redeclared viewMode, this is the correct one.
@@ -3077,7 +3157,23 @@ export default function Lists2View({
                           <SmartListCard
                             name={list.name}
                             description={list.smartListDescription}
-                            iconNode={<Bookmark className="h-6 w-6" />}
+                            iconNode={
+                              isPaymentReminderListId(list.originalSmartListId) ? (
+                                <Bell className="h-6 w-6" />
+                              ) : (
+                                <Bookmark className="h-6 w-6" />
+                              )
+                            }
+                            iconBg={
+                              isPaymentReminderListId(list.originalSmartListId)
+                                ? "#FEF3C7"
+                                : undefined
+                            }
+                            iconColor={
+                              isPaymentReminderListId(list.originalSmartListId)
+                                ? "#D97706"
+                                : undefined
+                            }
                             customerCount={list.customerCount}
                             badge={list.type === "dynamic" ? "Dynamic" : "Static"}
                             badgeStyle={
@@ -3114,9 +3210,18 @@ export default function Lists2View({
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                            <Bookmark className="h-5 w-5 text-primary" />
-                          </div>
+                          {isPaymentReminderListId(list.originalSmartListId) ? (
+                            <div
+                              className="w-10 h-10 rounded-lg flex items-center justify-center"
+                              style={{ backgroundColor: "#FEF3C7", color: "#D97706" }}
+                            >
+                              <Bell className="h-5 w-5" />
+                            </div>
+                          ) : (
+                            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                              <Bookmark className="h-5 w-5 text-primary" />
+                            </div>
+                          )}
                           <div>
                             <h3 className="font-medium">{list.name}</h3>
                             <p className="text-sm text-gray-500">{list.customerCount.toLocaleString()} customers</p>
@@ -3255,7 +3360,7 @@ export default function Lists2View({
                                     <SmartListCard
                                       name={suggestion.name}
                                       description={suggestion.description}
-                                      byLabel="by Brand Broker"
+                                      byLabel="by Qollabi"
                                       rating={suggestion.rating}
                                       iconNode={<span className="text-2xl">{suggestion.icon}</span>}
                                       customerCount={suggestion.userCount}
@@ -3294,7 +3399,7 @@ export default function Lists2View({
                                   <SmartListCard
                                     name={suggestion.name}
                                     description={description}
-                                    byLabel={catLabel ? `by ${catLabel}` : undefined}
+                                    byLabel="by Qollabi"
                                     badge={urg.label}
                                     badgeStyle={{ bg: urg.bg, text: urg.text }}
                                     iconNode={
@@ -3768,6 +3873,14 @@ export default function Lists2View({
                 <CardContent className="p-0">
                   <CustomerTable
                     customers={filteredData.map(customerRecordToMasterCustomer)}
+                    variant={
+                      isPaymentReminderListId(
+                        savedLists.find((l) => l.id === selectedListId)
+                          ?.originalSmartListId,
+                      )
+                        ? "payment-reminders"
+                        : "default"
+                    }
                   />
                 </CardContent>
               </Card>
