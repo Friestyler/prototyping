@@ -106,25 +106,25 @@ export const PRESET_CAMPAIGNS: PresetCampaign[] = [
 
 /**
  * Create the 3 preset campaigns if they don't already exist for this user.
- * Match is by `smartListId` — that's the stable identifier and survives
- * renames or copy edits. Failures are logged to the console so they show up
- * in DevTools when the API rejects a save (auth, validation, etc.).
+ *
+ * We deliberately do NOT pass `smartListId` to the API: the schema enforces
+ * a foreign key to `user_smart_lists`, but the preset Payment-Reminder lists
+ * are computed in-memory (carrier-entries-driven) and don't have DB rows —
+ * setting the FK would 500 the insert. Instead we dedupe by campaign name,
+ * which is stable enough for these three presets.
  */
 export async function ensurePresetCampaigns(): Promise<UserCampaign[]> {
   const existing = await loadUserCampaigns()
-  const existingSmartListIds = new Set(
-    existing.map((c) => c.smartListId).filter((id): id is string => !!id),
-  )
+  const existingNames = new Set(existing.map((c) => c.name))
 
   const created: UserCampaign[] = []
   const failed: string[] = []
   for (const preset of PRESET_CAMPAIGNS) {
-    if (existingSmartListIds.has(preset.smartListId)) continue
+    if (existingNames.has(preset.name)) continue
     const saved = await saveUserCampaign({
       name: preset.name,
       targetGroup: preset.targetGroup,
       description: preset.description,
-      smartListId: preset.smartListId,
       subject: preset.subject,
       body: preset.body,
       icon: preset.icon,
