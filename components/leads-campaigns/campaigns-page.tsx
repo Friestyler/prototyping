@@ -30,6 +30,7 @@ import {
   type UserCampaign,
   type UserCampaignTemplate,
 } from "@/lib/user-campaigns";
+import { ensurePresetCampaigns } from "@/lib/preset-campaigns";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -122,10 +123,20 @@ export default function CampaignsPage({ initialCampaignName, onInitialConsumed }
   }, []);
 
   useEffect(() => {
-    refresh();
+    // Seed the 3 preset Payment-Reminder campaigns once per workspace, then
+    // refresh. The seeder is idempotent (matches by smartListId), so it's
+    // safe to run on every mount.
+    let cancelled = false;
+    (async () => {
+      await ensurePresetCampaigns();
+      if (!cancelled) await refresh();
+    })();
     const onChange = () => refresh();
     window.addEventListener(USER_CAMPAIGNS_CHANGE_EVENT, onChange);
-    return () => window.removeEventListener(USER_CAMPAIGNS_CHANGE_EVENT, onChange);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(USER_CAMPAIGNS_CHANGE_EVENT, onChange);
+    };
   }, [refresh]);
 
   useEffect(() => {
