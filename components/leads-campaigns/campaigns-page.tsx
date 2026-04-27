@@ -128,7 +128,19 @@ export default function CampaignsPage({ initialCampaignName, onInitialConsumed }
     // safe to run on every mount.
     let cancelled = false;
     (async () => {
-      await ensurePresetCampaigns();
+      try {
+        const created = await ensurePresetCampaigns();
+        if (cancelled) return;
+        if (created.length > 0) {
+          toast({
+            title: `${created.length} payment-reminder campaign${created.length === 1 ? "" : "s"} ready`,
+            description: created.map((c) => c.name).join(" · "),
+          });
+        }
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error("[campaigns] seed failed:", err);
+      }
       if (!cancelled) await refresh();
     })();
     const onChange = () => refresh();
@@ -137,7 +149,7 @@ export default function CampaignsPage({ initialCampaignName, onInitialConsumed }
       cancelled = true;
       window.removeEventListener(USER_CAMPAIGNS_CHANGE_EVENT, onChange);
     };
-  }, [refresh]);
+  }, [refresh, toast]);
 
   useEffect(() => {
     if (initialCampaignName) {

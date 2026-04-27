@@ -107,7 +107,8 @@ export const PRESET_CAMPAIGNS: PresetCampaign[] = [
 /**
  * Create the 3 preset campaigns if they don't already exist for this user.
  * Match is by `smartListId` — that's the stable identifier and survives
- * renames or copy edits.
+ * renames or copy edits. Failures are logged to the console so they show up
+ * in DevTools when the API rejects a save (auth, validation, etc.).
  */
 export async function ensurePresetCampaigns(): Promise<UserCampaign[]> {
   const existing = await loadUserCampaigns()
@@ -116,6 +117,7 @@ export async function ensurePresetCampaigns(): Promise<UserCampaign[]> {
   )
 
   const created: UserCampaign[] = []
+  const failed: string[] = []
   for (const preset of PRESET_CAMPAIGNS) {
     if (existingSmartListIds.has(preset.smartListId)) continue
     const saved = await saveUserCampaign({
@@ -129,7 +131,18 @@ export async function ensurePresetCampaigns(): Promise<UserCampaign[]> {
       iconBg: preset.iconBg,
       iconColor: preset.iconColor,
     })
-    if (saved) created.push(saved)
+    if (saved) {
+      created.push(saved)
+    } else {
+      failed.push(preset.name)
+    }
+  }
+  if (failed.length > 0 && typeof window !== "undefined") {
+    // eslint-disable-next-line no-console
+    console.error(
+      `[preset-campaigns] failed to create ${failed.length} campaign(s):`,
+      failed,
+    )
   }
   return created
 }
