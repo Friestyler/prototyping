@@ -90,52 +90,23 @@ function normalize(s: string): string {
     .trim()
 }
 
-const ESCALATION_DAYS = 30
-
 function isFirstReminder(e: CarrierEntry): boolean {
   const s = normalize(e.status ?? "")
-  if (!s) return false
-  // Bare "rappel" or "rappel 1" — but only while still inside the first-reminder
-  // window. A stale rappel escalates to Payment Reminder 2.
-  if (/^rappel(\s*1)?$/.test(s)) {
-    return !isActionOlderThanDays(e, ESCALATION_DAYS)
-  }
-  return false
+  // Bare "rappel" or "rappel 1" — the carrier's first formal nudge.
+  return /^rappel(\s*1)?$/.test(s)
 }
 
 function isSecondReminder(e: CarrierEntry): boolean {
   const s = normalize(e.status ?? "")
   if (!s) return false
-  // Explicit second-reminder labels.
-  if (/(rappel\s*[23]|deuxieme\s*rappel|2eme\s*rappel|recouvrement)/.test(s)) {
-    return true
-  }
-  // Stale first reminder (carrier hasn't escalated the label yet but enough
-  // time has passed that it's effectively at second-reminder stage).
-  if (/^rappel(\s*1)?$/.test(s) && isActionOlderThanDays(e, ESCALATION_DAYS)) {
-    return true
-  }
-  return false
+  // Explicit second-/last-reminder labels carriers use. We deliberately don't
+  // match bare "recouvrement" because carriers use it in compound phrases
+  // like "transfert agence de recouvrement" — that's post-MeD (collections),
+  // not a reminder.
+  return /(rappel\s*[23]|deuxieme\s*rappel|2eme\s*rappel|derniere\s*lettre)/.test(s)
 }
 
 function isMiseEnDemeure(e: CarrierEntry): boolean {
   const s = normalize(e.status ?? "")
   return /mise\s*en\s*demeure/.test(s)
-}
-
-function isActionOlderThanDays(e: CarrierEntry, days: number): boolean {
-  if (!e.actionDate) return false
-  const d = parseDate(e.actionDate)
-  if (!d) return false
-  return d.getTime() < Date.now() - days * 24 * 60 * 60 * 1000
-}
-
-function parseDate(s: string): Date | null {
-  // Belgian carrier files use DD/MM/YYYY or DD-MM-YYYY.
-  const parts = s.split(/[/-]/).map((p) => p.trim()).filter(Boolean)
-  if (parts.length !== 3) return null
-  const [a, b, c] = parts.map((p) => Number.parseInt(p, 10))
-  if (![a, b, c].every(Number.isFinite)) return null
-  if (c >= 1900 && c <= 2100) return new Date(c, b - 1, a)
-  return null
 }

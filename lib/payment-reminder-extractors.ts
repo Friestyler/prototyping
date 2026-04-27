@@ -21,6 +21,8 @@ export interface PaymentReminderRow {
   soldePolice: string
   vcs: string
   numCompte: string
+  /** Concatenated postal address (street + zip + city) when available. */
+  address?: string
 }
 
 export type InsurerId =
@@ -90,8 +92,18 @@ const viviumExtractor: Extractor = {
   extract: (allRows) => {
     const headers = allRows[0] ?? []
     const rows = allRows.slice(1)
-    const iFirst = headerIndex(headers, ["first name", "prenom", "prénom"])
-    const iLast = headerIndex(headers, ["last name", "nom"])
+
+    // Newer Vivium exports use a single "NOM PRENEUR ASSURANCES" column
+    // formatted as "LastName, FirstName"; older exports had separate first/
+    // last name columns. Support both.
+    const iNomPreneur = headerIndex(headers, [
+      "nom preneur assurances",
+      "nom du preneur",
+      "preneur",
+    ])
+    const iFirstLegacy = headerIndex(headers, ["first name", "prenom", "prénom"])
+    const iLastLegacy = headerIndex(headers, ["last name"])
+
     const iEmail = headerIndex(headers, ["email", "e-mail"])
     const iPolice = headerIndex(headers, ["police"])
     const iEtat = headerIndex(headers, ["etat de non-paiement"])
@@ -99,30 +111,68 @@ const viviumExtractor: Extractor = {
     const iSolde = headerIndex(headers, ["solde police"])
     const iVcs = headerIndex(headers, ["vcs"])
     const iCompte = headerIndex(headers, ["num. compte p&v", "num compte p&v"])
+    const iAdresse = headerIndex(headers, ["adresse"])
+    const iCp = headerIndex(headers, ["c.p.", "cp", "code postal"])
+    const iLocalite = headerIndex(headers, ["localite", "localité"])
 
     const out: PaymentReminderRow[] = []
     for (let r = 0; r < rows.length; r++) {
       const row = rows[r]
       if (!row || row.every((c) => !c?.trim())) continue
+
       const police = (row[iPolice] ?? "").trim()
-      const first = (row[iFirst] ?? "").trim()
-      const last = (row[iLast] ?? "").trim()
-      if (!police && !first && !last) continue
-      // Vivium exports a second "mapping metadata" row below the data (see
-      // `productExternalID`, `contactFirstName` literals). Real policy numbers
-      // are numeric, so drop anything that isn't.
+      const etat = (row[iEtat] ?? "").trim()
+
+      // The newer Vivium export duplicates each customer across two rows: the
+      // first carries contract metadata with an empty status, the second
+      // carries the reminder data (status, email, action date). We only want
+      // rows that have a populated `ETAT DE NON-PAIEMENT`. As a side effect
+      // this also drops the legacy "mapping metadata" stub row whose POLICE
+      // value isn't a real policy number.
+      if (!etat) continue
       if (!/^\d+$/.test(police)) continue
+
+      // Names: prefer "NOM PRENEUR ASSURANCES" ("LastName, FirstName"); split
+      // on the first comma so multi-token last names like "Van der Linden"
+      // stay intact.
+      let firstName = ""
+      let lastName = ""
+      if (iNomPreneur !== -1) {
+        const raw = (row[iNomPreneur] ?? "").trim()
+        const commaIdx = raw.indexOf(",")
+        if (commaIdx > 0) {
+          lastName = raw.slice(0, commaIdx).trim()
+          firstName = raw.slice(commaIdx + 1).trim()
+        } else {
+          // No comma: treat the whole string as a last name (or org name).
+          lastName = raw
+        }
+      } else {
+        firstName = (row[iFirstLegacy] ?? "").trim()
+        lastName = (row[iLastLegacy] ?? "").trim()
+      }
+
+      // Address: stitch street + postal code + city when present.
+      const street = (row[iAdresse] ?? "").trim()
+      const cp = (row[iCp] ?? "").trim()
+      const city = (row[iLocalite] ?? "").trim()
+      const cityLine = [cp, city].filter(Boolean).join(" ")
+      const address = [street, cityLine].filter(Boolean).join(", ")
+
+      if (!police && !firstName && !lastName) continue
+
       out.push({
         id: `${police || "row"}-${r}`,
-        firstName: first,
-        lastName: last,
+        firstName,
+        lastName,
         email: (row[iEmail] ?? "").trim(),
         policyExternalId: police,
-        etatNonPaiement: (row[iEtat] ?? "").trim(),
+        etatNonPaiement: etat,
         dateAction: (row[iDate] ?? "").trim(),
         soldePolice: (row[iSolde] ?? "").trim(),
         vcs: (row[iVcs] ?? "").trim(),
         numCompte: (row[iCompte] ?? "").trim(),
+        address: address || undefined,
       })
     }
     return out

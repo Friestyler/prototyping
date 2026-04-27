@@ -101,7 +101,7 @@ export function PaymentRemindersUpload({ onOpenSavedList }: Props) {
         })
         return
       }
-      const text = await file.text()
+      const text = await readCarrierFile(file)
       const allRows = parseDelimited(text)
       if (allRows.length === 0) {
         toast({ title: "Couldn't read the file", description: "File looks empty." })
@@ -292,6 +292,22 @@ function labelFor(kind: FileKind): string {
   return FORMATS.find((f) => f.kind === kind)?.label ?? kind
 }
 
+/**
+ * Read a carrier file as text, falling back to Windows-1252 (Latin-1) when
+ * the bytes don't decode as UTF-8. Belgian carriers ship CSVs in Windows-1252
+ * — without this, every accented character becomes "�" and breaks both the
+ * extracted names ("Gérard" → "G�rard") and the classifier's regexes
+ * ("Dernière lettre de rappel").
+ */
+async function readCarrierFile(file: File): Promise<string> {
+  const buffer = await file.arrayBuffer()
+  try {
+    return new TextDecoder("utf-8", { fatal: true }).decode(buffer)
+  } catch {
+    return new TextDecoder("windows-1252").decode(buffer)
+  }
+}
+
 interface ExtractionOutcome {
   customerIds: number[]
   matchedFromPortfolio: number
@@ -380,6 +396,7 @@ function viviumCandidates(rows: PaymentReminderRow[]): ImportCandidate[] {
       firstName: r.firstName,
       lastName: r.lastName,
       email: r.email || undefined,
+      address: r.address,
       products: ["Vivium"],
       customerType: "Natural person",
       carrierEntry: {

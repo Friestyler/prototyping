@@ -30,16 +30,21 @@ let initialPartnersSeeded = false
 
 /**
  * Mirror the persisted imports into the module-scoped `initialPartners`
- * array that `lists-2-view.tsx` reads directly (not via props). Idempotent —
- * only inserts records whose id isn't already present.
+ * array that `lists-2-view.tsx` reads directly (not via props). Existing
+ * entries are *replaced in place* (so re-uploads with better extracted data
+ * — e.g. real names where we previously had "Unknown" — are picked up).
  */
 function seedInitialPartners(records: MasterCustomer[]) {
-  const existing = new Set(initialPartners.map((p) => String(p.id)))
+  const indexById = new Map<string, number>()
+  initialPartners.forEach((p, i) => indexById.set(String(p.id), i))
   for (const m of records) {
     const rec = masterCustomerToRecord(m)
-    if (!existing.has(String(rec.id))) {
+    const idx = indexById.get(String(rec.id))
+    if (idx == null) {
+      indexById.set(String(rec.id), initialPartners.length)
       initialPartners.push(rec)
-      existing.add(String(rec.id))
+    } else {
+      initialPartners[idx] = rec
     }
   }
 }
@@ -75,18 +80,45 @@ export function getImportedCustomerRecords(): CustomerRecord[] {
 }
 
 /**
- * Upsert a batch of imported customers, keyed by dossierNumber (unique per
- * external policy). Returns the persisted recordIds in the same order.
+ * Upsert a batch of imported customers, keyed by dossierNumber. When a record
+ * already exists, refresh fields that were previously empty or contained a
+ * placeholder ("Unknown") — this handles re-uploads where an upgraded
+ * extractor now provides better data (e.g. real names instead of "Unknown").
+ * Returns the persisted recordIds in the same order as the input.
  */
 export function upsertImportedCustomers(records: Omit<MasterCustomer, "id" | "recordId">[]): number[] {
   const existing = read()
   const byDossier = new Map(existing.map((c) => [c.dossierNumber, c]))
   let nextId = RECORD_ID_BASE + existing.length
   const recordIds: number[] = []
+  let mutated = false
 
   for (const rec of records) {
     const prior = byDossier.get(rec.dossierNumber)
     if (prior) {
+      // Refresh empty / "Unknown" fields with whatever the new import gave us.
+      // Last-write-wins on populated fields would also be reasonable but might
+      // overwrite manual edits, so we only fill gaps.
+      if ((!prior.firstName || prior.firstName === "Unknown") && rec.firstName && rec.firstName !== "Unknown") {
+        prior.firstName = rec.firstName
+        mutated = true
+      }
+      if (!prior.lastName && rec.lastName) {
+        prior.lastName = rec.lastName
+        mutated = true
+      }
+      if (!prior.address && rec.address) {
+        prior.address = rec.address
+        mutated = true
+      }
+      if (!prior.email && rec.email) {
+        prior.email = rec.email
+        mutated = true
+      }
+      if ((!prior.products || prior.products.length === 0) && rec.products?.length) {
+        prior.products = rec.products
+        mutated = true
+      }
       recordIds.push(prior.recordId)
       continue
     }
@@ -99,12 +131,15 @@ export function upsertImportedCustomers(records: Omit<MasterCustomer, "id" | "re
     existing.push(full)
     byDossier.set(full.dossierNumber, full)
     recordIds.push(recordId)
+    mutated = true
   }
 
-  write(existing)
-  // Keep the module-scoped `initialPartners` array in sync so list rendering
-  // (which reads it directly, not via props) can find these records.
-  seedInitialPartners(existing)
+  if (mutated) {
+    write(existing)
+    // Keep the module-scoped `initialPartners` array in sync so list rendering
+    // (which reads it directly, not via props) can find these records.
+    seedInitialPartners(existing)
+  }
   return recordIds
 }
 
@@ -124,6 +159,8 @@ export interface ImportCandidate {
   firstName: string
   lastName: string
   email?: string
+  /** Postal address (street + postal code + city) when the carrier file has it. */
+  address?: string
   products: string[]
   customerType: "Natural person" | "Legal entity"
   /** What to write into the carrier-entries sidecar for the resolved customer. */
@@ -180,7 +217,7 @@ export function resolveOrImportCustomers(
       firstName: c.firstName || "Unknown",
       lastName: c.lastName || "",
       dateOfBirth: "",
-      address: "",
+      address: c.address ?? "",
       customerType: c.customerType,
       dossierNumber: c.dossierNumber,
       products: c.products,
