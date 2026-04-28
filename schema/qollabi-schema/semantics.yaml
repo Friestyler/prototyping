@@ -1,0 +1,118 @@
+# Qollabi schema semantics — sidecar metadata for tables, columns, and named SQL patterns.
+#
+# Why this file exists
+# ────────────────────
+# `qollabi-schema.sql` is regenerated from production and overwrites any inline
+# annotation. This sidecar holds the model knowledge the dump can't carry:
+# - per-table invariants (e.g. "categories is an arbitrary-depth tree")
+# - per-column semantics that aren't visible from type+constraint alone
+# - named, reusable SQL patterns that requirement `.sql` files compose
+#
+# Structure
+# ─────────
+# tables.<table>.notes              — table-level invariants
+# tables.<table>.columns.<col>.notes — column-level semantics
+# tables.<table>.columns.<col>.do_not_filter — true if requirements must not filter on this column (with reason)
+# patterns.<name>                   — reusable SQL recipe; referenced by `composes: [name]`
+#
+# Stability under schema change
+# ─────────────────────────────
+# Keys are table+column names, never line numbers or ordinals. Adding a new column
+# adds a new key; renaming moves exactly one key; deleting a column removes one
+# entry. Patterns reference each other by name, not by inlining, so a pattern's
+# wording is updated in one place.
+
+# Target-environment constraints (apply to every requirement `.sql`)
+# ─────────────────────────────
+# - The Qollabi app's query runner accepts only statements that **start with
+#   `SELECT`**. A leading `WITH` / `WITH RECURSIVE` is rejected with
+#   "Invalid query: Only SELECT statements are allowed." Recursive CTEs must
+#   therefore live inside a parenthesised subquery in the FROM/JOIN, not at the
+#   top level. Both DuckDB and Postgres accept `WITH` in any subquery context,
+#   so the same SQL runs locally for verification.
+# - Every pattern below is written in the SELECT-first form for this reason.
+
+tables:
+
+  categories:
+    notes:
+      - "Arbitrary-depth tree: `parentId` is a self-FK to `id`. The tree can be any number of levels deep — a product's `productCategoryId` can point to the root, a direct child, a grand-child, or deeper. Never hard-code a fixed number of levels in a join; recurse via `WITH RECURSIVE`."
+      - "'Domein' = the root of the tree. When a Dutch/Flemish business requirement names a *domein* (Auto, Brand, Leven en belegging, Rechtsbijstand, Bijstand, …) it always refers to the row with `parentId IS NULL`. Sub-level names (polistype, etc.) are descendants of a domein, not the domein itself."
+      - "Names at every depth come from the same `name` column; depth is what distinguishes a domein from a polistype from a sub-polistype, not a different column."
+    columns:
+      id:
+        notes: "Primary key, referenced by `parentId` (self) and by `products.productCategoryId`."
+      parentId:
+        notes: "Self-FK to `categories.id`. NULL ⇒ this row is a root (a domein). Recurse through this column to walk the tree; it is the only edge."
+      name:
+        notes: "Human-readable label. Same column at every depth: domein name when `parentId IS NULL`, polistype name when parent is a domein, sub-polistype below that, etc. Anchor recursive CTEs by matching on `name` plus the appropriate depth predicate."
+
+  products:
+    notes:
+      - "One product = one policy in source data. `customerId` and `productCategoryId` are the joins requirements actually filter on."
+    columns:
+      customerId:
+        notes: "FK → `customers.id`. Use this for `JOIN products ON products.customerId = customers.id`."
+      productCategoryId:
+        notes: "FK → `categories.id` at any depth. To filter products by a domein or polistype, build the relevant `<x>_tree` recursive CTE first and join `productCategoryId` against it; do not match by category `name` directly on the product row."
+      lifecycleStage:
+        do_not_filter: true
+        notes: "Tracks internal product lifecycle (active/expired/etc.) but is not a business dimension users query on in this project. Do not add it to WHERE/EXISTS/JOIN predicates and do not raise it as an open doubt. See memory: feedback_never_filter_lifecycle_stage."
+
+patterns:
+
+  domein-tree:
+    when: "Requirement names a domein (a root category): 'in the Auto domein', 'customers with a Brand product', etc."
+    why: "The domein subtree can be arbitrarily deep; recursion absorbs every descendant so no product is missed."
+    sql: |
+      SELECT DISTINCT …
+      FROM customers c
+      JOIN products p ON p."customerId" = c."id"
+      JOIN (
+        WITH RECURSIVE <domein>_tree AS (
+          SELECT "id"
+          FROM categories
+          WHERE "name" = '<Domein>' AND "parentId" IS NULL
+          UNION ALL
+          SELECT c."id"
+          FROM categories c
+          JOIN <domein>_tree d ON c."parentId" = d."id"
+        )
+        SELECT "id" FROM <domein>_tree
+      ) d ON d."id" = p."productCategoryId"
+      ORDER BY …;
+    examples:
+      - sql-results/Demo_Merged_Final_2/alive-customers-over-50-with-auto.sql
+
+  polistype-inside-domein:
+    when: "Requirement names a polistype X inside a domein Y (any non-root category nested inside a root)."
+    composes: [domein-tree]
+    why: "Both levels can be arbitrarily deep, *independently*: the domein subtree may grow intermediate nodes, and the polistype itself can have descendants (sub-polistypes, variants). One recursion per level keeps the query correct under any future depth on either side. A single CTE seeded on `sub.name = '<X>' AND parent.name = '<Y>' AND parent.parentId IS NULL` happens to work today only because the tree is exactly two levels deep — it silently drops customers as soon as either level gains a layer."
+    sql: |
+      SELECT DISTINCT …
+      FROM customers c
+      JOIN products p ON p."customerId" = c."id"
+      JOIN (
+        WITH RECURSIVE <domein>_tree AS (
+          SELECT "id", "name"
+          FROM categories
+          WHERE "name" = '<Domein>' AND "parentId" IS NULL
+          UNION ALL
+          SELECT c."id", c."name"
+          FROM categories c
+          JOIN <domein>_tree d ON c."parentId" = d."id"
+        ),
+        <polistype>_tree AS (
+          SELECT "id"
+          FROM <domein>_tree
+          WHERE "name" = '<Polistype>'
+          UNION ALL
+          SELECT c."id"
+          FROM categories c
+          JOIN <polistype>_tree p ON c."parentId" = p."id"
+        )
+        SELECT "id" FROM <polistype>_tree
+      ) t ON t."id" = p."productCategoryId"
+      ORDER BY …;
+    examples:
+      - sql-results/Demo_Merged_Final_2/customers-with-polistype-toerisme-en-zaken.sql

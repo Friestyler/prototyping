@@ -7,16 +7,11 @@
 -- This file contains **only Qollabi-shaped SQL** — no CSV column names, no translation-layer CTEs.
 -- Joins use production FK columns (customerId → customers.id, productCategoryId → categories.id,
 -- parentId → categories.id). externalId appears only in the SELECT output.
+--
+-- The query starts with SELECT (not WITH) because the Qollabi app only accepts
+-- statements beginning with SELECT. The recursive CTE lives inside a parenthesised
+-- subquery in the JOIN — both DuckDB and Postgres support `WITH` in any subquery context.
 
-WITH RECURSIVE auto_tree AS (
-  SELECT "id"
-  FROM categories
-  WHERE "name" = 'Auto' AND "parentId" IS NULL
-  UNION ALL
-  SELECT c."id"
-  FROM categories c
-  JOIN auto_tree a ON c."parentId" = a."id"
-)
 SELECT DISTINCT
   c."externalId",
   c."firstName",
@@ -24,8 +19,19 @@ SELECT DISTINCT
   c."dateOfBirth",
   c."customerType"
 FROM customers c
-JOIN products p   ON p."customerId" = c."id"
-JOIN auto_tree a  ON a."id" = p."productCategoryId"
+JOIN products p ON p."customerId" = c."id"
+JOIN (
+  WITH RECURSIVE auto_tree AS (
+    SELECT "id"
+    FROM categories
+    WHERE "name" = 'Auto' AND "parentId" IS NULL
+    UNION ALL
+    SELECT c."id"
+    FROM categories c
+    JOIN auto_tree a ON c."parentId" = a."id"
+  )
+  SELECT "id" FROM auto_tree
+) a ON a."id" = p."productCategoryId"
 WHERE c."dateOfDeath" IS NULL
   AND c."dateOfBirth" <= CURRENT_DATE - INTERVAL '50 years'
 ORDER BY c."externalId";

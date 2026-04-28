@@ -27,8 +27,7 @@ schema/qollabi-schema/mappings/brio.csv
 | Domein - Omschrijving | categories | name + id (top-level) + `parentId` of the child | Not filtered here — the polistype is child of `Auto` in this data, but the query doesn't constrain on that parent. |
 
 ## Assumptions made
-- **"Polistype X inside domein Y" = `sub.name = 'Toerisme en Zaken, gemengd gebruik' AND parent.name = 'Auto' AND parent.parentId IS NULL`.** The recursive CTE seeds on categories whose parent is the `Auto` root; only products in that specific subtree qualify. A same-named polistype under a different domein would be excluded.
-- The recursive walker still descends through any sub-polistypes below the anchor — there are none in this Brio export, but the shape is future-proof.
+- **"Polistype X inside domein Y" = two composed recursive CTEs.** First `auto_tree` walks the `Auto` root subtree (the canonical `<domein>_tree` pattern). Then `toerisme_tree` anchors on `name = 'Toerisme en Zaken, gemengd gebruik'` **within `auto_tree`** and walks downward. A same-named polistype under a different domein cannot leak in — the inner anchor reads only from `auto_tree`. Both levels are arbitrary-depth-safe.
 - **No age / alive / lifecycle filters.** The requirement is a polistype-inside-domein filter and says nothing else.
 - Output = one row per customer; `ORDER BY externalId` for stable reproduction.
 

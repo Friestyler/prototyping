@@ -8,24 +8,18 @@
 -- Joins use production FK columns (customerId → customers.id, productCategoryId → categories.id,
 -- parentId → categories.id). externalId appears only in the SELECT output.
 --
--- Polistype anchored inside a specific domein: the recursive CTE seeds on the polistype
--- whose parent is the `Auto` root category. The join to the parent category plus the
--- `parent."parentId" IS NULL` check disambiguates in case the same polistype name ever
--- appears under a different domein. The recursion still descends through any future
--- sub-polistypes below this anchor.
+-- The query starts with SELECT (not WITH) because the Qollabi app only accepts
+-- statements beginning with SELECT. The recursive CTEs live inside a parenthesised
+-- subquery in the JOIN — both DuckDB and Postgres support `WITH` in any subquery context.
+--
+-- Polistype-inside-domein pattern: compose two recursive CTEs, one per tree level.
+--   1. `auto_tree`  — the canonical `<domein>_tree`: anchored on the root category
+--                     (`name = 'Auto' AND parentId IS NULL`), then walked downward.
+--   2. `toerisme_tree` — anchored on the polistype-by-name **within `auto_tree`**, then
+--                        walked downward to absorb any future sub-polistypes.
+-- A same-named polistype under a different domein cannot leak in: the inner anchor reads
+-- only from `auto_tree`. The shape is future-proof for arbitrary tree depth on either level.
 
-WITH RECURSIVE toerisme_tree AS (
-  SELECT sub."id"
-  FROM categories sub
-  JOIN categories parent ON parent."id" = sub."parentId"
-  WHERE sub."name" = 'Toerisme en Zaken, gemengd gebruik'
-    AND parent."name" = 'Auto'
-    AND parent."parentId" IS NULL
-  UNION ALL
-  SELECT c."id"
-  FROM categories c
-  JOIN toerisme_tree t ON c."parentId" = t."id"
-)
 SELECT DISTINCT
   c."externalId",
   c."firstName",
@@ -33,6 +27,26 @@ SELECT DISTINCT
   c."dateOfBirth",
   c."customerType"
 FROM customers c
-JOIN products p       ON p."customerId" = c."id"
-JOIN toerisme_tree t  ON t."id" = p."productCategoryId"
+JOIN products p ON p."customerId" = c."id"
+JOIN (
+  WITH RECURSIVE auto_tree AS (
+    SELECT "id", "name"
+    FROM categories
+    WHERE "name" = 'Auto' AND "parentId" IS NULL
+    UNION ALL
+    SELECT c."id", c."name"
+    FROM categories c
+    JOIN auto_tree a ON c."parentId" = a."id"
+  ),
+  toerisme_tree AS (
+    SELECT "id"
+    FROM auto_tree
+    WHERE "name" = 'Toerisme en Zaken, gemengd gebruik'
+    UNION ALL
+    SELECT c."id"
+    FROM categories c
+    JOIN toerisme_tree t ON c."parentId" = t."id"
+  )
+  SELECT "id" FROM toerisme_tree
+) t ON t."id" = p."productCategoryId"
 ORDER BY c."externalId";
