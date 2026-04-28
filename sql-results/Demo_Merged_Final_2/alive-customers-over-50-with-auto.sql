@@ -33,5 +33,5 @@ JOIN (
   SELECT "id" FROM auto_tree
 ) a ON a."id" = p."productCategoryId"
 WHERE c."dateOfDeath" IS NULL
-  AND c."dateOfBirth" <= CURRENT_DATE - INTERVAL '50 years'
+  AND c."dateOfBirth" <  CURRENT_DATE - INTERVAL '50 years'
 ORDER BY c."externalId";

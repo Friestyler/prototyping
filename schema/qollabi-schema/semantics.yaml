@@ -39,13 +39,20 @@ tables:
       - "Arbitrary-depth tree: `parentId` is a self-FK to `id`. The tree can be any number of levels deep — a product's `productCategoryId` can point to the root, a direct child, a grand-child, or deeper. Never hard-code a fixed number of levels in a join; recurse via `WITH RECURSIVE`."
       - "'Domein' = the root of the tree. When a Dutch/Flemish business requirement names a *domein* (Auto, Brand, Leven en belegging, Rechtsbijstand, Bijstand, …) it always refers to the row with `parentId IS NULL`. Sub-level names (polistype, etc.) are descendants of a domein, not the domein itself."
       - "Names at every depth come from the same `name` column; depth is what distinguishes a domein from a polistype from a sub-polistype, not a different column."
+      - "**`name` is not unique on its own.** The same polistype/subcategory name can exist as multiple distinct records — one under each parent. e.g. a polistype 'X' under domein 'Auto' and a polistype 'X' under domein 'Brand' are two different `categories.id` values with the same `name`. Always disambiguate by the `(parent, name)` chain, never by `name` alone."
     columns:
       id:
         notes: "Primary key, referenced by `parentId` (self) and by `products.productCategoryId`."
       parentId:
-        notes: "Self-FK to `categories.id`. NULL ⇒ this row is a root (a domein). Recurse through this column to walk the tree; it is the only edge."
+        notes: |
+          Self-FK to `categories.id`. The only edge — recurse through this column to walk the tree.
+          NULL means *structurally* the row is a root (a domein). But do **not** read user phrasing the
+          other way: when a requirement names a category/subcategory without specifying its parent, that
+          does **not** mean parent is NULL. Use the user's *word* to disambiguate intent —
+          'domein' ⇒ root (`parentId IS NULL`); 'polistype' / 'subcategory' ⇒ non-root
+          (`parentId IS NOT NULL`, at any depth).
       name:
-        notes: "Human-readable label. Same column at every depth: domein name when `parentId IS NULL`, polistype name when parent is a domein, sub-polistype below that, etc. Anchor recursive CTEs by matching on `name` plus the appropriate depth predicate."
+        notes: "Human-readable label. Same column at every depth: domein name when `parentId IS NULL`, polistype name when parent is a domein, sub-polistype below that, etc. Anchor recursive CTEs by matching on `name` plus the appropriate depth predicate. Not unique on its own — see table notes."
 
   products:
     notes:
@@ -57,7 +64,31 @@ tables:
         notes: "FK → `categories.id` at any depth. To filter products by a domein or polistype, build the relevant `<x>_tree` recursive CTE first and join `productCategoryId` against it; do not match by category `name` directly on the product row."
       lifecycleStage:
         do_not_filter: true
+        null_semantics: "NULL means the lifecycle is unknown for that product. Do not infer 'active' or any other state from a non-NULL value either — see `do_not_filter` above."
+        enum:
+          values: [unknown]   # TODO: confirm canonical values from production schema; not used by any requirement here, kept as a stub.
         notes: "Tracks internal product lifecycle (active/expired/etc.) but is not a business dimension users query on in this project. Do not add it to WHERE/EXISTS/JOIN predicates and do not raise it as an open doubt. See memory: feedback_never_filter_lifecycle_stage."
+
+  customers:
+    notes:
+      - "One customer = one dossier in source data. `id` is the join target for `products.customerId`."
+    columns:
+      id:
+        notes: "Primary key. `products.customerId` references this column."
+      dateOfBirth:
+        notes: "Business date — used by age-based phrases (see `phrases.customers over N`). Stored as `DATE`; compare via `CURRENT_DATE - INTERVAL 'N years'`, never against a hardcoded literal."
+      dateOfDeath:
+        null_semantics: "NULL means the customer is alive. The phrase 'alive customer' is exactly `dateOfDeath IS NULL`."
+        notes: "Business date. Combine with `dateOfBirth` for any 'alive over N' filter."
+      customerType:
+        enum:
+          values: [naturalPerson, legalEntity, group]
+        source_translations:
+          brio:
+            "Natuurlijk persoon":                                "naturalPerson"
+            "Rechtspersoon":                                     "legalEntity"
+            "Groepering van natuurlijke en/of rechtspersonen":   "group"
+        notes: "Controlled vocabulary. The translation layer (`qollabi-view.sql`) maps source-system Dutch labels to these canonical values; business-logic SQL must filter on the canonical values, never on the source labels."
 
 patterns:
 
@@ -116,3 +147,136 @@ patterns:
       ORDER BY …;
     examples:
       - sql-results/Demo_Merged_Final_2/customers-with-polistype-toerisme-en-zaken.sql
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Business synonyms — Dutch/Flemish (and other locale) phrasing → Qollabi entity.
+# First place to look when interpreting a new requirement: resolve every
+# domain word here before writing SQL. The `where:` clauses below are *intent
+# disambiguators*, not full filters — they say "which subset of the entity does
+# this word refer to", not "what extra predicate to add to the query".
+# ─────────────────────────────────────────────────────────────────────────────
+synonyms:
+
+  domein:
+    resolves_to: categories
+    where: "parentId IS NULL"
+    notes: "Always the root of the category tree. Auto, Brand, Leven en belegging, Rechtsbijstand, Bijstand, etc."
+
+  polistype:
+    resolves_to: categories
+    where: "parentId IS NOT NULL"
+    notes: |
+      Any non-root category, at any depth. The parent of a polistype can itself be another polistype
+      (sub-polistype) — the only constraint is "not the root". Do **not** require parent to be a domein:
+      the tree can have multiple non-root levels.
+
+  subcategory:
+    resolves_to: categories
+    where: "parentId IS NOT NULL"
+    notes: "Synonym for `polistype` — same disambiguation: any non-root category, at any depth."
+
+  polis:
+    resolves_to: products
+    notes: "One policy = one product row."
+
+  verzekering:
+    resolves_to: products
+    notes: "Synonym for `polis`."
+
+  klant:
+    resolves_to: customers
+
+  dossier:
+    resolves_to: customers
+    notes: "Source-system word for a customer record (Brio uses `Dossier` as the customer external id)."
+
+  maatschappij:
+    resolves_to: insurers
+    notes: "Insurance carrier. In the current Brio-derived translation layer this surfaces on `products.insurerId` / `product_templates`; a dedicated insurers table may be added later."
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phrase library — canonical SQL interpretation of recurring business phrasings.
+# Lock in inclusivity, anchor (CURRENT_DATE), and column choice so two requirements
+# that mean the same thing produce identical predicates.
+# ─────────────────────────────────────────────────────────────────────────────
+phrases:
+
+  "alive customer":
+    sql: 'customers."dateOfDeath" IS NULL'
+
+  "customers over N":
+    sql: 'customers."dateOfBirth" < CURRENT_DATE - INTERVAL ''N years'''
+    notes: "Strict less-than: 'over 50' = strictly older than 50 (age 51+). Excludes customers who are exactly 50."
+
+  "customers under N":
+    sql: 'customers."dateOfBirth" > CURRENT_DATE - INTERVAL ''N years'''
+    notes: "Strict greater-than: 'under 50' = strictly younger than 50."
+
+  "as of today":
+    sql: 'CURRENT_DATE'
+    notes: "Never a hardcoded literal — see memory feedback_current_date_not_hardcoded."
+
+  "in the last N days":
+    sql: '<col> >= CURRENT_DATE - INTERVAL ''N days'''
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Anti-patterns — recurring shapes to recognise and rewrite before writing SQL.
+# Each entry: a name, the symptom that triggers it, and the correct form (or a
+# pointer to the right pattern).
+# ─────────────────────────────────────────────────────────────────────────────
+anti_patterns:
+
+  - name: leading-with
+    symptom: "Query starts with `WITH` or `WITH RECURSIVE` at column 0."
+    correct: "Wrap CTEs inside a parenthesised subquery in the FROM/JOIN so the file starts with SELECT. See target-environment constraints at the top of this file and memory feedback_select_first_query_form."
+
+  - name: fixed-depth-category-join
+    symptom: "Two-or-more JOINs against `categories` with a hardcoded `parent.parentId IS NULL` shape, instead of recursion."
+    correct: "Use the `domein-tree` pattern (or `polistype-inside-domein` for two-level filters). The category tree can grow deeper at any time."
+
+  - name: single-cte-polistype-anchor
+    symptom: "A recursive CTE seeded on `sub.name = '<X>' AND parent.name = '<Y>' AND parent.parentId IS NULL`."
+    correct: "Use `polistype-inside-domein`: two composed recursions, one per tree level. The single-CTE form silently drops customers as soon as either level gains a layer."
+
+  - name: filter-on-lifecycleStage
+    symptom: "`WHERE products.lifecycleStage = ...` or `EXISTS … products.lifecycleStage …`."
+    correct: "Remove the predicate. `lifecycleStage` is `do_not_filter` in this project — see column note and memory feedback_never_filter_lifecycle_stage."
+
+  - name: hardcoded-time-boundary
+    symptom: "Date literals in WHERE/HAVING (e.g. `dateOfBirth <= DATE '1976-04-23'`)."
+    correct: "Compute from `CURRENT_DATE` via `INTERVAL` so daily runs stay correct. See `phrases` and memory feedback_current_date_not_hardcoded."
+
+  - name: join-via-externalId
+    symptom: "`ON p.customerExternalId = c.externalId` or any join on a `*ExternalId` column."
+    correct: "Joins use production FK columns to `id` (e.g. `ON p.customerId = c.id`). `externalId` appears only in SELECT output, never on the join."
+
+  - name: name-only-category-match
+    symptom: "Filtering categories purely by `name` without anchoring depth or parent: e.g. `WHERE categories.name = 'Toerisme en Zaken, gemengd gebruik'`."
+    correct: "`categories.name` is not unique — the same polistype name can exist under multiple parents. Anchor by the `(parent, name)` chain via the appropriate `_tree` recursive CTE."
+
+  - name: parent-unspecified-means-root
+    symptom: "Treating a requirement that names a category without specifying its parent as `parentId IS NULL`."
+    correct: "Disambiguate by the user's *word*: 'domein' ⇒ root, 'polistype'/'subcategory' ⇒ non-root at any depth. Ask if neither word is used."
+
+  - name: query-helpers-in-translation-layer
+    symptom: "`category_roots`, `auto_subtree`, or other query-specific views inside `qollabi-view.sql`."
+    correct: "The translation layer is strictly CSV → Qollabi shape. Recursion and any business-logic helpers belong in the requirement `.sql`."
+
+  - name: csv-columns-in-business-logic
+    symptom: "References to source-CSV column names (`Dossier`, `Polistype - Omschrijving`, etc.) in `sql-results/**/<name>.sql`."
+    correct: "Business-logic SQL queries the Qollabi-shaped views only. CSV column names appear exclusively in `databases/<db>/qollabi-view.sql`."
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Golden-query registry — common business phrasings → canonical example file.
+# Populate once we have ≥3 requirements that share a pattern, so the registry
+# captures shape reuse rather than per-question scaffolding. Until then, see
+# `examples:` on each pattern above.
+#
+# Schema (when populated):
+#   golden_queries:
+#     "<plain-language phrasing>":
+#       example: <path to sql-results/.../<name>.sql>
+#       uses_pattern: <pattern name>
+#       notes: <optional caveat>
+# ─────────────────────────────────────────────────────────────────────────────
+# golden_queries: {}   # 2 requirements so far; add this section at 3+.

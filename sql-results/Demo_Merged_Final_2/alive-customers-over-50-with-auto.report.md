@@ -29,7 +29,7 @@ schema/qollabi-schema/mappings/brio.csv
 | Product Template Name, Product Template ID, E-mail | — | — | Not in the Brio mapping; confirmed ignorable by the user. |
 
 ## Assumptions made
-- "Over 50 years" read as **at least 50** on the run date (Dutch "50-plus"). Implemented as `dateOfBirth <= CURRENT_DATE - INTERVAL '50 years'`, so the query is correct every day it runs — someone who hits 50 tomorrow is included tomorrow, not today. **Do not** replace this with a hardcoded date like `DATE '1976-04-23'`; that would silently drift stale.
+- "Over 50 years" read as **strictly greater than 50** on the run date — exclusive reading per the canonical `phrases."customers over N"` in `schema/qollabi-schema/semantics.yaml`. Implemented as `dateOfBirth < CURRENT_DATE - INTERVAL '50 years'`, so the query is correct every day it runs — someone who turns 51 tomorrow is included tomorrow, not today; customers exactly 50 on the run date are excluded. **Do not** replace this with a hardcoded date like `DATE '1976-04-23'`; that would silently drift stale.
 - "Alive" = `dateOfDeath IS NULL`. No row in the CSV had a future-dated death, so no additional clause was needed.
 - **"Auto domein" = the product's category is `Auto` itself or any descendant of `Auto` in the category tree.** Categories in Qollabi form an arbitrary-depth tree; products can attach at any node. The query uses a `WITH RECURSIVE auto_tree` CTE that starts from the root named `Auto` with no parent and expands downward, then joins products against that set. For this CSV the tree is 2 levels deep (Brio's `Domein → Polistype`) so the empirical count matches what a fixed 2-level join would produce; the pattern stays correct for deeper trees.
 - Output = one row per customer. Implemented the Qollabi engineer's idiomatic pattern: `SELECT DISTINCT` over `JOIN products`/`JOIN auto_tree`. A customer with ten Auto policies collapses to one result row. `ORDER BY externalId` for stable reproduction.
@@ -51,9 +51,10 @@ schema/qollabi-schema/mappings/brio.csv
 - Source CSV rows: 1413
 - Distinct customers (`Dossier`): 374
 - Alive customers: 371
-- Alive customers aged ≥ 50: 288
+- Alive customers aged > 50 (strict): 288
 - Customers with at least one `Auto` product: 205
 - Result rows: 168
-- Rows filtered out: 206 customers (374 − 168): 3 deceased, 83 alive but under 50, 120 alive and ≥ 50 but no Auto product.
+- Rows filtered out: 206 customers (374 − 168): 3 deceased, 83 alive but ≤ 50, 120 alive and > 50 but no Auto product.
+- Customers exactly 50 on the run date (the delta vs the prior inclusive `<=` reading): 0 — count happens to be unchanged today; will diverge whenever a customer's DOB lands exactly on `CURRENT_DATE - INTERVAL '50 years'`.
 - Unrecognized `customerType` values: 0
 - CSV dialect preserved: `;` delimiter, CRLF line endings, UTF-8 (no BOM), `dd/MM/yyyy` date format — matches source.
