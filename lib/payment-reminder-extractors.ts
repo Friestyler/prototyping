@@ -33,6 +33,7 @@ export type InsurerId =
   | "allianz"
   | "ethias"
   | "kbc"
+  | "dkv"
   | "other"
 
 export interface InsurerOption {
@@ -49,6 +50,7 @@ export const INSURERS: InsurerOption[] = [
   { id: "allianz", label: "Allianz", color: "#0369A1" },
   { id: "ethias", label: "Ethias", color: "#7C3AED" },
   { id: "kbc", label: "KBC", color: "#0E7490" },
+  { id: "dkv", label: "DKV", color: "#65A30D" },
   { id: "other", label: "Other", color: "#6B7280" },
 ]
 

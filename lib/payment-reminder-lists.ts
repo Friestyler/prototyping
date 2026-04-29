@@ -92,8 +92,11 @@ function normalize(s: string): string {
 
 function isFirstReminder(e: CarrierEntry): boolean {
   const s = normalize(e.status ?? "")
-  // Bare "rappel" or "rappel 1" — the carrier's first formal nudge.
-  return /^rappel(\s*1)?$/.test(s)
+  // Vivium uses bare "RAPPEL"/"RAPPEL 1"; AXA Impayés spells it out as
+  // "Première lettre de rappel". Both are the carrier's first formal nudge.
+  if (/^rappel(\s*1)?$/.test(s)) return true
+  if (/(premiere|1ere)\s+lettre/.test(s)) return true
+  return false
 }
 
 function isSecondReminder(e: CarrierEntry): boolean {

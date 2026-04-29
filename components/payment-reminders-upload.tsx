@@ -41,6 +41,11 @@ import {
 } from "@/lib/axa-chutes-extractor"
 import { saveAxaChutesUpload } from "@/lib/axa-chutes-store"
 import {
+  detectAxaImpayes,
+  extractAxaImpayes,
+  type AxaImpayeRow,
+} from "@/lib/axa-impayes-extractor"
+import {
   resolveOrImportCustomers,
   type ImportCandidate,
 } from "@/lib/imported-customers-store"
@@ -48,6 +53,13 @@ import {
   PAYMENT_REMINDER_LISTS,
   computeListCustomerIds,
 } from "@/lib/payment-reminder-lists"
+import {
+  extractPaymentReminderPdf,
+  splitCustomerName,
+  statusFromDocumentType,
+  type PdfExtractionResult,
+} from "@/lib/pdf-payment-reminder-extractor"
+import { getInsurer } from "@/lib/payment-reminder-extractors"
 
 /**
  * Supported carrier-file formats. Each one binds an extractor + matcher; the
@@ -55,7 +67,7 @@ import {
  * removed — the broker drops any payment-reminder file into this single
  * block and we route it based on detection.
  */
-type FileKind = "vivium" | "axa-chutes"
+type FileKind = "vivium" | "axa-chutes" | "axa-impayes"
 
 interface FileFormat {
   kind: FileKind
@@ -66,15 +78,25 @@ interface FileFormat {
 
 const FORMATS: FileFormat[] = [
   { kind: "vivium", label: "Vivium · Payment reminders" },
+  { kind: "axa-impayes", label: "AXA · Impayés (payment reminders)" },
   { kind: "axa-chutes", label: "AXA · Chutes (churned policies)" },
 ]
 
-interface PendingFile {
+interface PendingCsv {
+  source: "csv"
   filename: string
   allRows: string[][]
   detected: FileKind | null
   confidence: number
 }
+
+interface PendingPdf {
+  source: "pdf"
+  filename: string
+  extraction: PdfExtractionResult
+}
+
+type PendingFile = PendingCsv | PendingPdf
 
 interface Props {
   onOpenSavedList?: (listId: string) => void
@@ -94,10 +116,14 @@ export function PaymentRemindersUpload({ onOpenSavedList }: Props) {
     setParsing(true)
     try {
       const name = file.name.toLowerCase()
+      if (name.endsWith(".pdf")) {
+        await handlePdf(file)
+        return
+      }
       if (!name.endsWith(".csv")) {
         toast({
           title: "Format not yet supported",
-          description: "Upload the CSV export — PDF/Excel parsing is on the roadmap.",
+          description: "Upload the CSV export or a PDF — Excel parsing is on the roadmap.",
         })
         return
       }
@@ -107,34 +133,67 @@ export function PaymentRemindersUpload({ onOpenSavedList }: Props) {
         toast({ title: "Couldn't read the file", description: "File looks empty." })
         return
       }
-      // AXA Chutes has a multi-row preamble + a very specific header signature,
-      // so test it first. Vivium's signature lives in row 0 and is checked next.
-      const axa = detectAxaChutes(allRows, file.name)
+      // Run all three detectors and pick the highest-scoring one. AXA's two
+      // formats share keywords ("axa", "impaye") in filenames, so we rely on
+      // the column-signature match to disambiguate.
+      const chutes = detectAxaChutes(allRows, file.name)
+      const impayes = detectAxaImpayes(allRows, file.name)
       const vivium = detectViviumInsurer(allRows, file.name)
-      let detected: FileKind | null = null
-      let confidence = 0
-      if (axa.confidence >= vivium.confidence && axa.matched) {
-        detected = "axa-chutes"
-        confidence = axa.confidence
-      } else if (vivium.insurer === "vivium" && vivium.confidence >= 0.5) {
-        detected = "vivium"
-        confidence = vivium.confidence
-      }
+      const candidates: Array<{ kind: FileKind; matched: boolean; confidence: number }> = [
+        { kind: "axa-chutes", matched: chutes.matched, confidence: chutes.confidence },
+        { kind: "axa-impayes", matched: impayes.matched, confidence: impayes.confidence },
+        {
+          kind: "vivium",
+          matched: vivium.insurer === "vivium" && vivium.confidence >= 0.5,
+          confidence: vivium.insurer === "vivium" ? vivium.confidence : 0,
+        },
+      ]
+      const best = candidates
+        .filter((c) => c.matched)
+        .sort((a, b) => b.confidence - a.confidence)[0]
+      const detected: FileKind | null = best?.kind ?? null
+      const confidence = best?.confidence ?? 0
       setChosenKind(detected ?? "vivium")
-      setPending({ filename: file.name, allRows, detected, confidence })
+      setPending({ source: "csv", filename: file.name, allRows, detected, confidence })
     } finally {
       setParsing(false)
     }
+  }
+
+  async function handlePdf(file: File) {
+    const result = await extractPaymentReminderPdf(file)
+    if ("error" in result) {
+      const description =
+        result.error === "ai_not_configured"
+          ? "Set ANTHROPIC_API_KEY on the server to enable PDF parsing."
+          : (result.message ?? "Couldn't extract data from this PDF.")
+      toast({ title: "PDF extraction failed", description })
+      return
+    }
+    if (result.rows.length === 0) {
+      toast({
+        title: "No policies found",
+        description: "We couldn't extract any policy rows from this PDF.",
+      })
+      return
+    }
+    setPending({ source: "pdf", filename: file.name, extraction: result })
   }
 
   async function confirmExtract() {
     if (!pending) return
     setSaving(true)
     try {
-      const result =
-        chosenKind === "axa-chutes"
-          ? await runAxaChutes(pending)
-          : await runVivium(pending)
+      let result: ExtractionOutcome | null = null
+      if (pending.source === "pdf") {
+        result = await runPdf(pending)
+      } else if (chosenKind === "axa-chutes") {
+        result = await runAxaChutes(pending)
+      } else if (chosenKind === "axa-impayes") {
+        result = await runAxaImpayes(pending)
+      } else {
+        result = await runVivium(pending)
+      }
 
       if (!result) return
 
@@ -187,15 +246,18 @@ export function PaymentRemindersUpload({ onOpenSavedList }: Props) {
           <>
             <Loader2 className="h-5 w-5 text-amber-700 mb-1.5 animate-spin" />
             <span className="text-sm font-medium text-amber-800">Reading file…</span>
+            <span className="text-[11px] text-amber-700/80 mt-1">
+              PDFs are extracted with AI — this can take a few seconds.
+            </span>
           </>
         ) : (
           <>
             <Upload className="h-5 w-5 text-amber-700 mb-1.5" />
             <span className="text-sm font-medium text-amber-800">
-              Drag a CSV, PDF, or Excel file here
+              Drag a CSV or PDF file here
             </span>
             <span className="text-[11px] text-amber-700/80 mt-1">
-              CSV parsing is live · PDF/Excel coming soon
+              CSV (Vivium, AXA) and PDF (any insurer, AI-extracted)
             </span>
           </>
         )}
@@ -224,10 +286,10 @@ export function PaymentRemindersUpload({ onOpenSavedList }: Props) {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="w-4 h-4 text-amber-700" />
-              Confirm the insurer
+              {pending?.source === "pdf" ? "Review extracted policies" : "Confirm the document format"}
             </DialogTitle>
           </DialogHeader>
-          {pending && (
+          {pending?.source === "csv" && (
             <div className="space-y-3 pt-1">
               <div className="text-[12.5px] text-muted-foreground">
                 <span className="font-medium text-foreground">{pending.filename}</span>
@@ -266,6 +328,51 @@ export function PaymentRemindersUpload({ onOpenSavedList }: Props) {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+            </div>
+          )}
+
+          {pending?.source === "pdf" && (
+            <div className="space-y-3 pt-1">
+              <div className="text-[12.5px] text-muted-foreground">
+                <span className="font-medium text-foreground">{pending.filename}</span>
+                <span> · {pending.extraction.rows.length} polic{pending.extraction.rows.length === 1 ? "y" : "ies"}</span>
+              </div>
+
+              <div className="flex items-start gap-2 text-[13px] bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-lg px-3 py-2.5">
+                <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                <span>
+                  AI extracted a{" "}
+                  <span className="font-semibold">{labelForDocumentType(pending.extraction.documentType)}</span>{" "}
+                  from{" "}
+                  <span className="font-semibold">
+                    {pending.extraction.insurerName || getInsurer(pending.extraction.insurerId).label}
+                  </span>
+                  . Review the rows below and confirm to import.
+                </span>
+              </div>
+
+              <div className="max-h-56 overflow-auto rounded-lg border border-gray-200 text-[12px]">
+                <table className="w-full">
+                  <thead className="bg-gray-50 text-[11px] uppercase tracking-wide text-gray-500">
+                    <tr>
+                      <th className="text-left px-2.5 py-1.5">Customer</th>
+                      <th className="text-left px-2.5 py-1.5">Policy</th>
+                      <th className="text-right px-2.5 py-1.5">Open amount</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {pending.extraction.rows.map((r, i) => (
+                      <tr key={`${r.policyNumber}-${i}`}>
+                        <td className="px-2.5 py-1.5 text-gray-900">{r.customerName}</td>
+                        <td className="px-2.5 py-1.5 tabular-nums text-gray-700">{r.policyNumber}</td>
+                        <td className="px-2.5 py-1.5 tabular-nums text-right text-gray-900">
+                          {formatAmount(r.openAmount, r.currency)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
@@ -314,7 +421,7 @@ interface ExtractionOutcome {
   label: string
 }
 
-async function runVivium(pending: PendingFile): Promise<ExtractionOutcome | null> {
+async function runVivium(pending: PendingCsv): Promise<ExtractionOutcome | null> {
   const extracted = extractVivium("vivium", pending.allRows)
   if (extracted.length === 0) {
     toast({
@@ -341,7 +448,7 @@ async function runVivium(pending: PendingFile): Promise<ExtractionOutcome | null
   return { customerIds, matchedFromPortfolio, label: "Vivium" }
 }
 
-async function runAxaChutes(pending: PendingFile): Promise<ExtractionOutcome | null> {
+async function runAxaChutes(pending: PendingCsv): Promise<ExtractionOutcome | null> {
   const extracted = extractAxaChutes(pending.allRows)
   if (extracted.length === 0) {
     toast({
@@ -365,6 +472,116 @@ async function runAxaChutes(pending: PendingFile): Promise<ExtractionOutcome | n
   })
 
   return { customerIds, matchedFromPortfolio, label: "AXA" }
+}
+
+async function runAxaImpayes(pending: PendingCsv): Promise<ExtractionOutcome | null> {
+  const extracted = extractAxaImpayes(pending.allRows)
+  if (extracted.length === 0) {
+    toast({
+      title: "No rows extracted",
+      description:
+        "We couldn't find the AXA Impayés columns (Preneur, N° du contrat, Statut de la créance).",
+    })
+    return null
+  }
+
+  const { customerIds, matchedFromPortfolio } = resolveOrImportCustomers(
+    axaImpayesCandidates(extracted),
+    matchByName,
+  )
+
+  return { customerIds, matchedFromPortfolio, label: "AXA" }
+}
+
+async function runPdf(pending: PendingPdf): Promise<ExtractionOutcome | null> {
+  const { extraction } = pending
+  const status = statusFromDocumentType(extraction.documentType)
+  const uploadedAt = new Date().toISOString()
+  const insurerOption = getInsurer(extraction.insurerId)
+  const insurerLabel = extraction.insurerName || insurerOption.label
+
+  const insurerKey = insurerOption.id.toUpperCase()
+  const candidates: ImportCandidate[] = extraction.rows.map((r) => {
+    const split = splitCustomerName(r.customerName)
+    // Legal entities don't have a first/last split — fall back to the full
+    // name in the firstName slot so the customer table renders the company
+    // name instead of "Unknown {company}". Same convention as the AXA flow.
+    const isLegal = split.customerType === "Legal entity"
+    const firstName = isLegal ? r.customerName.trim() : split.firstName
+    const lastName = isLegal ? "" : split.lastName
+
+    const fnKey = firstName.toLowerCase().trim()
+    const lnKey = lastName.toLowerCase().trim()
+    const dossierNumber =
+      fnKey || lnKey
+        ? `${insurerKey}-NAME-${lnKey}-${fnKey}`
+        : `${insurerKey}-POLICY-${r.policyNumber}`
+
+    return {
+      dossierNumber,
+      firstName,
+      lastName,
+      products: [insurerLabel],
+      customerType: split.customerType,
+      carrierEntry: {
+        insurer: insurerLabel,
+        policyNumber: r.policyNumber,
+        uploadedAt,
+        status,
+        openAmount: r.openAmount ?? undefined,
+        currency: r.currency ?? undefined,
+      },
+    }
+  })
+
+  const { customerIds, matchedFromPortfolio } = resolveOrImportCustomers(
+    candidates,
+    matchByName,
+  )
+
+  return { customerIds, matchedFromPortfolio, label: insurerLabel }
+}
+
+function labelForDocumentType(t: PdfExtractionResult["documentType"]): string {
+  switch (t) {
+    case "rappel":
+      return "1st reminder"
+    case "rappel-2":
+      return "2nd reminder"
+    case "mise-en-demeure":
+      return "mise en demeure"
+    default:
+      return "payment reminder"
+  }
+}
+
+/**
+ * Parse Vivium's `SOLDE POLICE` (and similar carrier amount strings) into a
+ * number. The CSV uses European formatting — comma as decimal separator,
+ * period or space as thousands separator (e.g. "1.234,56" or "1 234,56").
+ * Currency symbols and trailing whitespace are stripped. Returns `undefined`
+ * for empty / unparseable inputs so the carrier entry omits the field
+ * instead of writing 0 (which would skew the rolled-up Open Amount column).
+ */
+function parseEuropeanAmount(raw: string): number | undefined {
+  if (!raw) return undefined
+  const cleaned = raw.replace(/[€$\s]/g, "").replace(/\./g, "").replace(",", ".")
+  const n = parseFloat(cleaned)
+  return Number.isFinite(n) ? n : undefined
+}
+
+function formatAmount(amount: number | null, currency: string | null): string {
+  if (amount == null) return "—"
+  const ccy = currency?.toUpperCase() || "EUR"
+  try {
+    return new Intl.NumberFormat("fr-BE", {
+      style: "currency",
+      currency: ccy,
+      maximumFractionDigits: 2,
+    }).format(amount)
+  } catch {
+    return `${amount.toFixed(2)} ${ccy}`
+  }
 }
 
 /**
@@ -404,6 +621,8 @@ function viviumCandidates(rows: PaymentReminderRow[]): ImportCandidate[] {
         policyNumber: r.policyExternalId,
         uploadedAt,
         status: r.etatNonPaiement || undefined,
+        openAmount: parseEuropeanAmount(r.soldePolice),
+        currency: r.soldePolice ? "EUR" : undefined,
         actionDate: r.dateAction || undefined,
       },
     }
@@ -444,6 +663,45 @@ function axaCandidates(rows: AxaChuteRow[]): ImportCandidate[] {
         uploadedAt,
         status: r.statusDescription || undefined,
         actionDate: r.churnDate || undefined,
+      },
+    }
+  })
+}
+
+// ── AXA Impayés candidate ──────────────────────────────────────────────────
+function axaImpayesCandidates(rows: AxaImpayeRow[]): ImportCandidate[] {
+  const uploadedAt = new Date().toISOString()
+  return rows.map((r) => {
+    const fn = r.firstName.toLowerCase().trim()
+    const ln = r.lastName.toLowerCase().trim()
+    // Persons share an identity by (last, first); legal entities by full name.
+    // Falling back to policy keeps each row resolvable when both are blank.
+    const dossierNumber = r.isLegalEntity
+      ? `AXA-NAME-${ln}`
+      : fn || ln
+        ? `AXA-NAME-${ln}-${fn}`
+        : `AXA-POLICY-${r.policyExternalId}`
+    return {
+      dossierNumber,
+      // Legal entities don't have a first/last split — push the full name
+      // into firstName so the customer table renders the company name
+      // instead of "Unknown {company}". Same convention as the AXA Chutes
+      // and PDF flows.
+      firstName: r.isLegalEntity ? r.fullName : r.firstName || "Unknown",
+      lastName: r.isLegalEntity ? "" : r.lastName || "",
+      email: undefined,
+      products: r.contractType ? [r.contractType] : [],
+      customerType: r.isLegalEntity ? "Legal entity" : "Natural person",
+      carrierEntry: {
+        insurer: "AXA",
+        policyNumber: r.policyExternalId,
+        uploadedAt,
+        status: r.paymentStatus || undefined,
+        actionDate: r.statusDate || undefined,
+        openAmount: parseEuropeanAmount(r.totalAmount),
+        currency: r.totalAmount ? "EUR" : undefined,
+        coverageStart: r.coverageStart || undefined,
+        coverageEnd: r.coverageEnd || undefined,
       },
     }
   })

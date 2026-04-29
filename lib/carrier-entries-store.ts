@@ -18,8 +18,10 @@ export interface CarrierEntry {
    * Raw status as it appears in the carrier's file. Drives the classifier
    * that routes customers into the preset Payment Reminder 1 / 2 / Mise en
    * demeure dynamic lists. Examples:
-   *   Vivium → "RAPPEL", "RAPPEL 2", "MISE EN DEMEURE"
-   *   AXA   → "Resil.Non Paiement De Prime", "Renon Expiration Contractuelle"
+   *   Vivium       → "RAPPEL", "RAPPEL 2", "MISE EN DEMEURE"
+   *   AXA Chutes   → "Resil.Non Paiement De Prime", "Renon Expiration Contractuelle"
+   *   AXA Impayés  → "Première lettre de rappel", "Dernière lettre de rappel",
+   *                  "Mise en demeure (Lettre recommandée)"
    */
   status?: string
   /**
@@ -29,6 +31,21 @@ export interface CarrierEntry {
    * Format follows the source file (typically DD/MM/YYYY or DD-MM-YYYY).
    */
   actionDate?: string
+  /**
+   * Outstanding premium amount for this policy at the time the carrier
+   * file/PDF was generated. Maps to the `products.openAmount` column in the
+   * canonical schema. Stored as a number; display formatting respects
+   * `currency`.
+   */
+  openAmount?: number
+  /** ISO 4217 currency code (e.g. "EUR"). Optional — defaults to EUR on display. */
+  currency?: string
+  /**
+   * Contract coverage window from the AXA Impayés file (`Période de couverture
+   * du` / `... au`). Stored as the carrier's raw string (typically DD-MM-YY).
+   */
+  coverageStart?: string
+  coverageEnd?: string
 }
 
 const KEY = "qollabi:carrier-entries"

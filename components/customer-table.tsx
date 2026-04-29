@@ -40,6 +40,8 @@ type SortKey =
   | "products"
   | "insurer"
   | "policy"
+  | "openAmount"
+  | "paymentStatus"
 type SortDir = "asc" | "desc"
 
 interface ColumnDef {
@@ -69,6 +71,8 @@ const PAYMENT_REMINDER_COLUMNS: ColumnDef[] = [
   { key: "lastName", label: "Last Name" },
   { key: "insurer", label: "Insurer" },
   { key: "policy", label: "Policy" },
+  { key: "paymentStatus", label: "Payment Status" },
+  { key: "openAmount", label: "Open Amount" },
   { key: "address", label: "Address" },
 ]
 
@@ -128,6 +132,48 @@ function formatPolicies(entries: CarrierEntry[]): string {
   if (entries.length === 0) return "—"
   if (entries.length === 1) return entries[0].policyNumber
   return `${entries[0].policyNumber} +${entries.length - 1}`
+}
+
+/**
+ * Show the most recent payment status; if multiple distinct statuses exist
+ * across this customer's policies, append "+N" so the broker can see at a
+ * glance that there's variation worth drilling into.
+ */
+function formatPaymentStatus(entries: CarrierEntry[]): string {
+  const statuses = entries.map((e) => e.status?.trim()).filter((s): s is string => !!s)
+  if (statuses.length === 0) return "—"
+  const unique = Array.from(new Set(statuses))
+  if (unique.length === 1) return unique[0]
+  return `${unique[0]} +${unique.length - 1}`
+}
+
+/** Sum of open amounts across all carrier entries for the customer. */
+function totalOpenAmount(entries: CarrierEntry[]): { total: number; currency: string } | null {
+  let total = 0
+  let currency = ""
+  let any = false
+  for (const e of entries) {
+    if (typeof e.openAmount === "number") {
+      total += e.openAmount
+      currency = currency || e.currency || "EUR"
+      any = true
+    }
+  }
+  return any ? { total, currency: currency || "EUR" } : null
+}
+
+function formatOpenAmount(entries: CarrierEntry[]): string {
+  const sum = totalOpenAmount(entries)
+  if (!sum) return "—"
+  try {
+    return new Intl.NumberFormat("fr-BE", {
+      style: "currency",
+      currency: sum.currency,
+      maximumFractionDigits: 2,
+    }).format(sum.total)
+  } catch {
+    return `${sum.total.toFixed(2)} ${sum.currency}`
+  }
 }
 
 function PreviewTable({
@@ -193,6 +239,8 @@ function cellClass(key: SortKey): string {
     case "dateOfBirth":
     case "policy":
       return "text-gray-600 tabular-nums"
+    case "openAmount":
+      return "text-gray-900 tabular-nums"
     default:
       return "text-gray-600"
   }
@@ -206,6 +254,14 @@ function sortValue(c: MasterCustomer, key: SortKey): string {
       return uniqueInsurers(carrierEntriesFor(c))
     case "policy":
       return formatPolicies(carrierEntriesFor(c))
+    case "openAmount": {
+      const sum = totalOpenAmount(carrierEntriesFor(c))
+      // Pad so the numeric-aware string compare orders by magnitude across
+      // mixed currencies (rare here — the carrier files all use EUR).
+      return sum ? sum.total.toFixed(2).padStart(15, "0") : ""
+    }
+    case "paymentStatus":
+      return formatPaymentStatus(carrierEntriesFor(c))
     default:
       return String(c[key as keyof MasterCustomer] ?? "")
   }
@@ -231,6 +287,12 @@ function renderCell(c: MasterCustomer, key: SortKey, entries: CarrierEntry[]) {
       return uniqueInsurers(entries)
     case "policy":
       return formatPolicies(entries)
+    case "openAmount":
+      return formatOpenAmount(entries)
+    case "paymentStatus": {
+      const text = formatPaymentStatus(entries)
+      return text === "—" ? <span className="text-gray-400">—</span> : text
+    }
   }
 }
 
