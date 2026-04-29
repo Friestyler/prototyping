@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 import {
   AlertCircle,
   Bell,
@@ -109,6 +109,13 @@ export function PaymentRemindersUpload({ onOpenSavedList }: Props) {
   const [saving, setSaving] = useState(false)
   const [pending, setPending] = useState<PendingFile | null>(null)
   const [chosenKind, setChosenKind] = useState<FileKind>("vivium")
+
+  // Re-extract whenever the user switches formats so the preview reflects the
+  // chosen extractor's output. Cheap — parsing already happened.
+  const previewRows = useMemo<PreviewRow[]>(() => {
+    if (pending?.source !== "csv") return []
+    return previewRowsForKind(chosenKind, pending.allRows)
+  }, [pending, chosenKind])
 
   const openPicker = () => inputRef.current?.click()
 
@@ -282,7 +289,7 @@ export function PaymentRemindersUpload({ onOpenSavedList }: Props) {
       </Button>
 
       <Dialog open={!!pending} onOpenChange={(v) => !v && setPending(null)}>
-        <DialogContent className="sm:max-w-[480px]">
+        <DialogContent className="sm:max-w-2xl lg:max-w-4xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="w-4 h-4 text-amber-700" />
@@ -290,7 +297,7 @@ export function PaymentRemindersUpload({ onOpenSavedList }: Props) {
             </DialogTitle>
           </DialogHeader>
           {pending?.source === "csv" && (
-            <div className="space-y-3 pt-1">
+            <div className="space-y-3 pt-1 min-w-0">
               <div className="text-[12.5px] text-muted-foreground">
                 <span className="font-medium text-foreground">{pending.filename}</span>
                 <span> · {pending.allRows.length} rows</span>
@@ -329,6 +336,52 @@ export function PaymentRemindersUpload({ onOpenSavedList }: Props) {
                   </SelectContent>
                 </Select>
               </div>
+
+              {previewRows.length > 0 && (
+                <div className="space-y-1">
+                  <label className="text-[12px] font-medium">
+                    Preview · {previewRows.length} polic{previewRows.length === 1 ? "y" : "ies"} extracted
+                  </label>
+                  <div className="max-h-56 overflow-auto overflow-x-auto rounded-lg border border-gray-200 text-[12px]">
+                    <table className="w-full table-fixed">
+                      <thead className="bg-gray-50 text-[11px] uppercase tracking-wide text-gray-500 sticky top-0">
+                        <tr>
+                          <th className="text-left px-2.5 py-1.5 w-[18%]">Name</th>
+                          <th className="text-left px-2.5 py-1.5 w-[12%]">First name</th>
+                          <th className="text-left px-2.5 py-1.5 w-[14%]">Last name</th>
+                          <th className="text-left px-2.5 py-1.5 w-[14%]">External id</th>
+                          <th className="text-left px-2.5 py-1.5 w-[28%]">Payment status</th>
+                          <th className="text-right px-2.5 py-1.5 w-[14%]">Amount due</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {previewRows.map((r, i) => (
+                          <tr key={`${r.policyNumber}-${i}`}>
+                            <td className="px-2.5 py-1.5 text-gray-900">
+                              {toTitleCase(r.fullName) || <span className="text-gray-400">—</span>}
+                            </td>
+                            <td className="px-2.5 py-1.5 text-gray-700">
+                              {toTitleCase(r.firstName) || <span className="text-gray-400">—</span>}
+                            </td>
+                            <td className="px-2.5 py-1.5 text-gray-700">
+                              {toTitleCase(r.lastName) || <span className="text-gray-400">—</span>}
+                            </td>
+                            <td className="px-2.5 py-1.5 tabular-nums text-gray-700 whitespace-nowrap">
+                              {r.policyNumber}
+                            </td>
+                            <td className="px-2.5 py-1.5 text-gray-700">
+                              {r.paymentStatus || <span className="text-gray-400">—</span>}
+                            </td>
+                            <td className="px-2.5 py-1.5 tabular-nums text-right text-gray-900 whitespace-nowrap">
+                              {formatAmount(r.amountDue ?? null, r.currency ?? null)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -553,6 +606,85 @@ function labelForDocumentType(t: PdfExtractionResult["documentType"]): string {
     default:
       return "payment reminder"
   }
+}
+
+/**
+ * Unified preview-row shape rendered in the Confirm-format dialog. The PDF
+ * flow already shows extracted rows before import; this gives CSVs the same
+ * treatment so the broker sees what will be saved (post-cleanup) before
+ * confirming.
+ */
+interface PreviewRow {
+  fullName: string
+  firstName: string
+  lastName: string
+  policyNumber: string
+  paymentStatus: string
+  amountDue?: number
+  currency?: string
+}
+
+function previewRowsForKind(kind: FileKind, allRows: string[][]): PreviewRow[] {
+  switch (kind) {
+    case "vivium": {
+      const rows = extractVivium("vivium", allRows)
+      return rows.map((r) => ({
+        fullName: composeFullName(r.firstName, r.lastName),
+        firstName: r.firstName,
+        lastName: r.lastName,
+        policyNumber: r.policyExternalId,
+        paymentStatus: r.etatNonPaiement,
+        amountDue: parseEuropeanAmount(r.soldePolice),
+        currency: r.soldePolice ? "EUR" : undefined,
+      }))
+    }
+    case "axa-chutes": {
+      const rows = extractAxaChutes(allRows)
+      return rows.map((r) => ({
+        fullName: composeFullName(r.firstName, r.lastName) || r.fullName,
+        firstName: r.firstName,
+        lastName: r.lastName,
+        policyNumber: r.policyExternalId,
+        // AXA Chutes has no creditor status; we display the churn status here
+        // so the column doesn't go blank for this format.
+        paymentStatus: r.statusDescription,
+      }))
+    }
+    case "axa-impayes": {
+      const rows = extractAxaImpayes(allRows)
+      return rows.map((r) => ({
+        fullName: composeFullName(r.firstName, r.lastName) || r.fullName,
+        firstName: r.firstName,
+        lastName: r.lastName,
+        policyNumber: r.policyExternalId,
+        paymentStatus: r.paymentStatus,
+        amountDue: parseEuropeanAmount(r.totalAmount),
+        currency: r.totalAmount ? "EUR" : undefined,
+      }))
+    }
+  }
+}
+
+/**
+ * Display the customer name in a friendly first-name-first order. Legal
+ * entities have no firstName, so we just return their lastName (which carries
+ * the full company name from every extractor).
+ */
+function composeFullName(firstName: string, lastName: string): string {
+  if (!firstName) return lastName
+  return `${firstName} ${lastName}`.trim()
+}
+
+/**
+ * Convert an upper-case carrier name (`JOHN DOE`, `JEAN-LOUP`, `'T KINT`) to
+ * standard title case (`John Doe`, `Jean-Loup`, `'t Kint`). The regex matches
+ * the first alpha character after a word boundary so apostrophe particles
+ * like `'t` keep their lowercase `t`.
+ */
+function toTitleCase(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/(^|[\s-])([a-zà-ÿ])/g, (_, sep, c: string) => sep + c.toUpperCase())
 }
 
 /**
