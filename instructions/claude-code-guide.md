@@ -299,6 +299,42 @@ Do not create `-v2`, `-final`, `-iteration-3` files. One requirement = one `.md`
 
 ---
 
+## Saving finished work to the shared project
+
+Whenever you finish producing a result for a business requirement (the `.sql`, the result `.csv`, and the `.report.md`), end your reply by asking the user — in plain, everyday language, no technical words — whether they're happy with it or want to keep tweaking. Use this **exact phrasing**:
+
+> All done — does this look right, or do you want me to adjust something?
+> - Say **"looks good"** (or "done", "share it", "final") and I'll save it to the shared project so your team can see it.
+> - Or just tell me what to change and I'll redo it.
+
+**If the user replies that it's final / good / ready to share:**
+
+1. First, grab anyone else's recent updates: `git pull --rebase`.
+2. Stage only the folders connected to this CSV:
+   `git add databases/<database-name>/ sql-results/<database-name>/`
+   (Also include any shared schema files you actually edited this turn, e.g. `schema/qollabi-schema/mappings/brio.csv`, `schema/qollabi-schema/code-lists.md`, or `schema/qollabi-schema/semantics.yaml`.)
+3. Commit with a short message naming the requirement:
+   `git commit -m "Add <requirement title> for <csv name>"`
+4. Push: `git push`.
+5. Reply to the user in friendly language. Something like:
+   > ✅ All set! Your team can see this now in the shared project.
+
+   Don't print raw git output unless something failed.
+
+**If the user wants to keep iterating:** just acknowledge ("Got it — what would you like to change?") and wait for their next instruction. Don't re-ask the share question until you've produced new files.
+
+**If something goes wrong while saving** (no internet, a teammate also made a change at the same time, push rejected, etc.): explain it in plain language and offer to retry. **Never use these words with the user:** *rebase, merge, commit, push, branch, remote, origin, HEAD, conflict, diff, staging.* Translate them — for example:
+
+- "your teammate also made a change at the same time, let me grab theirs first"
+- "couldn't reach the shared project — want me to try again?"
+- "saved" / "shared" instead of "committed" / "pushed"
+
+**Never save or share without the user's explicit go-ahead.** Their "looks good" is the green light. If they haven't replied yet, wait.
+
+This rule applies to **completed requirement output**, not to internal scaffolding (e.g. creating `databases/<db>/` after a CSV upload, or codifying a feedback memory). For those, no save prompt is needed unless the user asks.
+
+---
+
 ## Anti-patterns to avoid
 
 - Inventing schema fields that aren't in `schema/qollabi-schema/`.
