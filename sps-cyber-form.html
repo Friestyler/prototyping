@@ -168,7 +168,7 @@
     var contact = { firstName: '', lastName: '', email: '', phone: '' };
 
     function makePet() {
-        return { type: '', name: '', birthDate: '', breed: '' };
+        return { type: '', name: '', birthDate: '', breed: '', chipped: null, vaccinated: null, country: '' };
     }
 
     function setPetCount(n) {
@@ -289,13 +289,61 @@
         block.appendChild(nameField);
         block.appendChild(grid);
 
+        block.appendChild(renderYesNoField(pet, 'chipped', 'Is het huisdier gechipt? *'));
+        block.appendChild(renderYesNoField(pet, 'vaccinated', 'Is het huisdier gevaccineerd? *'));
+
+        var countryField = document.createElement('div');
+        countryField.className = 'field';
+        var countryLabel = document.createElement('label');
+        countryLabel.textContent = 'Land van herkomst *';
+        var countryInput = document.createElement('input');
+        countryInput.type = 'text';
+        countryInput.placeholder = 'bijv. België';
+        countryInput.value = pet.country;
+        countryInput.addEventListener('input', function() {
+            pet.country = countryInput.value;
+            updateSubmitState();
+        });
+        countryField.appendChild(countryLabel);
+        countryField.appendChild(countryInput);
+        block.appendChild(countryField);
+
         return block;
+    }
+
+    function renderYesNoField(pet, key, labelText) {
+        var field = document.createElement('div');
+        field.className = 'field';
+        var label = document.createElement('label');
+        label.textContent = labelText;
+        field.appendChild(label);
+
+        var btns = document.createElement('div');
+        btns.className = 'type-buttons';
+
+        [
+            { val: true, text: 'Ja' },
+            { val: false, text: 'Nee' }
+        ].forEach(function(opt) {
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'type-btn' + (pet[key] === opt.val ? ' active' : '');
+            btn.textContent = opt.text;
+            btn.addEventListener('click', function() {
+                pet[key] = opt.val;
+                renderPets();
+            });
+            btns.appendChild(btn);
+        });
+        field.appendChild(btns);
+        return field;
     }
 
     function allPetsComplete() {
         if (pets.length === 0) return false;
         return pets.every(function(p) {
-            return p.type && p.name.trim() && p.birthDate && p.breed.trim();
+            return p.type && p.name.trim() && p.birthDate && p.breed.trim() &&
+                   p.chipped !== null && p.vaccinated !== null && p.country.trim();
         });
     }
 
@@ -460,12 +508,11 @@
 
         // Each pet.
         pets.forEach(function(pet, idx) {
-            if (y > pageHeight - 140) { doc.addPage(); y = 60; }
+            var cardH = 170;
+            if (y > pageHeight - cardH - 40) { doc.addPage(); y = 60; }
 
-            // Card background.
             var cardX = marginX;
             var cardW = pageWidth - marginX * 2;
-            var cardH = 100;
             doc.setFillColor(246, 248, 252);
             doc.rect(cardX, y, cardW, cardH, 'F');
             doc.setFillColor(195, 10, 40);
@@ -478,32 +525,27 @@
 
             var col1X = cardX + 16;
             var col2X = cardX + cardW / 2 + 8;
-            var rowY = y + 42;
 
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(9);
-            doc.setTextColor(107, 114, 128);
-            doc.text('SOORT', col1X, rowY);
-            doc.text('NAAM', col2X, rowY);
+            function drawRow(rowY, lbl1, val1, lbl2, val2) {
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(9);
+                doc.setTextColor(107, 114, 128);
+                doc.text(lbl1, col1X, rowY);
+                if (lbl2) doc.text(lbl2, col2X, rowY);
 
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(11);
-            doc.setTextColor(39, 39, 39);
-            doc.text(TYPE_LABELS[pet.type] || '-', col1X, rowY + 14);
-            doc.text(pet.name || '-', col2X, rowY + 14);
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(11);
+                doc.setTextColor(39, 39, 39);
+                doc.text(val1 || '-', col1X, rowY + 14);
+                if (lbl2) doc.text(val2 || '-', col2X, rowY + 14);
+            }
 
-            rowY += 34;
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(9);
-            doc.setTextColor(107, 114, 128);
-            doc.text('GEBOORTEDATUM', col1X, rowY);
-            doc.text('RAS', col2X, rowY);
+            var yn = function(v) { return v === true ? 'Ja' : v === false ? 'Nee' : '-'; };
 
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(11);
-            doc.setTextColor(39, 39, 39);
-            doc.text(formatDateNL(pet.birthDate) || '-', col1X, rowY + 14);
-            doc.text(pet.breed || '-', col2X, rowY + 14);
+            drawRow(y + 42, 'SOORT', TYPE_LABELS[pet.type] || '-', 'NAAM', pet.name);
+            drawRow(y + 76, 'GEBOORTEDATUM', formatDateNL(pet.birthDate), 'RAS', pet.breed);
+            drawRow(y + 110, 'GECHIPT', yn(pet.chipped), 'GEVACCINEERD', yn(pet.vaccinated));
+            drawRow(y + 144, 'LAND VAN HERKOMST', pet.country, null, null);
 
             y += cardH + 14;
         });
